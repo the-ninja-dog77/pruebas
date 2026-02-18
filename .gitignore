@@ -1,0 +1,6 @@
+.env
+node_modules
+zzeta.db
+zzeta.test.db
+logs
+backups
