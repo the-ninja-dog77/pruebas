@@ -1,6 +1,15 @@
+const fs = require('fs');
+const path = require('path');
 const Database = require('better-sqlite3');
 
-const db = new Database(process.env.DB_PATH || 'zzeta.db');
+const dbPath = process.env.DB_PATH || 'zzeta.db';
+const dbDir = path.dirname(dbPath);
+
+if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
+  fs.mkdirSync(dbDir, { recursive: true });
+}
+
+const db = new Database(dbPath);
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS migrations (

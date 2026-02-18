@@ -42,6 +42,9 @@ if (process.env.NODE_ENV !== 'test') {
 
 const app = express();
 
+// Railway/Reverse proxy: necesario para rate-limit con X-Forwarded-For
+app.set('trust proxy', 1);
+
 app.use(cors());
 app.use(helmet());
 app.use(express.json());
