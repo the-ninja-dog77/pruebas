@@ -21,6 +21,7 @@ const sessions = new Map();
 const START_INTENTS = ['turno', 'reserv', 'agend', 'cita'];
 const GREETING_INTENTS = ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'];
 const THANKS_INTENTS = ['gracias', 'muchas gracias', 'te agradezco', 'thanks'];
+const NEW_BOOKING_INTENTS = ['otro turno', 'quiero otro turno', 'nuevo turno'];
 const REASSURANCE_INTENTS = [
   'seguro',
   'segura',
@@ -352,15 +353,21 @@ async function maybeAiFallback(texto, session) {
 
 async function buildReply(from, texto) {
   const msg = normalizeText(texto);
-  const session = getSession(from);
+  let session = getSession(from);
   const intentText = normalizeIntentText(msg);
 
   if (!msg) {
     return 'Escribime que servicio, fecha y hora queres reservar.';
   }
 
-  const wantsManageCancelCommand = containsAny(msg, MANAGE_CANCEL_INTENTS);
-  const wantsManageRescheduleCommand = containsAny(msg, MANAGE_RESCHEDULE_INTENTS);
+  const wantsManageCancelCommand =
+    containsAny(msg, MANAGE_CANCEL_INTENTS) ||
+    (msg.includes('cancelar') && msg.includes('turno'));
+  const wantsManageRescheduleCommand =
+    containsAny(msg, MANAGE_RESCHEDULE_INTENTS) ||
+    msg.includes('reprogramar') ||
+    (msg.includes('cambiar') && msg.includes('turno'));
+  const wantsStart = containsAny(msg, START_INTENTS);
 
   if (wantsManageCancelCommand) {
     session.stage = 'manage_cancel_collect';
@@ -390,6 +397,18 @@ async function buildReply(from, texto) {
       nuevaFecha: null,
       nuevaHora: null,
     };
+  }
+
+  if (!wantsManageCancelCommand && !wantsManageRescheduleCommand && containsAny(msg, THANKS_INTENTS)) {
+    resetSession(from);
+    return 'De nada. Cuando quieras, estoy para ayudarte.';
+  }
+
+  if (containsAny(msg, NEW_BOOKING_INTENTS)) {
+    resetSession(from);
+    session = getSession(from);
+    session.stage = 'collecting';
+    return 'Perfecto. Empecemos de nuevo. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)';
   }
 
   if (
@@ -476,6 +495,15 @@ async function buildReply(from, texto) {
     fillManageTargetDetections(session.manage, texto, msg);
 
     if (!session.manage.nombre || !session.manage.fecha) {
+      const proximo = turnosService.getProximoTurnoPorClienteId(from);
+      if (proximo) {
+        session.manage.turnoId = proximo.id;
+        session.manage.turnoOriginalFecha = proximo.fecha;
+        session.manage.turnoOriginalHora = proximo.hora;
+        session.stage = 'manage_reschedule_collect_new';
+        return `Encontre tu proximo turno (${proximo.fecha} ${proximo.hora}). Decime la nueva fecha y hora (ej: 2026-02-25 16:00).`;
+      }
+
       return 'Para reprogramar, decime nombre y fecha del turno actual (ej: Fernando Vallejos, 2026-02-24).';
     }
 
@@ -536,7 +564,6 @@ async function buildReply(from, texto) {
     }
   }
 
-  const wantsStart = containsAny(msg, START_INTENTS);
   const asksAvailability = containsAny(msg, [
     'horario',
     'horarios',
@@ -672,6 +699,13 @@ async function buildReply(from, texto) {
     return 'Esa fecha ya paso. Decime una fecha igual o posterior a hoy (ej: 2026-02-23).';
   }
 
+  const turnosActivosDelNumero = turnosService.getTurnosFuturosPorClienteId(from);
+  if (turnosActivosDelNumero.length && !session.draft.explicitOtherPerson) {
+    const yaAgendado = turnosActivosDelNumero[0];
+    session.stage = 'awaiting_name';
+    return `Ya tenes un turno activo el ${yaAgendado.fecha} a las ${yaAgendado.hora} (${yaAgendado.servicio}). Si queres cambiarlo, escribi "reprogramar turno". Si queres cancelarlo, escribi "cancelar". Si este nuevo turno es para otra persona, responde: "a nombre de Nombre Apellido".`;
+  }
+
   if (!session.draft.hora) {
     session.stage = 'awaiting_time';
     return `${buildAvailabilityMessage(session.draft.fecha)} Decime la hora en formato HH:MM (ej: 15:00).`;
@@ -690,13 +724,6 @@ async function buildReply(from, texto) {
   if (!session.draft.nombre) {
     session.stage = 'awaiting_name';
     return 'Perfecto. A nombre de quien agendo el turno?';
-  }
-
-  const turnosActivosDelNumero = turnosService.getTurnosFuturosPorClienteId(from);
-  if (turnosActivosDelNumero.length && !session.draft.explicitOtherPerson) {
-    const yaAgendado = turnosActivosDelNumero[0];
-    session.stage = 'awaiting_name';
-    return `Ya tenes un turno activo el ${yaAgendado.fecha} a las ${yaAgendado.hora} (${yaAgendado.servicio}). Si queres cambiarlo, escribi "reprogramar turno". Si queres cancelarlo, escribi "cancelar". Si este nuevo turno es para otra persona, responde: "a nombre de Nombre Apellido".`;
   }
 
   if (!session.draft.metodo_pago) {

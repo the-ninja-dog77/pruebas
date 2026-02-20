@@ -451,4 +451,59 @@ describe('WhatsApp webhook conversation flow', () => {
 
     expect(outboundMessages[outboundMessages.length - 1]).toContain('Listo Juan Perez');
   });
+
+  test('handles "reprogramar mi turno" without requiring name/date if only one upcoming booking exists', async () => {
+    const from = '595985544434';
+    const fecha = '2099-12-24';
+    const createSequence = [
+      'turno',
+      'corte',
+      fecha,
+      '09:00',
+      'Sofia Acosta',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of createSequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const start = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('reprogramar mi turno porfa', from));
+    expect(start.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Encontre tu proximo turno');
+
+    const apply = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`${fecha} 10:00`, from));
+    expect(apply.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('reprogramado');
+  });
+
+  test('thanks during an active flow resets gracefully instead of insisting on another hour', async () => {
+    const from = '595985544435';
+    const seq = ['turno', 'corte', '2099-12-23'];
+    for (const msg of seq) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const thanks = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('gracias entonces', from));
+    expect(thanks.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('De nada');
+  });
 });
