@@ -20,6 +20,7 @@ logger.info(
 const sessions = new Map();
 const START_INTENTS = ['turno', 'reserv', 'agend', 'cita'];
 const GREETING_INTENTS = ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'];
+const THANKS_INTENTS = ['gracias', 'muchas gracias', 'te agradezco', 'thanks'];
 const REASSURANCE_INTENTS = [
   'seguro',
   'segura',
@@ -200,6 +201,8 @@ function parseClientName(rawText) {
 
   const cleaned = raw
     .replace(/^(me llamo|soy|mi nombre es|a nombre de)\s+/i, '')
+    .replace(/^(a|para)\s+/i, '')
+    .replace(/\b(ya lo sabes|nms|nomas|bro+|rey)\b/gi, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -237,6 +240,7 @@ function createEmptySession() {
       hora: null,
       nombre: null,
       metodo_pago: null,
+      explicitOtherPerson: false,
     },
     manage: {
       action: null,
@@ -285,6 +289,10 @@ function applyDetections(session, msg) {
 
   const metodoPago = detectPaymentMethod(msg);
   if (metodoPago) session.draft.metodo_pago = metodoPago;
+
+  if (containsAny(msg, ['a nombre de', 'es para', 'para otra persona'])) {
+    session.draft.explicitOtherPerson = true;
+  }
 }
 
 function buildAvailabilityMessage(fecha) {
@@ -426,12 +434,13 @@ async function buildReply(from, texto) {
 
   applyDetections(session, msg);
 
-  if (session.stage === 'awaiting_name' && !session.draft.nombre) {
+  if (session.stage === 'awaiting_name') {
     const name = parseClientName(texto);
-    if (!name) {
+    if (name) {
+      session.draft.nombre = name;
+    } else if (!session.draft.nombre) {
       return 'Necesito un nombre valido para agendar. Ejemplo: Juan Perez.';
     }
-    session.draft.nombre = name;
   }
 
   if (session.stage === 'manage_cancel_collect') {
@@ -632,6 +641,10 @@ async function buildReply(from, texto) {
       return 'Hola! Soy ZZETA Bot. Si queres reservar, escribi "turno".';
     }
 
+    if (containsAny(msg, THANKS_INTENTS)) {
+      return 'De nada. Cuando quieras, estoy para ayudarte.';
+    }
+
     const aiReply = await maybeAiFallback(texto, session);
     if (aiReply) return aiReply;
 
@@ -677,6 +690,13 @@ async function buildReply(from, texto) {
   if (!session.draft.nombre) {
     session.stage = 'awaiting_name';
     return 'Perfecto. A nombre de quien agendo el turno?';
+  }
+
+  const turnosActivosDelNumero = turnosService.getTurnosFuturosPorClienteId(from);
+  if (turnosActivosDelNumero.length && !session.draft.explicitOtherPerson) {
+    const yaAgendado = turnosActivosDelNumero[0];
+    session.stage = 'awaiting_name';
+    return `Ya tenes un turno activo el ${yaAgendado.fecha} a las ${yaAgendado.hora} (${yaAgendado.servicio}). Si queres cambiarlo, escribi "reprogramar turno". Si queres cancelarlo, escribi "cancelar". Si este nuevo turno es para otra persona, responde: "a nombre de Nombre Apellido".`;
   }
 
   if (!session.draft.metodo_pago) {

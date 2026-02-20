@@ -223,6 +223,22 @@ function getProximoTurnoPorClienteId(clienteId) {
   return futuros[0] || null;
 }
 
+function getTurnosFuturosPorClienteId(clienteId) {
+  const turnos = clientesRepo.getTurnos(clienteId) || [];
+  if (!turnos.length) return [];
+
+  const now = businessTime.getNowParts();
+  return turnos
+    .filter(t => {
+      if (!t.fecha || !t.hora) return false;
+      return t.fecha > now.fecha || (t.fecha === now.fecha && t.hora >= now.hora);
+    })
+    .sort((a, b) => {
+      if (a.fecha !== b.fecha) return a.fecha.localeCompare(b.fecha);
+      return String(a.hora).localeCompare(String(b.hora));
+    });
+}
+
 function crearTurno(data) {
   if (data.origen === 'bot') {
     const minLeadMinutes = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
@@ -395,6 +411,7 @@ module.exports = {
   cancelarTurnoBot,
   reprogramarTurnoBot,
   getProximoTurnoPorClienteId,
+  getTurnosFuturosPorClienteId,
   crearTurno,
   eliminarTurno,
   getRecordatorioActivo,

@@ -389,4 +389,66 @@ describe('WhatsApp webhook conversation flow', () => {
     );
     expect(stillExists).toBe(false);
   });
+
+  test('responds naturally to thanks in idle state', async () => {
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('gracias bro', '595985544432'));
+
+    expect(res.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('De nada');
+  });
+
+  test('limits one active booking per number unless explicitly booking for another person', async () => {
+    const from = '595985544433';
+    const fecha = '2099-12-26';
+
+    const firstBooking = [
+      'turno',
+      'corte',
+      fecha,
+      '09:00',
+      'Fernando Vallejos',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of firstBooking) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const secondUntilName = ['turno', 'corte', fecha, '10:00', 'Fernando Vallejos'];
+    for (const msg of secondUntilName) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Ya tenes un turno activo');
+
+    const explicitOtherName = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('a nombre de Juan Perez', from));
+    expect(explicitOtherName.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('metodo de pago');
+
+    const finishSecondBooking = ['tarjeta', 'confirmar'];
+    for (const msg of finishSecondBooking) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Listo Juan Perez');
+  });
 });
