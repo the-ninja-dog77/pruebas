@@ -1,6 +1,7 @@
 require('dotenv').config();
 
 const express = require('express');
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -19,6 +20,7 @@ const healthRoutes = require('./routes/health.routes');
 const metricsRoutes = require('./routes/metrics.routes');
 const statsRoutes = require('./routes/stats.routes');
 const metaWebhookRoutes = require('./routes/metaWebhook.routes');
+const barberPanelRoutes = require('./routes/barberPanel.routes');
 const turnosService = require('./services/turnos.service');
 
 runMigrations();
@@ -69,6 +71,8 @@ app.use('/health', healthRoutes);
 app.use('/metrics', metricsRoutes);
 app.use('/stats', statsRoutes);
 app.use('/meta-webhook', metaWebhookRoutes);
+app.use('/api/barber-panel', barberPanelRoutes);
+app.use('/app', express.static(path.join(__dirname, 'public', 'app')));
 
 // error global
 app.use(errorMiddleware);

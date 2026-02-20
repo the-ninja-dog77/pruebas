@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>ZZETA Barber Panel</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Sora:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="loginView" class="phone login-screen">
+      <header class="brand">
+        <span class="chip">ZZETA</span>
+        <h1>Barber App</h1>
+        <p>Panel rapido para iPhone - negro/amarillo neon</p>
+      </header>
+
+      <form id="loginForm" class="card form">
+        <label>
+          Usuario
+          <input id="usernameInput" type="text" autocomplete="username" value="gonzabarber" />
+        </label>
+        <label>
+          Contrasena
+          <input
+            id="passwordInput"
+            type="password"
+            autocomplete="current-password"
+            value="barber312"
+          />
+        </label>
+        <button type="submit" class="btn-primary">Ingresar</button>
+        <small id="loginError" class="error"></small>
+      </form>
+    </main>
+
+    <main id="appView" class="phone app-screen hidden">
+      <header class="topbar">
+        <div>
+          <h2>ZZETA Barber</h2>
+          <p id="todayLabel"></p>
+        </div>
+        <button id="logoutBtn" class="icon-btn" title="Cerrar sesion">x</button>
+      </header>
+
+      <section id="slides" class="slides" aria-label="Paneles deslizables">
+        <article class="slide">
+          <div class="section-head">
+            <h3>Resumen</h3>
+            <button id="refreshSummaryBtn" class="ghost-btn">Actualizar</button>
+          </div>
+          <div class="summary-grid">
+            <div class="metric-card">
+              <span>Turnos hoy</span>
+              <strong id="turnosHoyValue">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Atendidos hoy</span>
+              <strong id="atendidosHoyValue">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Pendientes hoy</span>
+              <strong id="pendientesHoyValue">0</strong>
+            </div>
+            <div class="metric-card">
+              <span>Ingresos hoy</span>
+              <strong id="ingresosHoyValue">0</strong>
+            </div>
+          </div>
+          <div class="card next-card">
+            <h4>Proximo turno</h4>
+            <p id="nextTurnoLabel">Sin turnos proximos</p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="section-head">
+            <h3>Calendario</h3>
+            <div class="month-controls">
+              <button id="prevMonthBtn" class="icon-btn" aria-label="Mes anterior"><</button>
+              <strong id="monthLabel"></strong>
+              <button id="nextMonthBtn" class="icon-btn" aria-label="Mes siguiente">></button>
+            </div>
+          </div>
+
+          <div class="weekdays">
+            <span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span>
+          </div>
+          <div id="calendarGrid" class="calendar-grid"></div>
+
+          <div class="card day-details">
+            <h4 id="selectedDateLabel">Selecciona un dia</h4>
+            <p id="selectedBusinessHours"></p>
+            <div>
+              <strong>Turnos reservados</strong>
+              <ul id="dayAgendaList" class="list"></ul>
+            </div>
+            <div>
+              <strong>Horarios disponibles</strong>
+              <div id="daySlots" class="slots"></div>
+            </div>
+          </div>
+
+          <div class="card schedule-card">
+            <h4>Horarios semanales</h4>
+            <ul id="weeklyHoursList" class="schedule-list"></ul>
+          </div>
+        </article>
+
+        <article class="slide">
+          <h3>Control de Bot</h3>
+          <div class="card bot-card">
+            <p>
+              Apaga o prende el bot cuando no estas trabajando para evitar respuestas fuera de
+              horario.
+            </p>
+            <label class="toggle-row">
+              <span>Bot WhatsApp</span>
+              <input id="botToggle" type="checkbox" />
+            </label>
+            <button id="saveBotBtn" class="btn-primary">Guardar estado</button>
+            <p id="botStateLabel" class="state-label"></p>
+          </div>
+        </article>
+      </section>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-slide="0">Resumen</button>
+        <button class="nav-btn" data-slide="1">Calendario</button>
+        <button class="nav-btn" data-slide="2">Bot</button>
+      </nav>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>

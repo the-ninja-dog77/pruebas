@@ -1,5 +1,6 @@
 const turnosRepo = require('../repositories/turnos.repository');
 const clientesRepo = require('../repositories/clientes.repository');
+const businessHours = require('./businessHours.service');
 
 function obtenerTodos(user) {
   if (user.role === 'admin') {
@@ -29,8 +30,7 @@ function obtenerPorFecha(fecha, barberId, user) {
 }
 
 function horaToMinutos(hora) {
-  const [h, m] = hora.split(':').map(Number);
-  return h * 60 + m;
+  return businessHours.horaToMinutos(hora);
 }
 
 const SERVICE_PRICES = {
@@ -57,45 +57,36 @@ function inferPrecioServicio(servicio) {
   return 30000;
 }
 
-function validarHorarioBot(hora) {
-  const minutos = horaToMinutos(hora);
-  const apertura = horaToMinutos('09:00');
-  const cierre = horaToMinutos('20:00');
-
-  if (minutos < apertura || minutos >= cierre) {
-    return 'Fuera del horario laboral (09:00 a 20:00)';
+function validarHorarioBot(hora, fecha) {
+  const slots = businessHours.getSlotsForDate(fecha);
+  if (!slots.length) {
+    return 'Dia cerrado';
   }
 
-  const almuerzoInicio = horaToMinutos('12:00');
-  const almuerzoFin = horaToMinutos('13:00');
-
-  if (minutos >= almuerzoInicio && minutos < almuerzoFin) {
-    return 'Horario de almuerzo (12:00 a 13:00)';
+  if (!slots.includes(hora)) {
+    const rule = businessHours.getRuleForDate(fecha);
+    return `Fuera del horario laboral (${rule.label})`;
   }
 
   return null;
 }
 
-function obtenerDisponibilidad(fecha) {
-  const apertura = horaToMinutos('09:00');
-  const cierre = horaToMinutos('20:00');
-  const almuerzoInicio = horaToMinutos('12:00');
-  const almuerzoFin = horaToMinutos('13:00');
-
-  const turnosDelDia = turnosRepo.getHorasByFecha(fecha);
+function obtenerDisponibilidad(fecha, barberId = null) {
+  const turnosDelDia = barberId
+    ? turnosRepo.getHorasByFechaAndBarber(fecha, barberId)
+    : turnosRepo.getHorasByFecha(fecha);
+  const slots = businessHours.getSlotsForDate(fecha);
   const disponibles = [];
 
-  for (let min = apertura; min < cierre; min += 60) {
-    if (min >= almuerzoInicio && min < almuerzoFin) continue;
-
+  for (const hora of slots) {
+    const slotMin = horaToMinutos(hora);
     const conflicto = turnosDelDia.find(t => {
       const existenteMin = horaToMinutos(t.hora);
-      return Math.abs(existenteMin - min) < 60;
+      return Math.abs(existenteMin - slotMin) < businessHours.SLOT_MINUTES;
     });
 
     if (!conflicto) {
-      const h = String(Math.floor(min / 60)).padStart(2, '0');
-      disponibles.push(`${h}:00`);
+      disponibles.push(hora);
     }
   }
 
@@ -104,7 +95,7 @@ function obtenerDisponibilidad(fecha) {
 
 function crearTurno(data) {
   if (data.origen === 'bot') {
-    const errorHorario = validarHorarioBot(data.hora);
+    const errorHorario = validarHorarioBot(data.hora, data.fecha);
     if (errorHorario) {
       const error = new Error(errorHorario);
       error.status = 400;
@@ -112,9 +103,13 @@ function crearTurno(data) {
     }
 
     const nuevaHoraMin = horaToMinutos(data.hora);
-    const turnosDelDia = turnosRepo.getHorasByFecha(data.fecha);
+    const turnosDelDia = data.barber_id
+      ? turnosRepo.getHorasByFechaAndBarber(data.fecha, data.barber_id)
+      : turnosRepo.getHorasByFecha(data.fecha);
     const conflicto = turnosDelDia.find(t => {
-      return Math.abs(horaToMinutos(t.hora) - nuevaHoraMin) < 60;
+      return (
+        Math.abs(horaToMinutos(t.hora) - nuevaHoraMin) < businessHours.SLOT_MINUTES
+      );
     });
 
     if (conflicto) {

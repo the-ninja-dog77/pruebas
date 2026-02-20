@@ -15,6 +15,20 @@ module.exports.up = function (db) {
     `).run('zzeta', passwordHash, 'admin', 1);
   }
 
+  // Usuario barbero para app movil
+  const existingBarberUser = db
+    .prepare('SELECT * FROM users WHERE username = ?')
+    .get('gonzabarber');
+
+  if (!existingBarberUser) {
+    const passwordHash = bcrypt.hashSync('barber312', 10);
+
+    db.prepare(`
+      INSERT INTO users (username, passwordHash, role, barber_id)
+      VALUES (?, ?, ?, ?)
+    `).run('gonzabarber', passwordHash, 'barber', 1);
+  }
+
   // Cliente base
   const existingCliente = db
     .prepare('SELECT * FROM clientes WHERE id = ?')

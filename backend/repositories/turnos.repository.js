@@ -57,6 +57,12 @@ function getHorasByFecha(fecha) {
     .all(fecha);
 }
 
+function getHorasByFechaAndBarber(fecha, barberId) {
+  return db
+    .prepare('SELECT hora FROM turnos WHERE fecha = ? AND barber_id = ?')
+    .all(fecha, barberId);
+}
+
 function getPendientesRecordatorio() {
   return db
     .prepare('SELECT * FROM turnos WHERE recordatorioEnviado = 0')
@@ -93,6 +99,7 @@ module.exports = {
   create,
   remove,
   getHorasByFecha,
+  getHorasByFechaAndBarber,
   getPendientesRecordatorio,
   marcarRecordatorioEnviado,
   getRecordatorioActivoPorCliente,

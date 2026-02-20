@@ -1,0 +1,81 @@
+const barberPanelRepo = require('../repositories/barberPanel.repository');
+const settingsRepo = require('../repositories/settings.repository');
+const turnosService = require('./turnos.service');
+const businessHours = require('./businessHours.service');
+
+function pad2(v) {
+  return String(v).padStart(2, '0');
+}
+
+function nowLocalParts() {
+  const now = new Date();
+  const fecha = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
+  const hora = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
+  return { fecha, hora };
+}
+
+function getSummary(barberId) {
+  const { fecha, hora } = nowLocalParts();
+  const summary = barberPanelRepo.getDaySummary({ barberId, fecha, hora }) || {};
+  const nextTurno = barberPanelRepo.getNextTurno({ barberId, fecha, hora }) || null;
+
+  return {
+    fecha,
+    totalTurnosHoy: Number(summary.totalTurnos || 0),
+    atendidosHoy: Number(summary.atendidosHoy || 0),
+    pendientesHoy: Number(summary.pendientesHoy || 0),
+    ingresosHoy: Number(summary.ingresosHoy || 0),
+    proximoTurno: nextTurno,
+  };
+}
+
+function getCalendar(barberId, month) {
+  const selectedMonth =
+    /^\d{4}-\d{2}$/.test(String(month || '')) ?
+      String(month) :
+      nowLocalParts().fecha.slice(0, 7);
+
+  return {
+    month: selectedMonth,
+    counts: barberPanelRepo.getMonthCounts({ barberId, month: selectedMonth }),
+    weeklyHours: businessHours.getWeeklyHoursDisplay(),
+  };
+}
+
+function getDay(barberId, fecha) {
+  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''));
+  if (!isValidDate) {
+    const err = new Error('Fecha invalida. Usa formato YYYY-MM-DD.');
+    err.status = 400;
+    throw err;
+  }
+
+  const agenda = barberPanelRepo.getTurnosByDay({ barberId, fecha });
+  const disponibles = turnosService.obtenerDisponibilidad(fecha, barberId).disponibles;
+  const rule = businessHours.getRuleForDate(fecha);
+
+  return {
+    fecha,
+    dayName: rule.dayName,
+    businessHours: rule.label,
+    agenda,
+    disponibles,
+  };
+}
+
+function getBotStatus() {
+  return { enabled: settingsRepo.getBoolean('bot_enabled', true) };
+}
+
+function updateBotStatus(enabled) {
+  settingsRepo.setBoolean('bot_enabled', Boolean(enabled));
+  return getBotStatus();
+}
+
+module.exports = {
+  getSummary,
+  getCalendar,
+  getDay,
+  getBotStatus,
+  updateBotStatus,
+};

@@ -3,6 +3,7 @@ const router = express.Router();
 const logger = require('../logger');
 const turnosService = require('../services/turnos.service');
 const clientesRepo = require('../repositories/clientes.repository');
+const settingsRepo = require('../repositories/settings.repository');
 const aiAssistant = require('../services/aiAssistant.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
@@ -196,7 +197,7 @@ function applyDetections(session, msg) {
 }
 
 function buildAvailabilityMessage(fecha) {
-  const disponibilidad = turnosService.obtenerDisponibilidad(fecha).disponibles;
+  const disponibilidad = turnosService.obtenerDisponibilidad(fecha, 1).disponibles;
   if (!disponibilidad.length) {
     return `Para ${fecha} no quedan horarios disponibles.`;
   }
@@ -295,7 +296,7 @@ async function buildReply(from, texto) {
     return `${buildAvailabilityMessage(session.draft.fecha)} Decime la hora en formato HH:MM (ej: 15:00).`;
   }
 
-  const disponibilidad = turnosService.obtenerDisponibilidad(session.draft.fecha).disponibles;
+  const disponibilidad = turnosService.obtenerDisponibilidad(session.draft.fecha, 1).disponibles;
   if (!disponibilidad.includes(session.draft.hora)) {
     session.stage = 'awaiting_time';
     return `Ese horario no esta disponible. ${buildAvailabilityMessage(session.draft.fecha)} Decime otra hora.`;
@@ -360,6 +361,16 @@ router.get('/', (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const debugMode = req.headers['x-webhook-debug'] === '1';
+    const botEnabled = settingsRepo.getBoolean('bot_enabled', true);
+
+    if (!botEnabled) {
+      logger.info('WHATSAPP bot disabled, inbound ignored');
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'bot_disabled' });
+      }
+      return res.sendStatus(200);
+    }
+
     const value = req.body?.entry?.[0]?.changes?.[0]?.value;
     const incoming = value?.messages?.[0];
 
