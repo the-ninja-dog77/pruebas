@@ -108,6 +108,36 @@
               <strong>Horarios disponibles</strong>
               <div id="daySlots" class="slots"></div>
             </div>
+            <div id="createTurnoCard" class="card create-turno hidden">
+              <h4>Cargar turno</h4>
+              <p id="createTurnoTimeLabel">Selecciona un horario disponible</p>
+              <form id="createTurnoForm" class="create-turno-form">
+                <label>
+                  Servicio
+                  <input
+                    id="createServicioInput"
+                    type="text"
+                    placeholder="Ej: Corte"
+                    maxlength="100"
+                  />
+                </label>
+                <label>
+                  Precio
+                  <input
+                    id="createPrecioInput"
+                    type="number"
+                    min="0"
+                    step="1000"
+                    placeholder="Ej: 30000"
+                  />
+                </label>
+                <div class="create-turno-actions">
+                  <button type="submit" class="btn-primary">Guardar turno</button>
+                  <button type="button" id="cancelCreateTurnoBtn" class="ghost-btn">Cancelar</button>
+                </div>
+                <small id="createTurnoFeedback" class="create-feedback"></small>
+              </form>
+            </div>
           </div>
 
           <div class="card schedule-card">

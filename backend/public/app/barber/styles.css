@@ -304,6 +304,55 @@ input:focus {
   background: rgba(255, 225, 0, 0.06);
 }
 
+.slot-btn {
+  cursor: pointer;
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.slot-btn:hover,
+.slot-btn:focus-visible {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(255, 225, 0, 0.2);
+}
+
+.create-turno {
+  margin-top: 4px;
+  padding: 12px;
+}
+
+.create-turno h4 {
+  margin: 0;
+}
+
+.create-turno p {
+  margin: 2px 0 10px;
+  color: var(--muted);
+}
+
+.create-turno-form {
+  display: grid;
+  gap: 10px;
+}
+
+.create-turno-actions {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+}
+
+.create-feedback {
+  min-height: 16px;
+  color: var(--muted);
+}
+
+.create-feedback.ok {
+  color: var(--ok);
+}
+
+.create-feedback.error {
+  color: var(--danger);
+}
+
 .schedule-card {
   padding: 14px;
 }

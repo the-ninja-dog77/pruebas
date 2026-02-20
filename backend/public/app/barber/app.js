@@ -3,6 +3,7 @@ const API = {
   summary: '/api/barber-panel/summary',
   calendar: '/api/barber-panel/calendar',
   day: fecha => `/api/barber-panel/day/${fecha}`,
+  createTurno: fecha => `/api/barber-panel/day/${fecha}/turnos`,
   botStatus: '/api/barber-panel/bot-status',
 };
 
@@ -34,6 +35,13 @@ const selectedBusinessHours = document.getElementById('selectedBusinessHours');
 const dayAgendaList = document.getElementById('dayAgendaList');
 const daySlots = document.getElementById('daySlots');
 const weeklyHoursList = document.getElementById('weeklyHoursList');
+const createTurnoCard = document.getElementById('createTurnoCard');
+const createTurnoTimeLabel = document.getElementById('createTurnoTimeLabel');
+const createTurnoForm = document.getElementById('createTurnoForm');
+const createServicioInput = document.getElementById('createServicioInput');
+const createPrecioInput = document.getElementById('createPrecioInput');
+const createTurnoFeedback = document.getElementById('createTurnoFeedback');
+const cancelCreateTurnoBtn = document.getElementById('cancelCreateTurnoBtn');
 
 const botToggle = document.getElementById('botToggle');
 const saveBotBtn = document.getElementById('saveBotBtn');
@@ -43,6 +51,7 @@ let token = '';
 let currentMonthDate = startOfMonth(new Date());
 let selectedDate = '';
 let monthCountsMap = {};
+let selectedCreateHora = '';
 
 function pad2(v) {
   return String(v).padStart(2, '0');
@@ -294,17 +303,81 @@ function renderDayDetails(data) {
     daySlots.appendChild(span);
   } else {
     data.disponibles.forEach(h => {
-      const span = document.createElement('span');
-      span.className = 'slot';
-      span.textContent = h;
-      daySlots.appendChild(span);
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'slot slot-btn';
+      btn.textContent = h;
+      btn.addEventListener('click', () => {
+        openCreateTurno(h);
+      });
+      daySlots.appendChild(btn);
     });
   }
+
+  hideCreateTurno();
 }
 
 async function loadDayDetails(fecha) {
   const data = await apiFetch(API.day(fecha));
   renderDayDetails(data);
+}
+
+function setCreateFeedback(text, kind = '') {
+  createTurnoFeedback.textContent = text || '';
+  createTurnoFeedback.className = `create-feedback${kind ? ` ${kind}` : ''}`;
+}
+
+function hideCreateTurno() {
+  selectedCreateHora = '';
+  createTurnoCard.classList.add('hidden');
+  createTurnoForm.reset();
+  setCreateFeedback('');
+}
+
+function openCreateTurno(hora) {
+  selectedCreateHora = hora;
+  createTurnoCard.classList.remove('hidden');
+  createTurnoTimeLabel.textContent = `Nuevo turno para ${selectedDate} a las ${hora}`;
+  setCreateFeedback('');
+  createServicioInput.focus();
+}
+
+async function submitCreateTurno(event) {
+  event.preventDefault();
+  setCreateFeedback('');
+
+  if (!selectedDate || !selectedCreateHora) {
+    setCreateFeedback('Selecciona una fecha y un horario.', 'error');
+    return;
+  }
+
+  const servicio = createServicioInput.value.trim();
+  const precio = Number(createPrecioInput.value);
+
+  if (!servicio) {
+    setCreateFeedback('Completa el servicio.', 'error');
+    return;
+  }
+
+  if (!Number.isFinite(precio) || precio < 0) {
+    setCreateFeedback('Completa un precio valido.', 'error');
+    return;
+  }
+
+  try {
+    await apiFetch(API.createTurno(selectedDate), {
+      method: 'POST',
+      body: JSON.stringify({
+        hora: selectedCreateHora,
+        servicio,
+        precio: Math.round(precio),
+      }),
+    });
+    setCreateFeedback('Turno creado.', 'ok');
+    await Promise.all([loadSummary(), loadCalendar()]);
+  } catch (err) {
+    setCreateFeedback(err.message || 'No se pudo crear el turno.', 'error');
+  }
 }
 
 function setBotState(enabled) {
@@ -372,6 +445,8 @@ saveBotBtn.addEventListener('click', saveBotStatus);
 botToggle.addEventListener('change', () => {
   setBotState(botToggle.checked);
 });
+createTurnoForm.addEventListener('submit', submitCreateTurno);
+cancelCreateTurnoBtn.addEventListener('click', hideCreateTurno);
 
 attachSlideNav();
 renderTodayLabel();

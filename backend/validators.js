@@ -19,6 +19,14 @@ const crearTurnoSchema = Joi.object({
   barber_id: Joi.number().integer().required(),
 });
 
+const crearTurnoPanelSchema = Joi.object({
+  hora: Joi.string()
+    .pattern(/^\d{2}:\d{2}$/)
+    .required(),
+  servicio: Joi.string().min(2).max(100).required(),
+  precio: Joi.number().integer().min(0).required(),
+});
+
 /* ======================================================
    VALIDACION LOGIN
    ====================================================== */
@@ -39,6 +47,7 @@ const responderRecordatorioSchema = Joi.object({
 
 module.exports = {
   crearTurnoSchema,
+  crearTurnoPanelSchema,
   loginSchema,
   responderRecordatorioSchema,
 };
