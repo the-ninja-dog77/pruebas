@@ -143,4 +143,25 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(res.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('no esta disponible');
   });
+
+  test('reassures availability on follow-up "seguro?" before selecting service', async () => {
+    const from = '595985544425';
+    const fecha = '2099-12-31';
+
+    const first = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`hola tienes un turno el ${fecha} a las 09:00?`, from));
+
+    expect(first.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('esta disponible');
+
+    const second = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('seguro?', from));
+
+    expect(second.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('sigue disponible');
+  });
 });

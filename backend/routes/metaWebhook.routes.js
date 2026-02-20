@@ -18,6 +18,15 @@ logger.info(
 
 const sessions = new Map();
 const START_INTENTS = ['turno', 'reserv', 'agend', 'cita'];
+const GREETING_INTENTS = ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'];
+const REASSURANCE_INTENTS = [
+  'seguro',
+  'segura',
+  'de verdad',
+  'en serio',
+  'confirmame',
+  'confirmar disponibilidad',
+];
 
 function normalizeText(texto) {
   return String(texto || '')
@@ -171,6 +180,7 @@ function createEmptySession() {
       fecha: null,
       hora: null,
     },
+    lastAvailability: null,
   };
 }
 
@@ -184,6 +194,11 @@ function getSession(from) {
 
 function resetSession(from) {
   sessions.set(from, createEmptySession());
+}
+
+function getCurrentSlotAvailability(fecha, hora) {
+  const disponibles = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID).disponibles;
+  return disponibles.includes(hora);
 }
 
 function applyDetections(session, msg) {
@@ -265,11 +280,14 @@ async function buildReply(from, texto) {
     }
 
     if (session.draft.hora) {
-      const disponibilidad = turnosService.obtenerDisponibilidad(
-        session.draft.fecha,
-        BOT_BARBER_ID
-      ).disponibles;
-      if (disponibilidad.includes(session.draft.hora)) {
+      const isAvailable = getCurrentSlotAvailability(session.draft.fecha, session.draft.hora);
+      session.lastAvailability = {
+        fecha: session.draft.fecha,
+        hora: session.draft.hora,
+        available: isAvailable,
+      };
+
+      if (isAvailable) {
         return `Si, ${session.draft.fecha} a las ${session.draft.hora} esta disponible. Si queres reservar, decime el servicio.`;
       }
       return `No, ${session.draft.fecha} a las ${session.draft.hora} no esta disponible. ${buildAvailabilityMessage(
@@ -281,6 +299,51 @@ async function buildReply(from, texto) {
   }
 
   if (
+    session.draft.fecha &&
+    session.draft.hora &&
+    !session.draft.servicio &&
+    containsAny(msg, REASSURANCE_INTENTS)
+  ) {
+    const isAvailable = getCurrentSlotAvailability(session.draft.fecha, session.draft.hora);
+    session.lastAvailability = {
+      fecha: session.draft.fecha,
+      hora: session.draft.hora,
+      available: isAvailable,
+    };
+
+    if (isAvailable) {
+      return `Si, ${session.draft.fecha} a las ${session.draft.hora} sigue disponible. Si queres reservar, decime el servicio.`;
+    }
+
+    return `No, ${session.draft.fecha} a las ${session.draft.hora} ya no esta disponible. ${buildAvailabilityMessage(
+      session.draft.fecha
+    )}`;
+  }
+
+  if (
+    session.draft.fecha &&
+    session.draft.hora &&
+    !session.draft.servicio &&
+    !wantsStart &&
+    containsAny(msg, GREETING_INTENTS)
+  ) {
+    const isAvailable = getCurrentSlotAvailability(session.draft.fecha, session.draft.hora);
+    session.lastAvailability = {
+      fecha: session.draft.fecha,
+      hora: session.draft.hora,
+      available: isAvailable,
+    };
+
+    if (isAvailable) {
+      return `Hola! ${session.draft.fecha} a las ${session.draft.hora} sigue disponible. Si queres reservar, decime el servicio.`;
+    }
+
+    return `Hola! ${session.draft.fecha} a las ${session.draft.hora} ya no esta disponible. ${buildAvailabilityMessage(
+      session.draft.fecha
+    )}`;
+  }
+
+  if (
     session.stage === 'idle' &&
     !wantsStart &&
     !session.draft.servicio &&
@@ -288,7 +351,7 @@ async function buildReply(from, texto) {
     !session.draft.hora
   ) {
     if (
-      containsAny(msg, ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'])
+      containsAny(msg, GREETING_INTENTS)
     ) {
       return 'Hola! Soy ZZETA Bot. Si queres reservar, escribi "turno".';
     }
