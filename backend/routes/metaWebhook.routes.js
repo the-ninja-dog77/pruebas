@@ -9,9 +9,10 @@ const aiAssistant = require('../services/aiAssistant.service');
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
 const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
+const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 60);
 
 logger.info(
-  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} phoneNumberIdSet=${Boolean(
+  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
     process.env.WHATSAPP_PHONE_NUMBER_ID
   )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} aiEnabled=${aiAssistant.isEnabled()}`
 );
@@ -199,6 +200,7 @@ function resetSession(from) {
 function getCurrentSlotAvailability(fecha, hora) {
   const disponibles = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID, {
     includePastForToday: false,
+    minLeadMinutes: BOT_MIN_LEAD_MINUTES,
   }).disponibles;
   return disponibles.includes(hora);
 }
@@ -221,6 +223,7 @@ function buildAvailabilityMessage(fecha) {
 
   const disponibilidad = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID, {
     includePastForToday: false,
+    minLeadMinutes: BOT_MIN_LEAD_MINUTES,
   }).disponibles;
   if (!disponibilidad.length) {
     return `Para ${fecha} no quedan horarios disponibles.`;
@@ -399,7 +402,7 @@ async function buildReply(from, texto) {
   const disponibilidad = turnosService.obtenerDisponibilidad(
     session.draft.fecha,
     BOT_BARBER_ID,
-    { includePastForToday: false }
+    { includePastForToday: false, minLeadMinutes: BOT_MIN_LEAD_MINUTES }
   ).disponibles;
   if (!disponibilidad.includes(session.draft.hora)) {
     session.stage = 'awaiting_time';

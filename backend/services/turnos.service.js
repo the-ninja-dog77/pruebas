@@ -74,6 +74,7 @@ function validarHorarioBot(hora, fecha) {
 
 function obtenerDisponibilidad(fecha, barberId = null, options = {}) {
   const includePastForToday = options.includePastForToday !== false;
+  const minLeadMinutes = Number(options.minLeadMinutes || 0);
   const turnosDelDia = barberId
     ? turnosRepo.getHorasByFechaAndBarber(fecha, barberId)
     : turnosRepo.getHorasByFecha(fecha);
@@ -94,15 +95,37 @@ function obtenerDisponibilidad(fecha, barberId = null, options = {}) {
 
   const finalDisponibles = includePastForToday
     ? disponibles
-    : businessTime.keepCurrentAndFutureSlots(fecha, disponibles, horaToMinutos);
+    : businessTime.keepCurrentAndFutureSlots(
+      fecha,
+      disponibles,
+      horaToMinutos,
+      minLeadMinutes
+    );
 
   return { fecha, disponibles: finalDisponibles };
 }
 
 function crearTurno(data) {
   if (data.origen === 'bot') {
+    const minLeadMinutes = Number(process.env.BOT_MIN_LEAD_MINUTES || 60);
+
     if (businessTime.isPastDateTime(data.fecha, data.hora, horaToMinutos)) {
       const error = new Error('No puedo agendar turnos en fecha u horario pasado');
+      error.status = 400;
+      throw error;
+    }
+
+    if (
+      businessTime.isTooSoonDateTime(
+        data.fecha,
+        data.hora,
+        horaToMinutos,
+        minLeadMinutes
+      )
+    ) {
+      const error = new Error(
+        `Ese horario requiere al menos ${minLeadMinutes} minutos de anticipacion`
+      );
       error.status = 400;
       throw error;
     }

@@ -53,7 +53,21 @@ function isPastDateTime(fecha, hora, horaToMinutos) {
   return horaToMinutos(hora) < horaToMinutos(now.hora);
 }
 
-function keepCurrentAndFutureSlots(fecha, slots, horaToMinutos) {
+function isTooSoonDateTime(fecha, hora, horaToMinutos, minLeadMinutes = 0) {
+  const lead = Number(minLeadMinutes || 0);
+  if (!lead) return false;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))) return false;
+  if (!/^\d{2}:\d{2}$/.test(String(hora || ''))) return false;
+
+  const now = getNowParts();
+  if (fecha !== now.fecha) return false;
+
+  const nowMin = horaToMinutos(now.hora);
+  const targetMin = horaToMinutos(hora);
+  return targetMin < nowMin + lead;
+}
+
+function keepCurrentAndFutureSlots(fecha, slots, horaToMinutos, minLeadMinutes = 0) {
   const list = Array.isArray(slots) ? slots : [];
   const now = getNowParts();
 
@@ -62,7 +76,9 @@ function keepCurrentAndFutureSlots(fecha, slots, horaToMinutos) {
   }
 
   const nowMin = horaToMinutos(now.hora);
-  return list.filter(hora => horaToMinutos(hora) >= nowMin);
+  const lead = Number(minLeadMinutes || 0);
+  const minAllowed = nowMin + lead;
+  return list.filter(hora => horaToMinutos(hora) >= minAllowed);
 }
 
 module.exports = {
@@ -70,5 +86,6 @@ module.exports = {
   getNowParts,
   isPastDate,
   isPastDateTime,
+  isTooSoonDateTime,
   keepCurrentAndFutureSlots,
 };

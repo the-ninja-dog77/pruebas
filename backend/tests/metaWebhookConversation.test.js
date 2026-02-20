@@ -6,6 +6,7 @@ process.env.DB_PATH = `zzeta.meta.${Date.now()}.db`;
 process.env.WHATSAPP_PHONE_NUMBER_ID = '1234567890';
 process.env.WHATSAPP_TOKEN = 'test_token';
 process.env.WHATSAPP_GRAPH_VERSION = 'v24.0';
+process.env.BOT_MIN_LEAD_MINUTES = '60';
 
 const app = require('../index');
 
