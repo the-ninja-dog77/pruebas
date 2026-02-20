@@ -25,11 +25,15 @@ describe('WhatsApp webhook conversation flow', () => {
     });
   });
 
+  beforeEach(() => {
+    outboundMessages.length = 0;
+  });
+
   afterAll(() => {
     jest.restoreAllMocks();
   });
 
-  function messagePayload(text) {
+  function messagePayload(text, from = '595985544421') {
     return {
       entry: [
         {
@@ -38,7 +42,7 @@ describe('WhatsApp webhook conversation flow', () => {
               value: {
                 messages: [
                   {
-                    from: '595985544421',
+                    from,
                     text: { body: text },
                   },
                 ],
@@ -64,7 +68,7 @@ describe('WhatsApp webhook conversation flow', () => {
       const res = await request(app)
         .post('/meta-webhook')
         .set('x-webhook-debug', '1')
-        .send(messagePayload(msg));
+        .send(messagePayload(msg, '595985544421'));
 
       expect(res.statusCode).toBe(200);
     }
@@ -75,5 +79,36 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(outboundMessages[3]).toContain('Horarios disponibles para 2099-12-31');
     expect(outboundMessages[4]).toContain('Si queres confirmar, responde "confirmar"');
     expect(outboundMessages[5]).toContain('turno confirmado');
+  });
+
+  test('does not confirm when user says no', async () => {
+    const sequence = [
+      'turno',
+      'corte',
+      '30/12/2099',
+      '15:00',
+      'y si no quiero?',
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, '595985544422'));
+
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('No se confirmo todavia');
+  });
+
+  test('asks for date when availability is requested from idle', async () => {
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('que horarios manejas?', '595985544423'));
+
+    expect(res.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime la fecha');
   });
 });

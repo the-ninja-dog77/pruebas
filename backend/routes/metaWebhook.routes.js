@@ -29,6 +29,29 @@ function containsAny(texto, needles) {
   return needles.some(needle => texto.includes(needle));
 }
 
+function normalizeIntentText(texto) {
+  return String(texto || '')
+    .replace(/[?!.,;:"'()¿¡]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function isConfirmIntent(intentText) {
+  const positives = ['confirmar', 'confirmo', 'ok', 'dale', 'de una', 'listo', 'perfecto'];
+  if (positives.some(p => intentText.includes(p))) return true;
+
+  return intentText === 'si' || intentText === 's';
+}
+
+function isNegativeConfirmIntent(intentText) {
+  return (
+    intentText === 'no' ||
+    intentText.includes('no quiero') ||
+    intentText.includes('no deseo') ||
+    intentText.includes('todavia no')
+  );
+}
+
 function pad2(value) {
   return String(value).padStart(2, '0');
 }
@@ -197,6 +220,7 @@ async function maybeAiFallback(texto, session) {
 async function buildReply(from, texto) {
   const msg = normalizeText(texto);
   const session = getSession(from);
+  const intentText = normalizeIntentText(msg);
 
   if (!msg) {
     return 'Escribime que servicio, fecha y hora queres reservar.';
@@ -221,16 +245,17 @@ async function buildReply(from, texto) {
     'disponibilidad',
     'turnos libres',
   ]);
-  const confirms = containsAny(msg, [
-    'confirmar',
-    'confirmo',
-    'si',
-    'ok',
-    'dale',
-    'de una',
-    'listo',
-    'perfecto',
-  ]);
+  const confirms = isConfirmIntent(intentText);
+  const rejectsConfirmation = isNegativeConfirmIntent(intentText);
+
+  if (asksAvailability) {
+    session.stage = 'collecting';
+    if (!session.draft.fecha) {
+      return 'Decime la fecha para revisar horarios (ej: 2026-02-23 o 23/02/2026).';
+    }
+
+    return buildAvailabilityMessage(session.draft.fecha);
+  }
 
   if (
     session.stage === 'idle' &&
@@ -253,14 +278,6 @@ async function buildReply(from, texto) {
 
   if (session.stage === 'idle') {
     session.stage = 'collecting';
-  }
-
-  if (asksAvailability) {
-    if (!session.draft.fecha) {
-      return 'Decime la fecha para revisar horarios (ej: 2026-02-23 o 23/02/2026).';
-    }
-
-    return buildAvailabilityMessage(session.draft.fecha);
   }
 
   if (!session.draft.servicio) {
@@ -287,6 +304,10 @@ async function buildReply(from, texto) {
   if (session.stage !== 'awaiting_confirm') {
     session.stage = 'awaiting_confirm';
     return buildSummaryMessage(session.draft);
+  }
+
+  if (rejectsConfirmation) {
+    return `${buildSummaryMessage(session.draft)} No se confirmo todavia. Si queres cancelar, escribi "cancelar".`;
   }
 
   if (!confirms) {
