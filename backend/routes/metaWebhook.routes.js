@@ -62,6 +62,7 @@ router.post('/', async (req, res) => {
     const body = {
       messaging_product: 'whatsapp',
       to: from,
+      type: 'text',
       text: { body: construirRespuesta(texto) },
     };
 
