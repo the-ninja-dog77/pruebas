@@ -6,6 +6,17 @@ function getById(id) {
     .get(id);
 }
 
+function ensureExists(id, nombre = 'Cliente WhatsApp') {
+  const exists = getById(id);
+  if (exists) return exists;
+
+  db.prepare(
+    'INSERT INTO clientes (id, nombre, estado) VALUES (?, ?, ?)'
+  ).run(id, nombre, 'idle');
+
+  return getById(id);
+}
+
 function getTurnos(clienteId) {
   return db
     .prepare('SELECT * FROM turnos WHERE cliente_id = ?')
@@ -26,6 +37,7 @@ function updateEstado(clienteId, estado) {
 
 module.exports = {
   getById,
+  ensureExists,
   getTurnos,
   getTurnosByClienteYBarbero,
   updateEstado,
