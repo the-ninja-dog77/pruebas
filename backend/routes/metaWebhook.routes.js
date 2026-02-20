@@ -232,7 +232,7 @@ function extractNameForManage(rawText) {
   return parseClientName(cleaned);
 }
 
-function createEmptySession() {
+function createEmptySession(seed = {}) {
   return {
     stage: 'idle',
     draft: {
@@ -255,6 +255,9 @@ function createEmptySession() {
       nuevaHora: null,
     },
     lastAvailability: null,
+    memory: {
+      lastReferencedDate: seed.lastReferencedDate || null,
+    },
   };
 }
 
@@ -267,7 +270,15 @@ function getSession(from) {
 }
 
 function resetSession(from) {
-  sessions.set(from, createEmptySession());
+  const current = sessions.get(from);
+  const lastReferencedDate =
+    current?.draft?.fecha ||
+    current?.manage?.nuevaFecha ||
+    current?.manage?.fecha ||
+    current?.memory?.lastReferencedDate ||
+    null;
+
+  sessions.set(from, createEmptySession({ lastReferencedDate }));
 }
 
 function getCurrentSlotAvailability(fecha, hora) {
@@ -278,12 +289,29 @@ function getCurrentSlotAvailability(fecha, hora) {
   return disponibles.includes(hora);
 }
 
+function parseDateWithContext(msg, session) {
+  const parsedDate = parseDate(msg);
+  if (parsedDate) return parsedDate;
+
+  if (
+    session?.memory?.lastReferencedDate &&
+    containsAny(msg, ['mismo dia', 'ese dia', 'dia de recien', 'mismo de recien'])
+  ) {
+    return session.memory.lastReferencedDate;
+  }
+
+  return null;
+}
+
 function applyDetections(session, msg) {
   const servicio = detectService(msg);
   if (servicio) session.draft.servicio = servicio;
 
-  const fecha = parseDate(msg);
-  if (fecha) session.draft.fecha = fecha;
+  const fecha = parseDateWithContext(msg, session);
+  if (fecha) {
+    session.draft.fecha = fecha;
+    session.memory.lastReferencedDate = fecha;
+  }
 
   const hora = parseTime(msg);
   if (hora) session.draft.hora = hora;

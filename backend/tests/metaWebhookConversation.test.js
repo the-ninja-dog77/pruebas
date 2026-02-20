@@ -506,4 +506,84 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(thanks.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('De nada');
   });
+
+  test('does not get stuck on unavailable-hour loop when user asks to reschedule or thanks', async () => {
+    const from = '595985544436';
+    const fecha = '2099-12-22';
+    const ip = '10.0.0.236';
+    const createSequence = [
+      'turno',
+      'corte',
+      fecha,
+      '11:00',
+      'Bruno Rojas',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of createSequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const asksSameSlot = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(`turno para ${fecha} a las 11:00 (Corte)`, from));
+    expect(asksSameSlot.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Ya tenes un turno activo');
+
+    const reschedule = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('reprogramar mi turno porfa', from));
+    expect(reschedule.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Encontre tu proximo turno');
+
+    const thanks = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('gracias entonces', from));
+    expect(thanks.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('De nada');
+  });
+
+  test('accepts "mismo dia de recien" by reusing the last mentioned date', async () => {
+    const from = '595985544437';
+    const fecha = '2099-12-21';
+    const ip = '10.0.0.237';
+    const createAndCancel = [
+      'turno',
+      'corte',
+      fecha,
+      '16:00',
+      'Nadia Benitez',
+      'efectivo',
+      'confirmar',
+      'quiero cancelar no voy a poder ir ese dia',
+      'turno',
+      'corte',
+      'para el mismo dia de recien',
+    ];
+
+    for (const msg of createAndCancel) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain(
+      `Horarios disponibles para ${fecha}`
+    );
+  });
 });
