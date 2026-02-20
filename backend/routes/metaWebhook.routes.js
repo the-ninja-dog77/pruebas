@@ -4,6 +4,11 @@ const logger = require('../logger');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
+logger.info(
+  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} phoneNumberIdSet=${Boolean(
+    process.env.WHATSAPP_PHONE_NUMBER_ID
+  )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)}`
+);
 
 function construirRespuesta(texto) {
   const msg = String(texto || '').toLowerCase();

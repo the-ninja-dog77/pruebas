@@ -27,8 +27,8 @@ const logger = createLogger({
   ],
 });
 
-// En desarrollo tambien logea a consola
-if (process.env.NODE_ENV === 'development') {
+// En runtime (excepto tests) tambien logea a consola para observabilidad en Railway
+if (process.env.NODE_ENV !== 'test') {
   logger.add(
     new transports.Console({
       format: format.simple(),
