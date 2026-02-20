@@ -20,18 +20,23 @@
         <p>Panel rapido para iPhone - negro/amarillo neon</p>
       </header>
 
-      <form id="loginForm" class="card form">
+      <form id="loginForm" class="card form" autocomplete="off">
         <label>
           Usuario
-          <input id="usernameInput" type="text" autocomplete="username" value="gonzabarber" />
+          <input
+            id="usernameInput"
+            type="text"
+            autocomplete="off"
+            autocapitalize="none"
+            spellcheck="false"
+          />
         </label>
         <label>
           Contrasena
           <input
             id="passwordInput"
             type="password"
-            autocomplete="current-password"
-            value="barber312"
+            autocomplete="off"
           />
         </label>
         <button type="submit" class="btn-primary">Ingresar</button>

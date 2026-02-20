@@ -6,8 +6,6 @@ const API = {
   botStatus: '/api/barber-panel/bot-status',
 };
 
-const TOKEN_KEY = 'zzeta_barber_token';
-
 const loginView = document.getElementById('loginView');
 const appView = document.getElementById('appView');
 const loginForm = document.getElementById('loginForm');
@@ -41,7 +39,7 @@ const botToggle = document.getElementById('botToggle');
 const saveBotBtn = document.getElementById('saveBotBtn');
 const botStateLabel = document.getElementById('botStateLabel');
 
-let token = localStorage.getItem(TOKEN_KEY) || '';
+let token = '';
 let currentMonthDate = startOfMonth(new Date());
 let selectedDate = '';
 let monthCountsMap = {};
@@ -335,13 +333,12 @@ async function login(username, password) {
     headers: {},
   });
   token = data.token;
-  localStorage.setItem(TOKEN_KEY, token);
 }
 
 function logout() {
   token = '';
-  localStorage.removeItem(TOKEN_KEY);
   setLoggedInState(false);
+  loginForm.reset();
 }
 
 async function bootstrapApp() {
@@ -378,9 +375,3 @@ botToggle.addEventListener('change', () => {
 
 attachSlideNav();
 renderTodayLabel();
-
-if (token) {
-  bootstrapApp().catch(() => {
-    logout();
-  });
-}
