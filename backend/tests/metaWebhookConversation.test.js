@@ -164,4 +164,35 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(second.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('sigue disponible');
   });
+
+  test('rejects past date before asking for hour', async () => {
+    const from = '595985544426';
+
+    const sequence = [
+      'turno',
+      'corte',
+      '2000-01-01',
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('fecha ya paso');
+  });
+
+  test('returns past-date message when asking availability for an old date', async () => {
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('hay horarios para 2000-01-01?', '595985544427'));
+
+    expect(res.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('ya paso');
+  });
 });

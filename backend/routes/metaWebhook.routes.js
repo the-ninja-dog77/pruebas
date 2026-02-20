@@ -197,7 +197,9 @@ function resetSession(from) {
 }
 
 function getCurrentSlotAvailability(fecha, hora) {
-  const disponibles = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID).disponibles;
+  const disponibles = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID, {
+    includePastForToday: false,
+  }).disponibles;
   return disponibles.includes(hora);
 }
 
@@ -213,7 +215,13 @@ function applyDetections(session, msg) {
 }
 
 function buildAvailabilityMessage(fecha) {
-  const disponibilidad = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID).disponibles;
+  if (turnosService.esFechaPasada(fecha)) {
+    return `La fecha ${fecha} ya paso. Decime una fecha igual o posterior a hoy.`;
+  }
+
+  const disponibilidad = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID, {
+    includePastForToday: false,
+  }).disponibles;
   if (!disponibilidad.length) {
     return `Para ${fecha} no quedan horarios disponibles.`;
   }
@@ -376,6 +384,13 @@ async function buildReply(from, texto) {
     return 'Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)';
   }
 
+  if (turnosService.esFechaPasada(session.draft.fecha)) {
+    session.draft.fecha = null;
+    session.draft.hora = null;
+    session.stage = 'awaiting_date';
+    return 'Esa fecha ya paso. Decime una fecha igual o posterior a hoy (ej: 2026-02-23).';
+  }
+
   if (!session.draft.hora) {
     session.stage = 'awaiting_time';
     return `${buildAvailabilityMessage(session.draft.fecha)} Decime la hora en formato HH:MM (ej: 15:00).`;
@@ -383,7 +398,8 @@ async function buildReply(from, texto) {
 
   const disponibilidad = turnosService.obtenerDisponibilidad(
     session.draft.fecha,
-    BOT_BARBER_ID
+    BOT_BARBER_ID,
+    { includePastForToday: false }
   ).disponibles;
   if (!disponibilidad.includes(session.draft.hora)) {
     session.stage = 'awaiting_time';

@@ -1,6 +1,7 @@
 const turnosRepo = require('../repositories/turnos.repository');
 const clientesRepo = require('../repositories/clientes.repository');
 const businessHours = require('./businessHours.service');
+const businessTime = require('./businessTime.service');
 
 function obtenerTodos(user) {
   if (user.role === 'admin') {
@@ -71,7 +72,8 @@ function validarHorarioBot(hora, fecha) {
   return null;
 }
 
-function obtenerDisponibilidad(fecha, barberId = null) {
+function obtenerDisponibilidad(fecha, barberId = null, options = {}) {
+  const includePastForToday = options.includePastForToday !== false;
   const turnosDelDia = barberId
     ? turnosRepo.getHorasByFechaAndBarber(fecha, barberId)
     : turnosRepo.getHorasByFecha(fecha);
@@ -90,11 +92,21 @@ function obtenerDisponibilidad(fecha, barberId = null) {
     }
   }
 
-  return { fecha, disponibles };
+  const finalDisponibles = includePastForToday
+    ? disponibles
+    : businessTime.keepCurrentAndFutureSlots(fecha, disponibles, horaToMinutos);
+
+  return { fecha, disponibles: finalDisponibles };
 }
 
 function crearTurno(data) {
   if (data.origen === 'bot') {
+    if (businessTime.isPastDateTime(data.fecha, data.hora, horaToMinutos)) {
+      const error = new Error('No puedo agendar turnos en fecha u horario pasado');
+      error.status = 400;
+      throw error;
+    }
+
     const errorHorario = validarHorarioBot(data.hora, data.fecha);
     if (errorHorario) {
       const error = new Error(errorHorario);
@@ -233,6 +245,8 @@ module.exports = {
   obtenerTodos,
   obtenerPorFecha,
   obtenerDisponibilidad,
+  esFechaPasada: businessTime.isPastDate,
+  esFechaHoraPasada: (fecha, hora) => businessTime.isPastDateTime(fecha, hora, horaToMinutos),
   crearTurno,
   eliminarTurno,
   getRecordatorioActivo,
