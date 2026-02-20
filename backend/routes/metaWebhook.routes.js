@@ -28,6 +28,18 @@ const REASSURANCE_INTENTS = [
   'confirmame',
   'confirmar disponibilidad',
 ];
+const MANAGE_CANCEL_INTENTS = [
+  'cancelar turno',
+  'anular turno',
+  'eliminar turno',
+  'borrar turno',
+];
+const MANAGE_RESCHEDULE_INTENTS = [
+  'reprogramar turno',
+  'cambiar turno',
+  'mover turno',
+  'pasar turno',
+];
 
 function normalizeText(texto) {
   return String(texto || '')
@@ -199,6 +211,23 @@ function parseClientName(rawText) {
   return cleaned;
 }
 
+function extractNameForManage(rawText) {
+  let cleaned = String(rawText || '');
+  cleaned = cleaned
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' ')
+    .replace(/\b\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/g, ' ')
+    .replace(/\b([01]?\d|2[0-3])(?::[0-5]\d)?\b/g, ' ')
+    .replace(
+      /\b(cancelar|anular|eliminar|borrar|reprogramar|cambiar|mover|pasar|turno|de|del|para|el|la|las|hoy|manana|pasado manana|lunes|martes|miercoles|jueves|viernes|sabado|domingo|a|las|al)\b/gi,
+      ' '
+    )
+    .replace(/[.,;:!?]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return parseClientName(cleaned);
+}
+
 function createEmptySession() {
   return {
     stage: 'idle',
@@ -208,6 +237,17 @@ function createEmptySession() {
       hora: null,
       nombre: null,
       metodo_pago: null,
+    },
+    manage: {
+      action: null,
+      nombre: null,
+      fecha: null,
+      hora: null,
+      turnoId: null,
+      turnoOriginalFecha: null,
+      turnoOriginalHora: null,
+      nuevaFecha: null,
+      nuevaHora: null,
     },
     lastAvailability: null,
   };
@@ -270,6 +310,32 @@ function buildSummaryMessage(draft) {
   return `Te resumo: ${draft.nombre}, ${draft.servicio}, ${draft.fecha} a las ${draft.hora}, pago ${draft.metodo_pago}. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde "confirmar".`;
 }
 
+function fillManageTargetDetections(manage, texto, msg) {
+  if (!manage.nombre) {
+    const nombre = extractNameForManage(texto);
+    if (nombre) manage.nombre = nombre;
+  }
+  if (!manage.fecha) {
+    const fecha = parseDate(msg);
+    if (fecha) manage.fecha = fecha;
+  }
+  if (!manage.hora) {
+    const hora = parseTime(msg);
+    if (hora) manage.hora = hora;
+  }
+}
+
+function fillManageNewDetections(manage, msg) {
+  if (!manage.nuevaFecha) {
+    const fecha = parseDate(msg);
+    if (fecha) manage.nuevaFecha = fecha;
+  }
+  if (!manage.nuevaHora) {
+    const hora = parseTime(msg);
+    if (hora) manage.nuevaHora = hora;
+  }
+}
+
 async function maybeAiFallback(texto, session) {
   if (!aiAssistant.isEnabled()) return null;
   if (!aiAssistant.isQuestionLike(texto)) return null;
@@ -285,7 +351,44 @@ async function buildReply(from, texto) {
     return 'Escribime que servicio, fecha y hora queres reservar.';
   }
 
-  if (containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar'])) {
+  const wantsManageCancelCommand = containsAny(msg, MANAGE_CANCEL_INTENTS);
+  const wantsManageRescheduleCommand = containsAny(msg, MANAGE_RESCHEDULE_INTENTS);
+
+  if (wantsManageCancelCommand) {
+    session.stage = 'manage_cancel_collect';
+    session.manage = {
+      action: 'cancel',
+      nombre: null,
+      fecha: null,
+      hora: null,
+      turnoId: null,
+      turnoOriginalFecha: null,
+      turnoOriginalHora: null,
+      nuevaFecha: null,
+      nuevaHora: null,
+    };
+  }
+
+  if (wantsManageRescheduleCommand) {
+    session.stage = 'manage_reschedule_collect_current';
+    session.manage = {
+      action: 'reschedule',
+      nombre: null,
+      fecha: null,
+      hora: null,
+      turnoId: null,
+      turnoOriginalFecha: null,
+      turnoOriginalHora: null,
+      nuevaFecha: null,
+      nuevaHora: null,
+    };
+  }
+
+  if (
+    !wantsManageCancelCommand &&
+    !wantsManageRescheduleCommand &&
+    containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar'])
+  ) {
     resetSession(from);
     return 'Listo, cancele el flujo actual. Escribi "turno" para empezar otra reserva.';
   }
@@ -304,6 +407,99 @@ async function buildReply(from, texto) {
     session.draft.nombre = name;
   }
 
+  if (session.stage === 'manage_cancel_collect') {
+    fillManageTargetDetections(session.manage, texto, msg);
+
+    if (!session.manage.nombre || !session.manage.fecha) {
+      return 'Para cancelar, decime nombre y fecha del turno (ej: Fernando Vallejos, 2026-02-24).';
+    }
+
+    try {
+      const turno = turnosService.cancelarTurnoBot({
+        barber_id: BOT_BARBER_ID,
+        nombre: session.manage.nombre,
+        fecha: session.manage.fecha,
+        hora: session.manage.hora || null,
+      });
+      resetSession(from);
+      return `Listo, cancele el turno de ${turno.cliente} del ${turno.fecha} a las ${turno.hora}.`;
+    } catch (err) {
+      if (err.status === 409 && Array.isArray(err.horas) && err.horas.length) {
+        return `${err.message} Horas encontradas: ${err.horas.join(', ')}.`;
+      }
+      if (err.status === 404) {
+        return 'No encontre ese turno. Verifica nombre, fecha y hora.';
+      }
+
+      logger.error(`WHATSAPP cancel booking error: ${err.stack || err.message}`);
+      return 'No pude cancelar el turno ahora. Proba de nuevo en unos minutos.';
+    }
+  }
+
+  if (session.stage === 'manage_reschedule_collect_current') {
+    fillManageTargetDetections(session.manage, texto, msg);
+
+    if (!session.manage.nombre || !session.manage.fecha) {
+      return 'Para reprogramar, decime nombre y fecha del turno actual (ej: Fernando Vallejos, 2026-02-24).';
+    }
+
+    try {
+      const turno = turnosService.resolverTurnoPorNombreFechaHora({
+        barber_id: BOT_BARBER_ID,
+        nombre: session.manage.nombre,
+        fecha: session.manage.fecha,
+        hora: session.manage.hora || null,
+      });
+
+      session.manage.turnoId = turno.id;
+      session.manage.turnoOriginalFecha = turno.fecha;
+      session.manage.turnoOriginalHora = turno.hora;
+      session.stage = 'manage_reschedule_collect_new';
+
+      return `Encontre el turno de ${turno.cliente} (${turno.fecha} ${turno.hora}). Decime la nueva fecha y hora (ej: 2026-02-25 16:00).`;
+    } catch (err) {
+      if (err.status === 409 && Array.isArray(err.horas) && err.horas.length) {
+        return `${err.message} Horas encontradas: ${err.horas.join(', ')}.`;
+      }
+      if (err.status === 404) {
+        return 'No encontre ese turno para reprogramar. Verifica nombre, fecha y hora.';
+      }
+
+      logger.error(`WHATSAPP reschedule resolve error: ${err.stack || err.message}`);
+      return 'No pude preparar la reprogramacion ahora. Proba de nuevo en unos minutos.';
+    }
+  }
+
+  if (session.stage === 'manage_reschedule_collect_new') {
+    fillManageNewDetections(session.manage, msg);
+
+    if (!session.manage.nuevaFecha || !session.manage.nuevaHora) {
+      return 'Decime la nueva fecha y la nueva hora (ej: 2026-02-25 16:00).';
+    }
+
+    try {
+      const turno = turnosService.reprogramarTurnoBot({
+        id: session.manage.turnoId,
+        barber_id: BOT_BARBER_ID,
+        nuevaFecha: session.manage.nuevaFecha,
+        nuevaHora: session.manage.nuevaHora,
+      });
+
+      const oldFecha = session.manage.turnoOriginalFecha;
+      const oldHora = session.manage.turnoOriginalHora;
+      resetSession(from);
+      return `Listo, reprogramado: ${turno.cliente} paso de ${oldFecha} ${oldHora} a ${turno.fecha} ${turno.hora}.`;
+    } catch (err) {
+      if (err.status === 400 || err.status === 409) {
+        session.manage.nuevaHora = null;
+        return `${err.message}. ${buildAvailabilityMessage(session.manage.nuevaFecha)} Decime otra hora.`;
+      }
+
+      logger.error(`WHATSAPP reschedule booking error: ${err.stack || err.message}`);
+      return 'No pude reprogramar el turno ahora. Proba de nuevo en unos minutos.';
+    }
+  }
+
   const wantsStart = containsAny(msg, START_INTENTS);
   const asksAvailability = containsAny(msg, [
     'horario',
@@ -315,6 +511,9 @@ async function buildReply(from, texto) {
   const asksTurnoAtSlot = containsAny(msg, [
     'hay turno',
     'hay un turno',
+    'algun turno',
+    'tienes algun turno',
+    'tenes algun turno',
     'tenes turno',
     'tenes un turno',
     'tienes turno',

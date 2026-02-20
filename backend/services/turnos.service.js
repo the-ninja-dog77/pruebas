@@ -106,6 +106,105 @@ function obtenerDisponibilidad(fecha, barberId = null, options = {}) {
   return { fecha, disponibles: finalDisponibles };
 }
 
+function normalizeComparable(value) {
+  return String(value || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolverTurnoPorNombreFechaHora({ barber_id, nombre, fecha, hora = null }) {
+  const targetName = normalizeComparable(nombre);
+  const turnosDelDia = turnosRepo.getByFecha(fecha, barber_id);
+  const candidatos = turnosDelDia.filter(
+    t => normalizeComparable(t.cliente) === targetName
+  );
+
+  if (!candidatos.length) {
+    const error = new Error('No encontre turnos con ese nombre y fecha');
+    error.status = 404;
+    throw error;
+  }
+
+  if (hora) {
+    const exacto = candidatos.find(t => t.hora === hora);
+    if (!exacto) {
+      const error = new Error(
+        `No encontre turno para ${nombre} el ${fecha} a las ${hora}`
+      );
+      error.status = 404;
+      throw error;
+    }
+    return exacto;
+  }
+
+  if (candidatos.length > 1) {
+    const error = new Error('Hay mas de un turno. Decime tambien la hora.');
+    error.status = 409;
+    error.horas = candidatos.map(t => t.hora);
+    throw error;
+  }
+
+  return candidatos[0];
+}
+
+function cancelarTurnoBot({ barber_id, nombre, fecha, hora = null }) {
+  const turno = resolverTurnoPorNombreFechaHora({
+    barber_id,
+    nombre,
+    fecha,
+    hora,
+  });
+
+  turnosRepo.remove(turno.id);
+  if (turno.cliente_id) {
+    clientesRepo.updateEstado(turno.cliente_id, 'cancelado');
+  }
+
+  return turno;
+}
+
+function reprogramarTurnoBot({ id, barber_id, nuevaFecha, nuevaHora }) {
+  const turno = turnosRepo.getById(id);
+  if (!turno || Number(turno.barber_id) !== Number(barber_id)) {
+    const error = new Error('Turno no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  if (businessTime.isPastDateTime(nuevaFecha, nuevaHora, horaToMinutos)) {
+    const error = new Error('No puedo mover un turno a una fecha u horario pasado');
+    error.status = 400;
+    throw error;
+  }
+
+  const errorHorario = validarHorarioBot(nuevaHora, nuevaFecha);
+  if (errorHorario) {
+    const error = new Error(errorHorario);
+    error.status = 400;
+    throw error;
+  }
+
+  const nuevaHoraMin = horaToMinutos(nuevaHora);
+  const turnosDelDia = turnosRepo
+    .getByFecha(nuevaFecha, barber_id)
+    .filter(t => t.id !== turno.id);
+  const conflicto = turnosDelDia.find(t => {
+    return Math.abs(horaToMinutos(t.hora) - nuevaHoraMin) < businessHours.SLOT_MINUTES;
+  });
+
+  if (conflicto) {
+    const error = new Error(`Horario ocupado cerca de ${conflicto.hora}`);
+    error.status = 409;
+    throw error;
+  }
+
+  turnosRepo.updateFechaHora(turno.id, nuevaFecha, nuevaHora);
+  return turnosRepo.getById(turno.id);
+}
+
 function crearTurno(data) {
   if (data.origen === 'bot') {
     const minLeadMinutes = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
@@ -274,6 +373,9 @@ module.exports = {
   obtenerDisponibilidad,
   esFechaPasada: businessTime.isPastDate,
   esFechaHoraPasada: (fecha, hora) => businessTime.isPastDateTime(fecha, hora, horaToMinutos),
+  resolverTurnoPorNombreFechaHora,
+  cancelarTurnoBot,
+  reprogramarTurnoBot,
   crearTurno,
   eliminarTurno,
   getRecordatorioActivo,

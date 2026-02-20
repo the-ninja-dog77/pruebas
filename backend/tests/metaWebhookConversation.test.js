@@ -245,4 +245,101 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(Boolean(found)).toBe(true);
     expect(found.metodo_pago).toBe('Transferencia/QR');
   });
+
+  test('cancels booking by name and date via WhatsApp', async () => {
+    const from = '595985544429';
+    const fecha = '2099-12-30';
+    const sequenceCreate = [
+      'turno',
+      'corte',
+      fecha,
+      '13:00',
+      'Mario Lopez',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of sequenceCreate) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const cancel = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`cancelar turno de Mario Lopez el ${fecha}`, from));
+
+    expect(cancel.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('cancele el turno');
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    const token = login.body.token;
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    const exists = day.body.agenda.some(t => t.hora === '13:00' && t.cliente === 'Mario Lopez');
+    expect(exists).toBe(false);
+  });
+
+  test('reschedules booking by name and date via WhatsApp', async () => {
+    const from = '595985544430';
+    const fecha = '2099-12-29';
+    const sequenceCreate = [
+      'turno',
+      'corte',
+      fecha,
+      '14:00',
+      'Laura Diaz',
+      'tarjeta',
+      'confirmar',
+    ];
+
+    for (const msg of sequenceCreate) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const startReschedule = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`reprogramar turno de Laura Diaz el ${fecha}`, from));
+    expect(startReschedule.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime la nueva fecha y hora');
+
+    const applyReschedule = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`${fecha} 16:00`, from));
+    expect(applyReschedule.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('reprogramado');
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    const token = login.body.token;
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const movedExists = day.body.agenda.some(
+      t => t.hora === '16:00' && t.cliente === 'Laura Diaz'
+    );
+    expect(movedExists).toBe(true);
+  });
 });

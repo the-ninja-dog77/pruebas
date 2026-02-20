@@ -52,6 +52,12 @@ function remove(id) {
   return db.prepare('DELETE FROM turnos WHERE id = ?').run(id);
 }
 
+function updateFechaHora(id, fecha, hora) {
+  return db
+    .prepare('UPDATE turnos SET fecha = ?, hora = ? WHERE id = ?')
+    .run(fecha, hora, id);
+}
+
 function getHorasByFecha(fecha) {
   return db
     .prepare('SELECT hora FROM turnos WHERE fecha = ?')
@@ -99,6 +105,7 @@ module.exports = {
   getById,
   create,
   remove,
+  updateFechaHora,
   getHorasByFecha,
   getHorasByFechaAndBarber,
   getPendientesRecordatorio,
