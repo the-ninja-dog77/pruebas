@@ -1,10 +1,18 @@
 const logger = require('../logger');
 
-const OPENAI_BASE_URL = process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1';
-const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+// Primary config uses Groq naming; OpenAI names are kept for backward compatibility.
+const GROQ_BASE_URL =
+  process.env.GROQ_BASE_URL ||
+  process.env.OPENAI_BASE_URL ||
+  'https://api.groq.com/openai/v1';
+const GROQ_MODEL =
+  process.env.GROQ_MODEL ||
+  process.env.OPENAI_MODEL ||
+  'llama-3.1-8b-instant';
+const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY;
 
 function isEnabled() {
-  return Boolean(process.env.OPENAI_API_KEY);
+  return Boolean(GROQ_API_KEY);
 }
 
 function isQuestionLike(message) {
@@ -39,14 +47,14 @@ async function generateReply(message, session) {
   const timeout = setTimeout(() => controller.abort(), 9000);
 
   try {
-    const response = await fetch(`${OPENAI_BASE_URL}/chat/completions`, {
+    const response = await fetch(`${GROQ_BASE_URL}/chat/completions`, {
       method: 'POST',
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+        Authorization: `Bearer ${GROQ_API_KEY}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: OPENAI_MODEL,
+        model: GROQ_MODEL,
         temperature: 0.2,
         max_tokens: 160,
         messages: [
