@@ -3,6 +3,7 @@ const router = express.Router();
 const logger = require('../logger');
 const turnosService = require('../services/turnos.service');
 const clientesRepo = require('../repositories/clientes.repository');
+const aiAssistant = require('../services/aiAssistant.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
@@ -10,7 +11,7 @@ const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
 logger.info(
   `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} phoneNumberIdSet=${Boolean(
     process.env.WHATSAPP_PHONE_NUMBER_ID
-  )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)}`
+  )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} aiEnabled=${aiAssistant.isEnabled()}`
 );
 
 const sessions = new Map();
@@ -187,7 +188,13 @@ function buildSummaryMessage(draft) {
   return `Te resumo: ${draft.servicio}, ${draft.fecha} a las ${draft.hora}. Si queres confirmar, responde "confirmar".`;
 }
 
-function buildReply(from, texto) {
+async function maybeAiFallback(texto, session) {
+  if (!aiAssistant.isEnabled()) return null;
+  if (!aiAssistant.isQuestionLike(texto)) return null;
+  return aiAssistant.generateReply(texto, session);
+}
+
+async function buildReply(from, texto) {
   const msg = normalizeText(texto);
   const session = getSession(from);
 
@@ -238,6 +245,9 @@ function buildReply(from, texto) {
       return 'Hola! Soy ZZETA Bot. Si queres reservar, escribi "turno".';
     }
 
+    const aiReply = await maybeAiFallback(texto, session);
+    if (aiReply) return aiReply;
+
     return 'Puedo ayudarte a reservar. Escribi "turno" para empezar.';
   }
 
@@ -280,6 +290,11 @@ function buildReply(from, texto) {
   }
 
   if (!confirms) {
+    const aiReply = await maybeAiFallback(texto, session);
+    if (aiReply) {
+      return `${aiReply} Si queres confirmar, responde "confirmar".`;
+    }
+
     return `${buildSummaryMessage(session.draft)} Si queres cambiar algo, escribime el nuevo dato.`;
   }
 
@@ -366,7 +381,7 @@ router.post('/', async (req, res) => {
       messaging_product: 'whatsapp',
       to: from,
       type: 'text',
-      text: { body: buildReply(from, texto) },
+      text: { body: await buildReply(from, texto) },
     };
 
     const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
