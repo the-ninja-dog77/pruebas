@@ -28,8 +28,8 @@ function getById(id) {
 function create(data) {
   const stmt = db.prepare(`
     INSERT INTO turnos
-    (barber_id, cliente_id, cliente, servicio, fecha, hora, origen, precio, total)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    (barber_id, cliente_id, cliente, servicio, fecha, hora, origen, precio, total, metodo_pago)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `);
 
   const result = stmt.run(
@@ -41,7 +41,8 @@ function create(data) {
     data.hora,
     data.origen,
     data.precio,
-    data.total
+    data.total,
+    data.metodo_pago || null
   );
 
   return getById(result.lastInsertRowid);

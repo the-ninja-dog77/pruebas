@@ -20,7 +20,7 @@ function getNextTurno({ barberId, fecha, hora }) {
   return db
     .prepare(
       `
-      SELECT id, cliente, servicio, fecha, hora, total
+      SELECT id, cliente, servicio, fecha, hora, total, metodo_pago
       FROM turnos
       WHERE barber_id = ?
         AND (fecha > ? OR (fecha = ? AND hora >= ?))
@@ -50,7 +50,7 @@ function getTurnosByDay({ barberId, fecha }) {
   return db
     .prepare(
       `
-      SELECT id, cliente, servicio, fecha, hora, origen, precio, total
+      SELECT id, cliente, servicio, fecha, hora, origen, precio, total, metodo_pago
       FROM turnos
       WHERE barber_id = ? AND fecha = ?
       ORDER BY hora ASC

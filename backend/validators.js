@@ -16,6 +16,7 @@ const crearTurnoSchema = Joi.object({
     .required(),
   origen: Joi.string().valid('bot', 'panel').optional(),
   precio: Joi.number().integer().min(0).optional(),
+  metodo_pago: Joi.string().min(2).max(60).optional(),
   barber_id: Joi.number().integer().required(),
 });
 

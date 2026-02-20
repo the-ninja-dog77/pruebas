@@ -35,11 +35,10 @@ function horaToMinutos(hora) {
 }
 
 const SERVICE_PRICES = {
-  'corte': 30000,
-  'corte + barba': 45000,
-  'barba': 20000,
-  'perfilado de cejas': 15000,
-  'cejas': 15000,
+  'corte': 40000,
+  'recorte/tratamiento de barba': 10000,
+  'perfilado de cejas': 10000,
+  'corte + barba': 50000,
 };
 
 function inferPrecioServicio(servicio) {
@@ -52,10 +51,12 @@ function inferPrecioServicio(servicio) {
     return SERVICE_PRICES['corte + barba'];
   }
   if (key.includes('corte')) return SERVICE_PRICES['corte'];
-  if (key.includes('barba')) return SERVICE_PRICES['barba'];
-  if (key.includes('ceja')) return SERVICE_PRICES['cejas'];
+  if (key.includes('barba') || key.includes('afeitado')) {
+    return SERVICE_PRICES['recorte/tratamiento de barba'];
+  }
+  if (key.includes('ceja')) return SERVICE_PRICES['perfilado de cejas'];
 
-  return 30000;
+  return SERVICE_PRICES['corte'];
 }
 
 function validarHorarioBot(hora, fecha) {
@@ -107,7 +108,7 @@ function obtenerDisponibilidad(fecha, barberId = null, options = {}) {
 
 function crearTurno(data) {
   if (data.origen === 'bot') {
-    const minLeadMinutes = Number(process.env.BOT_MIN_LEAD_MINUTES || 60);
+    const minLeadMinutes = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
 
     if (businessTime.isPastDateTime(data.fecha, data.hora, horaToMinutos)) {
       const error = new Error('No puedo agendar turnos en fecha u horario pasado');
@@ -157,7 +158,9 @@ function crearTurno(data) {
   const precio = data.precio !== undefined
     ? Number(data.precio)
     : inferPrecioServicio(data.servicio);
-  const total = precio;
+  const precioMinimo = inferPrecioServicio(data.servicio);
+  const precioFinal = Number.isFinite(precio) ? Math.max(precio, precioMinimo) : precioMinimo;
+  const total = precioFinal;
 
   const nuevoTurno = turnosRepo.create({
     barber_id: data.barber_id,
@@ -167,8 +170,9 @@ function crearTurno(data) {
     fecha: data.fecha,
     hora: data.hora,
     origen: data.origen || 'panel',
-    precio,
+    precio: precioFinal,
     total,
+    metodo_pago: data.metodo_pago || null,
   });
 
   clientesRepo.updateEstado(data.cliente_id, 'confirmado');

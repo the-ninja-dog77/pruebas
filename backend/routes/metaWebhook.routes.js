@@ -9,7 +9,7 @@ const aiAssistant = require('../services/aiAssistant.service');
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
 const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
-const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 60);
+const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
 
 logger.info(
   `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
@@ -167,10 +167,36 @@ function parseTime(msg) {
 
 function detectService(msg) {
   if (msg.includes('corte') && msg.includes('barba')) return 'Corte + Barba';
-  if (msg.includes('barba') || msg.includes('afeitado')) return 'Barba';
+  if (msg.includes('barba') || msg.includes('afeitado')) return 'Recorte/Tratamiento de Barba';
   if (msg.includes('ceja')) return 'Perfilado de Cejas';
   if (msg.includes('corte') || msg.includes('pelo')) return 'Corte';
   return null;
+}
+
+function detectPaymentMethod(msg) {
+  if (containsAny(msg, ['efectivo', 'cash'])) return 'Efectivo';
+  if (containsAny(msg, ['transferencia', 'transfer', 'qr', 'billetera'])) {
+    return 'Transferencia/QR';
+  }
+  if (containsAny(msg, ['tarjeta', 'debito', 'credito', 'pos'])) return 'Tarjeta';
+  return null;
+}
+
+function parseClientName(rawText) {
+  const raw = String(rawText || '').trim();
+  if (!raw) return null;
+
+  const cleaned = raw
+    .replace(/^(me llamo|soy|mi nombre es|a nombre de)\s+/i, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (cleaned.length < 2 || cleaned.length > 80) return null;
+  const normalized = normalizeText(cleaned);
+  if (detectPaymentMethod(normalized)) return null;
+  if (containsAny(normalized, GREETING_INTENTS)) return null;
+  if (containsAny(normalized, ['confirmar', 'cancelar', 'turno'])) return null;
+  return cleaned;
 }
 
 function createEmptySession() {
@@ -180,6 +206,8 @@ function createEmptySession() {
       servicio: null,
       fecha: null,
       hora: null,
+      nombre: null,
+      metodo_pago: null,
     },
     lastAvailability: null,
   };
@@ -214,6 +242,9 @@ function applyDetections(session, msg) {
 
   const hora = parseTime(msg);
   if (hora) session.draft.hora = hora;
+
+  const metodoPago = detectPaymentMethod(msg);
+  if (metodoPago) session.draft.metodo_pago = metodoPago;
 }
 
 function buildAvailabilityMessage(fecha) {
@@ -236,7 +267,7 @@ function buildAvailabilityMessage(fecha) {
 }
 
 function buildSummaryMessage(draft) {
-  return `Te resumo: ${draft.servicio}, ${draft.fecha} a las ${draft.hora}. Si queres confirmar, responde "confirmar".`;
+  return `Te resumo: ${draft.nombre}, ${draft.servicio}, ${draft.fecha} a las ${draft.hora}, pago ${draft.metodo_pago}. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde "confirmar".`;
 }
 
 async function maybeAiFallback(texto, session) {
@@ -264,6 +295,14 @@ async function buildReply(from, texto) {
   }
 
   applyDetections(session, msg);
+
+  if (session.stage === 'awaiting_name' && !session.draft.nombre) {
+    const name = parseClientName(texto);
+    if (!name) {
+      return 'Necesito un nombre valido para agendar. Ejemplo: Juan Perez.';
+    }
+    session.draft.nombre = name;
+  }
 
   const wantsStart = containsAny(msg, START_INTENTS);
   const asksAvailability = containsAny(msg, [
@@ -379,7 +418,7 @@ async function buildReply(from, texto) {
 
   if (!session.draft.servicio) {
     session.stage = 'awaiting_service';
-    return 'Perfecto. Que servicio queres? (Corte, Barba, Corte + Barba, Perfilado de Cejas)';
+    return 'Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)';
   }
 
   if (!session.draft.fecha) {
@@ -409,6 +448,16 @@ async function buildReply(from, texto) {
     return `Ese horario no esta disponible. ${buildAvailabilityMessage(session.draft.fecha)} Decime otra hora.`;
   }
 
+  if (!session.draft.nombre) {
+    session.stage = 'awaiting_name';
+    return 'Perfecto. A nombre de quien agendo el turno?';
+  }
+
+  if (!session.draft.metodo_pago) {
+    session.stage = 'awaiting_payment';
+    return 'Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte.';
+  }
+
   if (session.stage !== 'awaiting_confirm') {
     session.stage = 'awaiting_confirm';
     return buildSummaryMessage(session.draft);
@@ -433,15 +482,16 @@ async function buildReply(from, texto) {
     const turno = turnosService.crearTurno({
       barber_id: BOT_BARBER_ID,
       cliente_id: from,
-      cliente: `WhatsApp ${from}`,
+      cliente: session.draft.nombre,
       servicio: session.draft.servicio,
       fecha: session.draft.fecha,
       hora: session.draft.hora,
       origen: 'bot',
+      metodo_pago: session.draft.metodo_pago,
     });
 
     resetSession(from);
-    return `Listo, turno confirmado para ${turno.fecha} a las ${turno.hora} (${turno.servicio}).`;
+    return `Listo ${turno.cliente}, turno confirmado para ${turno.fecha} a las ${turno.hora} (${turno.servicio}). Pago: ${turno.metodo_pago}. Recorda que abonas despues del corte.`;
   } catch (err) {
     if (err.status === 400 || err.status === 409) {
       session.stage = 'awaiting_time';

@@ -6,7 +6,7 @@ process.env.DB_PATH = `zzeta.meta.${Date.now()}.db`;
 process.env.WHATSAPP_PHONE_NUMBER_ID = '1234567890';
 process.env.WHATSAPP_TOKEN = 'test_token';
 process.env.WHATSAPP_GRAPH_VERSION = 'v24.0';
-process.env.BOT_MIN_LEAD_MINUTES = '60';
+process.env.BOT_MIN_LEAD_MINUTES = '0';
 
 const app = require('../index');
 
@@ -62,6 +62,8 @@ describe('WhatsApp webhook conversation flow', () => {
       'corte de pelo',
       '31/12/2099',
       '15:00',
+      'Juan Perez',
+      'efectivo',
       'confirmar',
     ];
 
@@ -78,8 +80,11 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(outboundMessages[1]).toContain('Que servicio queres');
     expect(outboundMessages[2]).toContain('Para que fecha queres');
     expect(outboundMessages[3]).toContain('Horarios disponibles para 2099-12-31');
-    expect(outboundMessages[4]).toContain('Si queres confirmar, responde "confirmar"');
-    expect(outboundMessages[5]).toContain('turno confirmado');
+    expect(outboundMessages[4]).toContain('A nombre de quien');
+    expect(outboundMessages[5]).toContain('metodo de pago');
+    expect(outboundMessages[6]).toContain('Si queres confirmar, responde "confirmar"');
+    expect(outboundMessages[7]).toContain('turno confirmado');
+    expect(outboundMessages[7]).toContain('Pago: Efectivo');
   });
 
   test('does not confirm when user says no', async () => {
@@ -88,6 +93,8 @@ describe('WhatsApp webhook conversation flow', () => {
       'corte',
       '30/12/2099',
       '15:00',
+      'Ana',
+      'tarjeta',
       'y si no quiero?',
     ];
 
@@ -195,5 +202,47 @@ describe('WhatsApp webhook conversation flow', () => {
 
     expect(res.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('ya paso');
+  });
+
+  test('stores provided customer name and payment method in barber panel day view', async () => {
+    const from = '595985544428';
+    const fecha = '2099-12-31';
+    const sequence = [
+      'turno',
+      'corte',
+      fecha,
+      '12:00',
+      'Carlos Gomez',
+      'transferencia',
+      'confirmar',
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+
+      expect(res.statusCode).toBe(200);
+    }
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+
+    expect(login.statusCode).toBe(200);
+    const token = login.body.token;
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(day.statusCode).toBe(200);
+    const found = day.body.agenda.find(t => t.hora === '12:00' && t.cliente === 'Carlos Gomez');
+    expect(Boolean(found)).toBe(true);
+    expect(found.metodo_pago).toBe('Transferencia/QR');
   });
 });

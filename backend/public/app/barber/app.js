@@ -146,7 +146,8 @@ function renderSummary(summary) {
   }
 
   const n = summary.proximoTurno;
-  nextTurnoLabel.textContent = `${n.hora} - ${n.servicio} (${n.cliente})`;
+  const pago = n.metodo_pago ? ` - Pago: ${n.metodo_pago}` : '';
+  nextTurnoLabel.textContent = `${n.hora} - ${n.servicio} (${n.cliente})${pago}`;
 }
 
 async function loadSummary() {
@@ -292,7 +293,8 @@ function renderDayDetails(data) {
     data.agenda.forEach(t => {
       const li = document.createElement('li');
       const origen = t.origen ? ` [${t.origen}]` : '';
-      li.textContent = `${t.hora} - ${t.servicio} (${t.cliente})${origen}`;
+      const pago = t.metodo_pago ? ` - Pago: ${t.metodo_pago}` : '';
+      li.textContent = `${t.hora} - ${t.servicio} (${t.cliente})${pago}${origen}`;
       dayAgendaList.appendChild(li);
     });
   }

@@ -68,7 +68,7 @@ describe('Barber panel', () => {
     expect(create.body.fecha).toBe(fecha);
     expect(create.body.hora).toBe(hora);
     expect(create.body.servicio).toBe('Corte');
-    expect(create.body.precio).toBe(30000);
+    expect(create.body.precio).toBe(40000);
 
     const dayAfter = await request(app)
       .get(`/api/barber-panel/day/${fecha}`)
