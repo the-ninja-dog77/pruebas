@@ -10,7 +10,7 @@ const DAY_NAMES = [
 
 const DAY_RULES = {
   0: { closed: true, label: 'Cerrado' },
-  1: { open: '13:30', close: '20:00', label: '1:30 a 8 p.m.' },
+  1: { open: '09:00', close: '20:00', label: '9 a.m a 8 p.m.' },
   2: { open: '09:00', close: '20:00', label: '9 a.m a 8 p.m.' },
   3: { open: '09:00', close: '20:00', label: '9 a.m a 8 p.m.' },
   4: { open: '09:00', close: '20:00', label: '9 a.m a 8 p.m.' },
