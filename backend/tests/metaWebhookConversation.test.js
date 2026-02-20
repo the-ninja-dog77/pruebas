@@ -111,4 +111,36 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(res.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime la fecha');
   });
+
+  test('detects slot occupied when panel already booked that hour', async () => {
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+
+    expect(login.statusCode).toBe(200);
+    const token = login.body.token;
+
+    const fecha = '2099-12-31';
+    const createFromPanel = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora: '10:00',
+        servicio: 'Corte',
+        precio: 30000,
+      });
+
+    expect(createFromPanel.statusCode).toBe(201);
+
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload(`hay turno el ${fecha} a las 10?`, '595985544424'));
+
+    expect(res.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('no esta disponible');
+  });
 });

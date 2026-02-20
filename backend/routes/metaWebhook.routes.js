@@ -8,9 +8,10 @@ const aiAssistant = require('../services/aiAssistant.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
+const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
 
 logger.info(
-  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} phoneNumberIdSet=${Boolean(
+  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} phoneNumberIdSet=${Boolean(
     process.env.WHATSAPP_PHONE_NUMBER_ID
   )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} aiEnabled=${aiAssistant.isEnabled()}`
 );
@@ -197,7 +198,7 @@ function applyDetections(session, msg) {
 }
 
 function buildAvailabilityMessage(fecha) {
-  const disponibilidad = turnosService.obtenerDisponibilidad(fecha, 1).disponibles;
+  const disponibilidad = turnosService.obtenerDisponibilidad(fecha, BOT_BARBER_ID).disponibles;
   if (!disponibilidad.length) {
     return `Para ${fecha} no quedan horarios disponibles.`;
   }
@@ -246,13 +247,34 @@ async function buildReply(from, texto) {
     'disponibilidad',
     'turnos libres',
   ]);
+  const asksTurnoAtSlot = containsAny(msg, [
+    'hay turno',
+    'hay un turno',
+    'tenes turno',
+    'tenes un turno',
+    'tienes turno',
+    'tienes un turno',
+  ]);
   const confirms = isConfirmIntent(intentText);
   const rejectsConfirmation = isNegativeConfirmIntent(intentText);
 
-  if (asksAvailability) {
+  if (asksAvailability || asksTurnoAtSlot) {
     session.stage = 'collecting';
     if (!session.draft.fecha) {
       return 'Decime la fecha para revisar horarios (ej: 2026-02-23 o 23/02/2026).';
+    }
+
+    if (session.draft.hora) {
+      const disponibilidad = turnosService.obtenerDisponibilidad(
+        session.draft.fecha,
+        BOT_BARBER_ID
+      ).disponibles;
+      if (disponibilidad.includes(session.draft.hora)) {
+        return `Si, ${session.draft.fecha} a las ${session.draft.hora} esta disponible. Si queres reservar, decime el servicio.`;
+      }
+      return `No, ${session.draft.fecha} a las ${session.draft.hora} no esta disponible. ${buildAvailabilityMessage(
+        session.draft.fecha
+      )}`;
     }
 
     return buildAvailabilityMessage(session.draft.fecha);
@@ -296,7 +318,10 @@ async function buildReply(from, texto) {
     return `${buildAvailabilityMessage(session.draft.fecha)} Decime la hora en formato HH:MM (ej: 15:00).`;
   }
 
-  const disponibilidad = turnosService.obtenerDisponibilidad(session.draft.fecha, 1).disponibles;
+  const disponibilidad = turnosService.obtenerDisponibilidad(
+    session.draft.fecha,
+    BOT_BARBER_ID
+  ).disponibles;
   if (!disponibilidad.includes(session.draft.hora)) {
     session.stage = 'awaiting_time';
     return `Ese horario no esta disponible. ${buildAvailabilityMessage(session.draft.fecha)} Decime otra hora.`;
@@ -324,7 +349,7 @@ async function buildReply(from, texto) {
     clientesRepo.ensureExists(from, `WhatsApp ${from}`);
 
     const turno = turnosService.crearTurno({
-      barber_id: 1,
+      barber_id: BOT_BARBER_ID,
       cliente_id: from,
       cliente: `WhatsApp ${from}`,
       servicio: session.draft.servicio,

@@ -52,6 +52,7 @@ let currentMonthDate = startOfMonth(new Date());
 let selectedDate = '';
 let monthCountsMap = {};
 let selectedCreateHora = '';
+let liveRefreshInterval = null;
 
 function pad2(v) {
   return String(v).padStart(2, '0');
@@ -279,7 +280,7 @@ async function loadCalendar() {
 }
 
 function renderDayDetails(data) {
-  selectedDateLabel.textContent = formatLongDate(data.fecha);
+  selectedDateLabel.textContent = `${formatLongDate(data.fecha)} (${data.fecha})`;
   selectedBusinessHours.textContent = `Horario: ${data.businessHours}`;
 
   dayAgendaList.innerHTML = '';
@@ -290,7 +291,8 @@ function renderDayDetails(data) {
   } else {
     data.agenda.forEach(t => {
       const li = document.createElement('li');
-      li.textContent = `${t.hora} - ${t.servicio} (${t.cliente})`;
+      const origen = t.origen ? ` [${t.origen}]` : '';
+      li.textContent = `${t.hora} - ${t.servicio} (${t.cliente})${origen}`;
       dayAgendaList.appendChild(li);
     });
   }
@@ -380,6 +382,37 @@ async function submitCreateTurno(event) {
   }
 }
 
+function stopLiveRefresh() {
+  if (liveRefreshInterval) {
+    clearInterval(liveRefreshInterval);
+    liveRefreshInterval = null;
+  }
+}
+
+async function refreshLiveData() {
+  if (!token) return;
+
+  try {
+    await loadSummary();
+
+    // Si el formulario de carga esta abierto, evitamos refrescar calendario
+    // para no pisar la edicion en curso.
+    const creatingTurno = !createTurnoCard.classList.contains('hidden');
+    if (!creatingTurno) {
+      await loadCalendar();
+    }
+  } catch (err) {
+    // Evita interrumpir la UI por errores temporales de red.
+  }
+}
+
+function startLiveRefresh() {
+  stopLiveRefresh();
+  liveRefreshInterval = setInterval(() => {
+    refreshLiveData();
+  }, 15000);
+}
+
 function setBotState(enabled) {
   botToggle.checked = Boolean(enabled);
   botStateLabel.className = `state-label ${enabled ? 'ok' : 'off'}`;
@@ -409,6 +442,7 @@ async function login(username, password) {
 }
 
 function logout() {
+  stopLiveRefresh();
   token = '';
   setLoggedInState(false);
   loginForm.reset();
@@ -418,6 +452,7 @@ async function bootstrapApp() {
   setLoggedInState(true);
   renderTodayLabel();
   await Promise.all([loadSummary(), loadCalendar(), loadBotStatus()]);
+  startLiveRefresh();
 }
 
 loginForm.addEventListener('submit', async event => {
@@ -450,3 +485,9 @@ cancelCreateTurnoBtn.addEventListener('click', hideCreateTurno);
 
 attachSlideNav();
 renderTodayLabel();
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    refreshLiveData();
+  }
+});
