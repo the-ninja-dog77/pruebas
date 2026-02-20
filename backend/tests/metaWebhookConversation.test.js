@@ -342,4 +342,51 @@ describe('WhatsApp webhook conversation flow', () => {
     );
     expect(movedExists).toBe(true);
   });
+
+  test('cancels nearest upcoming booking with natural cancel message', async () => {
+    const from = '595985544431';
+    const fecha = '2099-12-28';
+    const createSequence = [
+      'turno',
+      'corte',
+      fecha,
+      '11:00',
+      'Pedro Ruiz',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of createSequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const cancel = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('bro quiero cancelar no voy a poder ir ese dia', from));
+
+    expect(cancel.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('cancele tu turno');
+
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    const token = login.body.token;
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    const stillExists = day.body.agenda.some(
+      t => t.hora === '11:00' && t.cliente === 'Pedro Ruiz'
+    );
+    expect(stillExists).toBe(false);
+  });
 });

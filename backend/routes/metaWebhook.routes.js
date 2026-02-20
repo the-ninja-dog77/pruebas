@@ -389,8 +389,35 @@ async function buildReply(from, texto) {
     !wantsManageRescheduleCommand &&
     containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar'])
   ) {
+    const wantsBookingCancel = containsAny(msg, [
+      'cancelar',
+      'anular',
+      'no voy a poder',
+      'no puedo ir',
+      'no voy a ir',
+      'no podre ir',
+      'no podre asistir',
+    ]);
+
+    if (wantsBookingCancel) {
+      try {
+        const turno = turnosService.getProximoTurnoPorClienteId(from);
+        if (turno) {
+          turnosService.eliminarTurno({
+            id: turno.id,
+            cliente_id: from,
+            user: null,
+          });
+          resetSession(from);
+          return `Listo, cancele tu turno del ${turno.fecha} a las ${turno.hora} (${turno.servicio}).`;
+        }
+      } catch (err) {
+        logger.error(`WHATSAPP quick cancel error: ${err.stack || err.message}`);
+      }
+    }
+
     resetSession(from);
-    return 'Listo, cancele el flujo actual. Escribi "turno" para empezar otra reserva.';
+    return 'Listo, cancele el flujo actual. Si queres cancelar un turno especifico, escribi: "cancelar turno de NOMBRE el YYYY-MM-DD".';
   }
 
   if (containsAny(msg, ['ubicacion', 'donde', 'direccion', 'mapa'])) {
