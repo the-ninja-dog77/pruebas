@@ -13,12 +13,21 @@ const AUDIO_CONFIDENCE_ACTION = Number(process.env.AUDIO_CONFIDENCE_ACTION || 0.
 const AUDIO_CONFIDENCE_DESTRUCTIVE = Number(
   process.env.AUDIO_CONFIDENCE_DESTRUCTIVE || 0.85
 );
+function normalizeMimeType(value) {
+  const raw = String(value || '')
+    .toLowerCase()
+    .trim();
+  if (!raw) return '';
+  const [base] = raw.split(';');
+  return String(base || '').trim();
+}
+
 const SUPPORTED_AUDIO_MIME = String(
   process.env.SUPPORTED_AUDIO_MIME ||
     'audio/ogg,audio/opus,audio/mpeg,audio/mp4,audio/wav,audio/webm'
 )
   .split(',')
-  .map(x => x.trim().toLowerCase())
+  .map(x => normalizeMimeType(x))
   .filter(Boolean);
 
 const queue = [];
@@ -137,7 +146,7 @@ function processDebugTranscript(audioObj) {
 
 function unsupportedMime(mimeType) {
   if (!mimeType) return false;
-  const normalized = String(mimeType).toLowerCase();
+  const normalized = normalizeMimeType(mimeType);
   return !SUPPORTED_AUDIO_MIME.includes(normalized);
 }
 
@@ -190,7 +199,7 @@ async function processAudioMessage({
 }) {
   const startedAt = nowMs();
   const audioObj = incoming?.audio || {};
-  const mimeType = String(audioObj.mime_type || '').toLowerCase();
+  const mimeType = normalizeMimeType(audioObj.mime_type);
   const mediaId = String(audioObj.id || '').trim();
   const durationSec = Number(
     audioObj.duration_sec || audioObj.duration || audioObj.debug_duration_sec

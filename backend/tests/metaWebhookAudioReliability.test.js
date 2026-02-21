@@ -239,6 +239,33 @@ describe('WhatsApp audio reliability pipeline', () => {
     expect(recovery.reply).toContain('Que servicio queres');
   });
 
+  test('accepts WhatsApp ogg mime with codec parameter', async () => {
+    const from = '595985570018';
+    const response = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'mime-codec-ok',
+        mimeType: 'audio/ogg; codecs=opus',
+        debugTranscript: 'turno',
+        debugConfidence: 0.91,
+        debugDurationSec: 5,
+      })
+    );
+
+    expect(response.res.statusCode).toBe(200);
+    expect(response.reply).toContain('Que servicio queres');
+    recordCase({
+      dimension: 'A',
+      caseName: 'audio-mime-ogg-codecs-opus',
+      input: { mime_type: 'audio/ogg; codecs=opus' },
+      previousState: 'idle',
+      expected: 'aceptar formato WhatsApp y continuar flujo',
+      actual: response.reply,
+      latencyMs: response.latencyMs,
+      fallback: response.reply,
+    });
+  });
+
   test('low confidence audio does not advance dangerous action', async () => {
     const from = '595985570012';
 
