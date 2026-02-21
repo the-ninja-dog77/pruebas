@@ -1,14 +1,49 @@
 const logger = require('../logger');
 
-const GROQ_BASE_URL =
-  process.env.GROQ_BASE_URL ||
-  process.env.OPENAI_BASE_URL ||
-  'https://api.groq.com/openai/v1';
+const DEFAULT_GROQ_BASE_URL = 'https://api.groq.com/openai/v1';
+function normalizeBaseUrl(value) {
+  return String(value || '').trim().replace(/\/+$/, '');
+}
+
+function resolveGroqBaseUrl() {
+  const raw = process.env.GROQ_BASE_URL || process.env.OPENAI_BASE_URL || '';
+  const normalized = normalizeBaseUrl(raw);
+  if (!normalized) return DEFAULT_GROQ_BASE_URL;
+
+  if (normalized.includes('console.groq.com') || normalized.includes('/keys')) {
+    logger.warn(
+      `AUDIO STT invalid GROQ_BASE_URL detected (${normalized}); using default ${DEFAULT_GROQ_BASE_URL}`
+    );
+    return DEFAULT_GROQ_BASE_URL;
+  }
+
+  if (!/^https?:\/\//i.test(normalized)) {
+    logger.warn(
+      `AUDIO STT non-http GROQ_BASE_URL detected (${normalized}); using default ${DEFAULT_GROQ_BASE_URL}`
+    );
+    return DEFAULT_GROQ_BASE_URL;
+  }
+
+  return normalized;
+}
+
+const GROQ_BASE_URL = resolveGroqBaseUrl();
 const GROQ_API_KEY = process.env.GROQ_API_KEY || process.env.OPENAI_API_KEY || '';
-const STT_PROVIDER = String(process.env.AUDIO_STT_PROVIDER || 'groq').toLowerCase();
+const STT_PROVIDER_RAW = String(process.env.AUDIO_STT_PROVIDER || 'groq').toLowerCase();
+const STT_PROVIDER = STT_PROVIDER_RAW === 'groq' ? 'groq' : 'groq';
 const STT_MODEL = process.env.AUDIO_STT_MODEL || 'whisper-large-v3-turbo';
 const STT_TIMEOUT_MS = Number(process.env.AUDIO_STT_TIMEOUT_MS || 15000);
 const STT_MAX_RETRIES = Number(process.env.AUDIO_STT_RETRIES || 1);
+
+if (STT_PROVIDER_RAW !== 'groq') {
+  logger.warn(`AUDIO STT unsupported provider "${STT_PROVIDER_RAW}", forcing provider=groq`);
+}
+
+logger.info(
+  `AUDIO STT config provider=${STT_PROVIDER} baseUrl=${GROQ_BASE_URL} keySet=${Boolean(
+    GROQ_API_KEY
+  )} model=${STT_MODEL}`
+);
 
 async function withTimeout(promiseFactory, timeoutMs) {
   const controller = new AbortController();

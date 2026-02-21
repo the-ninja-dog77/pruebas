@@ -204,10 +204,18 @@ function fallbackReplyByReason(reason) {
       return 'Se demoro demasiado el procesamiento del audio. Reenvialo por favor.';
     case 'stt_timeout_or_network':
       return 'Tuve un problema temporal al transcribir el audio. Podes reenviarlo o escribir en texto.';
+    case 'stt_provider_error':
+      return 'El servicio de transcripcion devolvio un error temporal. Reenvia el audio en unos segundos o escribime en texto.';
     case 'stt_empty_transcript':
       return 'No pude extraer texto util del audio. Podrias repetirlo o escribir en texto?';
     case 'stt_not_configured':
       return 'Ahora mismo no tengo transcripcion de audio activa. Escribime en texto por favor.';
+    case 'stt_provider_not_supported':
+      return 'La configuracion de transcripcion no es valida. Escribime en texto por ahora.';
+    case 'missing_media_url':
+      return 'No pude obtener el archivo de audio desde WhatsApp. Reenvialo por favor.';
+    case 'audio_pipeline_error':
+      return 'No pude descargar o procesar ese audio desde WhatsApp. Reenvialo por favor o escribime en texto.';
     case 'missing_media_id':
       return 'No recibi bien el audio. Reenvialo por favor o escribime en texto.';
     default:
