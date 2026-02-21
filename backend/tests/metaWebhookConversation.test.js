@@ -622,4 +622,58 @@ describe('WhatsApp webhook conversation flow', () => {
 
     expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
   });
+
+  test('understands "las 4" as 16:00', async () => {
+    const from = '595985544440';
+    const fecha = '2099-12-30';
+    const ip = '10.0.0.240';
+    const sequence = ['turno', 'corte', fecha, 'las 4'];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('understands "las 16" as 16:00', async () => {
+    const from = '595985544441';
+    const fecha = '2099-12-30';
+    const ip = '10.0.0.241';
+    const sequence = ['turno', 'corte', fecha, 'las 16'];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('understands spoken-style "las cuatro" as 16:00', async () => {
+    const from = '595985544442';
+    const fecha = '2099-12-30';
+    const ip = '10.0.0.242';
+    const sequence = ['turno', 'corte', fecha, 'las cuatro'];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
 });

@@ -346,6 +346,42 @@ function parseDate(msg) {
 }
 
 function parseTime(msg) {
+  const HOUR_WORD_MAP = {
+    cero: 0,
+    un: 1,
+    uno: 1,
+    una: 1,
+    dos: 2,
+    tres: 3,
+    cuatro: 4,
+    cinco: 5,
+    seis: 6,
+    siete: 7,
+    ocho: 8,
+    nueve: 9,
+    diez: 10,
+    once: 11,
+    doce: 12,
+    trece: 13,
+    catorce: 14,
+    quince: 15,
+    dieciseis: 16,
+    diecisiete: 17,
+    dieciocho: 18,
+    diecinueve: 19,
+    veinte: 20,
+    veintiuno: 21,
+    veintiun: 21,
+    veintiuna: 21,
+    veintidos: 22,
+    veintitres: 23,
+  };
+  const parseHourWord = rawWord => {
+    const token = normalizeText(rawWord).replace(/[^a-z]/g, '');
+    if (!token) return null;
+    return HOUR_WORD_MAP[token] ?? null;
+  };
+
   const candidates = [];
   const pushCandidate = (index, hour, minutes, suffixRaw = '') => {
     const suffix = String(suffixRaw || '')
@@ -361,27 +397,63 @@ function parseTime(msg) {
     if (suffix === 'pm' && h < 12) h += 12;
     if (suffix === 'am' && h === 12) h = 0;
 
-    if (!suffix && h >= 0 && h <= 8) {
+    if (!suffix && h >= 1 && h <= 8) {
       h += 12;
     }
 
     candidates.push({ index, value: `${pad2(h)}:${pad2(m)}` });
   };
 
-  const exactRegex = /\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\b/gi;
+  const exactRegex =
+    /\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi;
   for (const match of msg.matchAll(exactRegex)) {
     pushCandidate(match.index, match[1], match[2], match[3]);
   }
 
-  const contextualRegex =
-    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*hs?)?\b/gi;
-  for (const match of msg.matchAll(contextualRegex)) {
+  const contextualNumericRegex =
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi;
+  for (const match of msg.matchAll(contextualNumericRegex)) {
     pushCandidate(match.index, match[1], match[2], match[3]);
   }
 
-  const hsRegex = /\b([0-2]?\d)(?::([0-5]\d))?\s*hs\b/gi;
+  const contextualWordRegex =
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([a-záéíóúñ]+)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas|en\s*punto))?\b/gi;
+  for (const match of msg.matchAll(contextualWordRegex)) {
+    const parsedHour = parseHourWord(match[1]);
+    if (parsedHour === null) continue;
+    pushCandidate(match.index, parsedHour, 0, match[2]);
+  }
+
+  const hsRegex = /\b([0-2]?\d)(?::([0-5]\d))?\s*(?:h|hs|hora|horas)\b/gi;
   for (const match of msg.matchAll(hsRegex)) {
     pushCandidate(match.index, match[1], match[2], '');
+  }
+
+  const bareNumericRegex =
+    /^\s*(?:a\s*las\s*)?([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\s*(?:h|hs|hora|horas)?\s*$/i;
+  const bareNumericMatch = msg.match(bareNumericRegex);
+  if (bareNumericMatch) {
+    pushCandidate(
+      msg.indexOf(String(bareNumericMatch[1] || '')),
+      bareNumericMatch[1],
+      bareNumericMatch[2],
+      bareNumericMatch[3]
+    );
+  }
+
+  const bareWordRegex =
+    /^\s*(?:a\s*las\s*)?([a-záéíóúñ]+)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\s*(?:h|hs|hora|horas)?\s*$/i;
+  const bareWordMatch = msg.match(bareWordRegex);
+  if (bareWordMatch) {
+    const parsedHour = parseHourWord(bareWordMatch[1]);
+    if (parsedHour !== null) {
+      pushCandidate(
+        msg.indexOf(String(bareWordMatch[1] || '')),
+        parsedHour,
+        0,
+        bareWordMatch[2]
+      );
+    }
   }
 
   if (!candidates.length) return null;
