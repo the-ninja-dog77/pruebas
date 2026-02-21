@@ -2,6 +2,13 @@ const axios = require('axios');
 const readline = require('readline');
 
 const API = 'http://localhost:3000';
+ 
+/* ======================================================
+   IDENTIDAD DEL CLIENTE — FASE 3.8
+   (simula WhatsApp real)
+   ====================================================== */
+
+const CLIENTE_ID = 'cliente_console_1';
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -123,7 +130,10 @@ function detectarHora(msg) {
 
 async function mostrarDisponibles() {
   try {
-    const res = await axios.get(`${API}/turnos/disponibilidad/${contexto.fecha}`);
+    const barberId = contexto.barbero === 'gonza' ? 1 : 2;
+    const res = await axios.get(
+      `${API}/turnos/disponibilidad/${contexto.fecha}/${barberId}`
+    );
     console.log('📅 Horarios disponibles:');
     console.log(res.data.disponibles.join(', '));
   } catch {
@@ -133,11 +143,15 @@ async function mostrarDisponibles() {
 
 async function crearTurno() {
   try {
+    const barberId = contexto.barbero === 'gonza' ? 1 : 2;
+
     const res = await axios.post(`${API}/turnos`, {
       cliente: 'Cliente WhatsApp',
+      cliente_id: CLIENTE_ID,
       servicio: contexto.servicio,
       fecha: contexto.fecha,
       hora: contexto.hora,
+      barber_id: barberId,
       origen: 'bot',
     });
 
@@ -162,22 +176,32 @@ async function crearTurno() {
 async function procesarMensaje(input) {
   const msg = normalizar(input);
 
-  /* 🔔 RECORDATORIOS */
+  /* 🔔 RECORDATORIOS — FASE 3.8 (AISLADOS POR CLIENTE) */
   try {
-    const res = await axios.get(`${API}/turnos/recordatorio/activo/${CLIENTE_ID}`);
+    const res = await axios.get(
+      `${API}/turnos/recordatorio/activo/${CLIENTE_ID}`
+    );
     const turno = res.data;
 
     if (turno) {
       if (esAfirmacion(msg)) {
-        await axios.post(`${API}/turnos/recordatorio/${turno.id}/responder`, { accion:'confirmar', cliente_id: CLIENTE_ID });
+        await axios.post(
+          `${API}/turnos/recordatorio/${turno.id}/responder`,
+          { accion: 'confirmar' }
+        );
         console.log('✅ Turno confirmado. Te esperamos.');
         return;
       }
+
       if (esCancelacion(msg)) {
-        await axios.post(`${API}/turnos/recordatorio/${turno.id}/responder`, { accion:'cancelar', cliente_id: CLIENTE_ID });
+        await axios.post(
+          `${API}/turnos/recordatorio/${turno.id}/responder`,
+          { accion: 'cancelar' }
+        );
         console.log('❌ Turno cancelado.');
         return;
       }
+
       console.log('👉 ¿Confirmás o querés cancelar tu turno?');
       return;
     }
@@ -280,9 +304,7 @@ async function procesarMensaje(input) {
 
   /* ❌ CANCELAR */
   if (ultimoTurnoConfirmado && esCancelacion(msg)) {
-    await axios.delete(`${API}/turnos/${ultimoTurnoConfirmado.id}`, {
-      data: { cliente_id: CLIENTE_ID },
-    });
+    await axios.delete(`${API}/turnos/${ultimoTurnoConfirmado.id}`);
     ultimoTurnoConfirmado = null;
     console.log('❌ Turno cancelado.');
     await mostrarDisponibles();
