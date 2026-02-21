@@ -7,9 +7,11 @@
     "start": "node index.js",
     "dev": "nodemon index.js",
     "test": "jest --runInBand",
-    "test:reliability": "jest tests/metaWebhookConversation.test.js tests/metaWebhookReliability.test.js tests/metaWebhookProductionMatrix.test.js --runInBand",
+    "test:reliability": "jest tests/metaWebhookConversation.test.js tests/metaWebhookReliability.test.js tests/metaWebhookProductionMatrix.test.js tests/metaWebhookAudioReliability.test.js --runInBand",
     "test:matrix": "jest tests/metaWebhookProductionMatrix.test.js --runInBand",
-    "load:webhook": "node scripts/runWebhookLoadChaos.js"
+    "test:audio": "jest tests/metaWebhookAudioReliability.test.js --runInBand",
+    "load:webhook": "node scripts/runWebhookLoadChaos.js",
+    "load:audio": "node scripts/runAudioLoadChaos.js"
   },
   "keywords": [],
   "author": "",

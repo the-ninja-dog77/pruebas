@@ -6,6 +6,8 @@ const turnosService = require('../services/turnos.service');
 const clientesRepo = require('../repositories/clientes.repository');
 const settingsRepo = require('../repositories/settings.repository');
 const aiAssistant = require('../services/aiAssistant.service');
+const audioPipeline = require('../services/audioPipeline.service');
+const audioMetrics = require('../services/audioObservability.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
@@ -276,36 +278,48 @@ function isValidDate(year, month, day) {
 }
 
 function parseDate(msg) {
-  let match = msg.match(/\b(\d{4})-(\d{2})-(\d{2})\b/);
-  if (match) {
+  const candidates = [];
+  const pushCandidate = (index, value) => {
+    if (index < 0 || !value) return;
+    candidates.push({ index, value });
+  };
+
+  const isoRegex = /\b(\d{4})-(\d{2})-(\d{2})\b/g;
+  for (const match of msg.matchAll(isoRegex)) {
     const year = Number(match[1]);
     const month = Number(match[2]);
     const day = Number(match[3]);
-
     if (isValidDate(year, month, day)) {
-      return `${year}-${pad2(month)}-${pad2(day)}`;
+      pushCandidate(match.index, `${year}-${pad2(month)}-${pad2(day)}`);
     }
   }
 
-  match = msg.match(/\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/);
-  if (match) {
+  const slashRegex = /\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/g;
+  for (const match of msg.matchAll(slashRegex)) {
     const day = Number(match[1]);
     const month = Number(match[2]);
     const rawYear = match[3];
     let year = rawYear ? Number(rawYear) : new Date().getFullYear();
-
     if (rawYear && rawYear.length === 2) {
       year += 2000;
     }
 
     if (isValidDate(year, month, day)) {
-      return `${year}-${pad2(month)}-${pad2(day)}`;
+      pushCandidate(match.index, `${year}-${pad2(month)}-${pad2(day)}`);
     }
   }
 
-  if (msg.includes('pasado manana')) return formatDateLocal(addDays(2));
-  if (msg.includes('manana')) return formatDateLocal(addDays(1));
-  if (msg.includes('hoy')) return formatDateLocal(new Date());
+  const relCandidates = [
+    { token: 'pasado manana', value: formatDateLocal(addDays(2)) },
+    { token: 'manana', value: formatDateLocal(addDays(1)) },
+    { token: 'hoy', value: formatDateLocal(new Date()) },
+  ];
+  for (const rel of relCandidates) {
+    const index = msg.lastIndexOf(rel.token);
+    if (index >= 0) {
+      pushCandidate(index, rel.value);
+    }
+  }
 
   const weekdayMap = {
     domingo: 0,
@@ -316,67 +330,63 @@ function parseDate(msg) {
     viernes: 5,
     sabado: 6,
   };
-
+  const today = new Date();
+  const todayDay = today.getDay();
   for (const [name, targetDay] of Object.entries(weekdayMap)) {
-    if (!msg.includes(name)) continue;
+    const index = msg.lastIndexOf(name);
+    if (index < 0) continue;
 
-    const today = new Date();
-    const todayDay = today.getDay();
     const diff = (targetDay - todayDay + 7) % 7 || 7;
-
-    return formatDateLocal(addDays(diff));
+    pushCandidate(index, formatDateLocal(addDays(diff)));
   }
 
-  return null;
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => a.index - b.index);
+  return candidates[candidates.length - 1].value;
 }
 
 function parseTime(msg) {
-  let match = msg.match(/\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\b/i);
-  if (match) {
-    let hour = Number(match[1]);
-    const minutes = Number(match[2]);
-    const suffix = String(match[3] || '')
+  const candidates = [];
+  const pushCandidate = (index, hour, minutes, suffixRaw = '') => {
+    const suffix = String(suffixRaw || '')
       .toLowerCase()
       .replace(/\s+/g, '')
       .replace(/\./g, '');
 
-    if (suffix === 'pm' && hour < 12) hour += 12;
-    if (suffix === 'am' && hour === 12) hour = 0;
+    let h = Number(hour);
+    const m = Number(minutes || 0);
+    if (!Number.isInteger(h) || h < 0 || h > 23) return;
+    if (!Number.isInteger(m) || m < 0 || m > 59) return;
 
-    if (!suffix && hour >= 1 && hour <= 8) {
-      hour += 12;
+    if (suffix === 'pm' && h < 12) h += 12;
+    if (suffix === 'am' && h === 12) h = 0;
+
+    if (!suffix && h >= 0 && h <= 8) {
+      h += 12;
     }
 
-    return `${pad2(hour)}:${pad2(minutes)}`;
+    candidates.push({ index, value: `${pad2(h)}:${pad2(m)}` });
+  };
+
+  const exactRegex = /\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\b/gi;
+  for (const match of msg.matchAll(exactRegex)) {
+    pushCandidate(match.index, match[1], match[2], match[3]);
   }
 
-  match = msg.match(
-    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*hs?)?\b/i
-  );
-  if (!match) {
-    match = msg.match(/\b([0-2]?\d)(?::([0-5]\d))?\s*hs\b/i);
+  const contextualRegex =
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*hs?)?\b/gi;
+  for (const match of msg.matchAll(contextualRegex)) {
+    pushCandidate(match.index, match[1], match[2], match[3]);
   }
 
-  if (!match) return null;
-
-  let hour = Number(match[1]);
-  const minutes = Number(match[2] || 0);
-  const suffix = String(match[3] || '')
-    .toLowerCase()
-    .replace(/\s+/g, '')
-    .replace(/\./g, '');
-
-  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
-  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
-
-  if (suffix === 'pm' && hour < 12) hour += 12;
-  if (suffix === 'am' && hour === 12) hour = 0;
-
-  if (!suffix && hour >= 0 && hour <= 8) {
-    hour += 12;
+  const hsRegex = /\b([0-2]?\d)(?::([0-5]\d))?\s*hs\b/gi;
+  for (const match of msg.matchAll(hsRegex)) {
+    pushCandidate(match.index, match[1], match[2], '');
   }
 
-  return `${pad2(hour)}:${pad2(minutes)}`;
+  if (!candidates.length) return null;
+  candidates.sort((a, b) => a.index - b.index);
+  return candidates[candidates.length - 1].value;
 }
 
 function detectService(msg) {
@@ -637,7 +647,7 @@ async function maybeAiFallback(texto, session) {
   return aiAssistant.generateReply(texto, session);
 }
 
-async function buildReply(from, texto) {
+async function buildReply(from, texto, _context = {}) {
   const msg = normalizeText(texto);
   let session = getSession(from);
   ensureSessionIntegrity(session);
@@ -1109,9 +1119,17 @@ router.post('/', async (req, res) => {
       return res.sendStatus(200);
     }
 
+    const isAudioInbound = Boolean(incoming.audio) || incoming.type === 'audio';
     const from = String(incoming.from || '').trim();
     if (!from) {
       logger.warn('WHATSAPP inbound ignored: missing sender');
+      if (isAudioInbound) {
+        audioMetrics.record({
+          discarded: true,
+          reason: 'invalid_inbound_payload',
+          failureType: 'audio',
+        });
+      }
       if (debugMode) {
         return res.status(200).json({ ok: true, reason: 'invalid_inbound_payload' });
       }
@@ -1121,6 +1139,13 @@ router.post('/', async (req, res) => {
     const inboundTimestamp = parseInboundTimestampSeconds(incoming.timestamp);
     if (isStaleInboundEvent(inboundTimestamp)) {
       logger.info(`WHATSAPP stale inbound ignored from=${from} ts=${incoming.timestamp}`);
+      if (isAudioInbound) {
+        audioMetrics.record({
+          discarded: true,
+          reason: 'stale_event',
+          failureType: 'timing',
+        });
+      }
       if (debugMode) {
         return res.status(200).json({ ok: true, reason: 'stale_event' });
       }
@@ -1129,6 +1154,14 @@ router.post('/', async (req, res) => {
 
     if (isOutOfOrderInboundEvent(from, inboundTimestamp)) {
       logger.info(`WHATSAPP out-of-order inbound ignored from=${from} ts=${incoming.timestamp}`);
+      if (isAudioInbound) {
+        audioMetrics.record({
+          discarded: true,
+          outOfOrder: true,
+          reason: 'out_of_order_event',
+          failureType: 'timing',
+        });
+      }
       if (debugMode) {
         return res.status(200).json({ ok: true, reason: 'out_of_order_event' });
       }
@@ -1141,7 +1174,7 @@ router.post('/', async (req, res) => {
       incoming.interactive?.button_reply?.title ||
       incoming.interactive?.list_reply?.title ||
       '';
-    logger.info(`WHATSAPP inbound from=${from} text="${texto}"`);
+    logger.info(`WHATSAPP inbound from=${from} type=${incoming.type || 'text'} text="${texto}"`);
 
     const incomingMessageId = String(incoming.id || '').trim();
     const dedupeId = incomingMessageId || null;
@@ -1175,11 +1208,30 @@ router.post('/', async (req, res) => {
       return res.sendStatus(200);
     }
 
+    let replyText = '';
+    let audioResult = null;
+    if (isAudioInbound) {
+      audioResult = await audioPipeline.processAudioMessage({
+        incoming,
+        from,
+        accessToken,
+        graphVersion: GRAPH_VERSION,
+        buildReply,
+      });
+      replyText = String(audioResult?.reply || '').trim();
+    } else {
+      replyText = String(await buildReply(from, texto, { source: 'text' }) || '').trim();
+    }
+
+    if (!replyText) {
+      replyText = 'No pude procesar tu mensaje. Proba de nuevo en unos minutos.';
+    }
+
     const body = {
       messaging_product: 'whatsapp',
       to: from,
       type: 'text',
-      text: { body: await buildReply(from, texto) },
+      text: { body: replyText },
     };
 
     const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
@@ -1210,7 +1262,11 @@ router.post('/', async (req, res) => {
     logger.info(`WHATSAPP outbound ok messageId=${data.messages?.[0]?.id || 'n/a'}`);
     markMessageProcessed(dedupeId);
     if (debugMode) {
-      return res.status(200).json({ ok: true, outbound: data });
+      return res.status(200).json({
+        ok: true,
+        outbound: data,
+        audio: audioResult,
+      });
     }
     return res.sendStatus(200);
   } catch (err) {

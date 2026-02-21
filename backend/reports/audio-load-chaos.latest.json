@@ -1,0 +1,161 @@
+{
+  "generatedAt": "2026-02-21T02:12:15.539Z",
+  "baseline": {
+    "name": "audio-baseline",
+    "chaos": false,
+    "totalRequests": 420,
+    "failures": 0,
+    "retries": 0,
+    "retryRatioPercent": 0,
+    "errorRatePercent": 0,
+    "throughputReqPerSec": 187.98,
+    "latencyMs": {
+      "p50": 57,
+      "p95": 84,
+      "p99": 123,
+      "avg": 56.14
+    },
+    "statusHistogram": {
+      "200": 420
+    },
+    "maxInFlight": 16,
+    "cpuPercent": 93.01,
+    "eventLoopDelayMs": {
+      "p99": 30.98,
+      "max": 50
+    },
+    "audioMetrics": {
+      "totals": {
+        "total": 420,
+        "processed": 232,
+        "discarded": 188,
+        "clarification": 164,
+        "lowConfidence": 164,
+        "confirmedActions": 0,
+        "executedActions": 0,
+        "sttRetries": 0,
+        "outOfOrder": 0
+      },
+      "ratios": {
+        "lowConfidencePct": 39.05,
+        "clarificationPct": 39.05,
+        "executedVsConfirmedPct": 0
+      },
+      "failureByType": {
+        "audio": 74,
+        "stt": 0,
+        "intent": 133,
+        "state": 31,
+        "timing": 0
+      },
+      "reasonCounts": {
+        "unsupported_audio_mime": 11,
+        "audio_processed": 182,
+        "low_confidence": 114,
+        "destructive_low_confidence": 31,
+        "audio_too_short": 37,
+        "audio_noise_or_silence": 26,
+        "actionable_low_confidence": 19
+      },
+      "latencyMs": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1
+      },
+      "confidence": {
+        "avg": 0.6303,
+        "p10": 0.3,
+        "p50": 0.72,
+        "p90": 0.91
+      },
+      "queue": {
+        "peakDepth": 0,
+        "rejected": 0,
+        "timeout": 0
+      }
+    }
+  },
+  "stress": {
+    "name": "audio-stress-chaos",
+    "chaos": true,
+    "totalRequests": 853,
+    "failures": 73,
+    "retries": 73,
+    "retryRatioPercent": 8.56,
+    "errorRatePercent": 8.56,
+    "throughputReqPerSec": 125.83,
+    "latencyMs": {
+      "p50": 75,
+      "p95": 711,
+      "p99": 970,
+      "avg": 175.18
+    },
+    "statusHistogram": {
+      "200": 780,
+      "500": 73
+    },
+    "maxInFlight": 28,
+    "cpuPercent": 53.71,
+    "eventLoopDelayMs": {
+      "p99": 25.64,
+      "max": 37.03
+    },
+    "audioMetrics": {
+      "totals": {
+        "total": 1200,
+        "processed": 656,
+        "discarded": 544,
+        "clarification": 445,
+        "lowConfidence": 445,
+        "confirmedActions": 4,
+        "executedActions": 0,
+        "sttRetries": 0,
+        "outOfOrder": 0
+      },
+      "ratios": {
+        "lowConfidencePct": 37.08,
+        "clarificationPct": 37.08,
+        "executedVsConfirmedPct": 0
+      },
+      "failureByType": {
+        "audio": 225,
+        "stt": 0,
+        "intent": 362,
+        "state": 83,
+        "timing": 0
+      },
+      "reasonCounts": {
+        "unsupported_audio_mime": 43,
+        "audio_processed": 530,
+        "low_confidence": 319,
+        "destructive_low_confidence": 83,
+        "audio_too_short": 94,
+        "audio_noise_or_silence": 88,
+        "actionable_low_confidence": 43
+      },
+      "latencyMs": {
+        "p50": 0,
+        "p95": 1,
+        "p99": 1
+      },
+      "confidence": {
+        "avg": 0.6371,
+        "p10": 0.3,
+        "p50": 0.72,
+        "p90": 0.91
+      },
+      "queue": {
+        "peakDepth": 0,
+        "rejected": 0,
+        "timeout": 0
+      }
+    }
+  },
+  "comparison": {
+    "p95DeltaMs": 627,
+    "p99DeltaMs": 847,
+    "errorRateDeltaPercent": 8.56,
+    "retryDeltaPercent": 8.56,
+    "throughputDeltaReqPerSec": -62.15
+  }
+}

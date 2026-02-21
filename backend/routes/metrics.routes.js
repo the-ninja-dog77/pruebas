@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../database');
 const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
+const audioMetrics = require('../services/audioObservability.service');
 
 router.get('/', (req, res) => {
   try {
@@ -19,6 +20,7 @@ router.get('/', (req, res) => {
       clientes: totalClientes,
       memoryUsage: process.memoryUsage(),
       uptime: process.uptime(),
+      audio: audioMetrics.getSnapshot(),
     });
   } catch (err) {
     res.status(500).json({ message: 'Error obteniendo métricas' });
@@ -35,6 +37,7 @@ router.get(
       dbPath: process.env.DB_PATH,
       memory: process.memoryUsage(),
       uptime: process.uptime(),
+      audio: audioMetrics.getSnapshot(),
     });
   }
 );
