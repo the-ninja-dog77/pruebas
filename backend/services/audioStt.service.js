@@ -34,6 +34,9 @@ const STT_PROVIDER = STT_PROVIDER_RAW === 'groq' ? 'groq' : 'groq';
 const STT_MODEL = process.env.AUDIO_STT_MODEL || 'whisper-large-v3-turbo';
 const STT_TIMEOUT_MS = Number(process.env.AUDIO_STT_TIMEOUT_MS || 15000);
 const STT_MAX_RETRIES = Number(process.env.AUDIO_STT_RETRIES || 1);
+const MEDIA_METADATA_RETRIES = Number(process.env.AUDIO_MEDIA_METADATA_RETRIES || 1);
+const MEDIA_DOWNLOAD_RETRIES = Number(process.env.AUDIO_MEDIA_DOWNLOAD_RETRIES || 1);
+const RETRY_BACKOFF_MS = Number(process.env.AUDIO_RETRY_BACKOFF_MS || 300);
 
 if (STT_PROVIDER_RAW !== 'groq') {
   logger.warn(`AUDIO STT unsupported provider "${STT_PROVIDER_RAW}", forcing provider=groq`);
@@ -55,55 +58,160 @@ async function withTimeout(promiseFactory, timeoutMs) {
   }
 }
 
-async function fetchMediaMetadata({ mediaId, accessToken, graphVersion }) {
-  const url = `https://graph.facebook.com/${graphVersion}/${mediaId}`;
-  const response = await withTimeout(
-    signal =>
-      fetch(url, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        signal,
-      }),
-    STT_TIMEOUT_MS
-  );
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
 
-  if (!response.ok) {
-    const body = await response.text();
-    const err = new Error(`Media metadata failed status=${response.status} body=${body}`);
-    err.status = response.status;
-    throw err;
+function shouldRetryStatus(status) {
+  return status === 408 || status === 409 || status === 429 || status >= 500;
+}
+
+function classifyMediaHttpError(status, operation) {
+  if (status === 401 || status === 403) return 'media_auth_error';
+  if (status === 404) {
+    if (operation === 'download') return 'media_url_expired_or_not_found';
+    return 'media_not_found';
+  }
+  if (status === 408 || status === 429 || status >= 500) return 'media_timeout';
+  return 'audio_pipeline_error';
+}
+
+function classifySttHttpError(status) {
+  if (status === 401 || status === 403) return 'stt_auth_error';
+  return 'stt_provider_error';
+}
+
+function buildMediaUrl({ mediaId, graphVersion, phoneNumberId }) {
+  const base = `https://graph.facebook.com/${graphVersion}/${mediaId}`;
+  if (!phoneNumberId) return base;
+  return `${base}?phone_number_id=${encodeURIComponent(String(phoneNumberId))}`;
+}
+
+async function fetchMediaMetadata({ mediaId, accessToken, graphVersion, phoneNumberId }) {
+  const url = buildMediaUrl({ mediaId, graphVersion, phoneNumberId });
+  let retries = 0;
+
+  while (retries <= MEDIA_METADATA_RETRIES) {
+    try {
+      const response = await withTimeout(
+        signal =>
+          fetch(url, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            signal,
+          }),
+        STT_TIMEOUT_MS
+      );
+
+      if (!response.ok) {
+        const body = await response.text();
+        const reason = classifyMediaHttpError(response.status, 'metadata');
+        if (retries < MEDIA_METADATA_RETRIES && shouldRetryStatus(response.status)) {
+          retries += 1;
+          await sleep(RETRY_BACKOFF_MS * retries);
+          continue;
+        }
+
+        return {
+          ok: false,
+          reason,
+          status: response.status,
+          body,
+          retries,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        ok: true,
+        data,
+        retries,
+      };
+    } catch (err) {
+      if (retries < MEDIA_METADATA_RETRIES) {
+        retries += 1;
+        await sleep(RETRY_BACKOFF_MS * retries);
+        continue;
+      }
+      logger.error(`AUDIO metadata timeout/error: ${err.message}`);
+      return {
+        ok: false,
+        reason: 'media_timeout',
+        retries,
+      };
+    }
   }
 
-  return response.json();
+  return {
+    ok: false,
+    reason: 'media_timeout',
+    retries: MEDIA_METADATA_RETRIES,
+  };
 }
 
 async function downloadMediaBuffer({ mediaUrl, accessToken }) {
-  const response = await withTimeout(
-    signal =>
-      fetch(mediaUrl, {
-        method: 'GET',
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-        signal,
-      }),
-    STT_TIMEOUT_MS
-  );
+  let retries = 0;
+  while (retries <= MEDIA_DOWNLOAD_RETRIES) {
+    try {
+      const response = await withTimeout(
+        signal =>
+          fetch(mediaUrl, {
+            method: 'GET',
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+            },
+            signal,
+          }),
+        STT_TIMEOUT_MS
+      );
 
-  if (!response.ok) {
-    const body = await response.text();
-    const err = new Error(`Media download failed status=${response.status} body=${body}`);
-    err.status = response.status;
-    throw err;
+      if (!response.ok) {
+        const body = await response.text();
+        const reason = classifyMediaHttpError(response.status, 'download');
+        if (retries < MEDIA_DOWNLOAD_RETRIES && shouldRetryStatus(response.status)) {
+          retries += 1;
+          await sleep(RETRY_BACKOFF_MS * retries);
+          continue;
+        }
+
+        return {
+          ok: false,
+          reason,
+          status: response.status,
+          body,
+          retries,
+        };
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || 'audio/ogg';
+      return {
+        ok: true,
+        buffer: Buffer.from(arrayBuffer),
+        contentType,
+        retries,
+      };
+    } catch (err) {
+      if (retries < MEDIA_DOWNLOAD_RETRIES) {
+        retries += 1;
+        await sleep(RETRY_BACKOFF_MS * retries);
+        continue;
+      }
+      logger.error(`AUDIO media download timeout/error: ${err.message}`);
+      return {
+        ok: false,
+        reason: 'media_timeout',
+        retries,
+      };
+    }
   }
 
-  const arrayBuffer = await response.arrayBuffer();
-  const contentType = response.headers.get('content-type') || 'audio/ogg';
   return {
-    buffer: Buffer.from(arrayBuffer),
-    contentType,
+    ok: false,
+    reason: 'media_timeout',
+    retries: MEDIA_DOWNLOAD_RETRIES,
   };
 }
 
@@ -116,16 +224,16 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
     };
   }
 
-  const blob = new Blob([buffer], { type: mimeType || 'audio/ogg' });
-  const form = new FormData();
-  form.append('file', blob, filename || 'audio.ogg');
-  form.append('model', STT_MODEL);
-  form.append('response_format', 'verbose_json');
-  form.append('temperature', '0');
-
   let retries = 0;
   while (retries <= STT_MAX_RETRIES) {
     try {
+      const blob = new Blob([buffer], { type: mimeType || 'audio/ogg' });
+      const form = new FormData();
+      form.append('file', blob, filename || 'audio.ogg');
+      form.append('model', STT_MODEL);
+      form.append('response_format', 'verbose_json');
+      form.append('temperature', '0');
+
       const response = await withTimeout(
         signal =>
           fetch(`${GROQ_BASE_URL}/audio/transcriptions`, {
@@ -141,14 +249,15 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
 
       if (!response.ok) {
         const errText = await response.text();
-        if (retries < STT_MAX_RETRIES) {
+        if (retries < STT_MAX_RETRIES && shouldRetryStatus(response.status)) {
           retries += 1;
+          await sleep(RETRY_BACKOFF_MS * retries);
           continue;
         }
         logger.error(`AUDIO STT failed status=${response.status} body=${errText}`);
         return {
           ok: false,
-          reason: 'stt_provider_error',
+          reason: classifySttHttpError(response.status),
           failureType: 'stt',
           retries,
         };
@@ -175,6 +284,7 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
     } catch (err) {
       if (retries < STT_MAX_RETRIES) {
         retries += 1;
+        await sleep(RETRY_BACKOFF_MS * retries);
         continue;
       }
       logger.error(`AUDIO STT timeout/error: ${err.message}`);
@@ -198,16 +308,28 @@ async function transcribeFromWhatsAppMedia({
   mediaId,
   accessToken,
   graphVersion,
+  phoneNumberId,
   mimeTypeHint,
   filenameHint,
 }) {
   try {
-    const metadata = await fetchMediaMetadata({
+    const metadataResult = await fetchMediaMetadata({
       mediaId,
       accessToken,
       graphVersion,
+      phoneNumberId,
     });
-    const mediaUrl = metadata?.url;
+    if (!metadataResult.ok) {
+      return {
+        ok: false,
+        reason: metadataResult.reason || 'audio_pipeline_error',
+        failureType: metadataResult.reason === 'media_timeout' ? 'timing' : 'audio',
+        retries: Number(metadataResult.retries || 0),
+      };
+    }
+
+    const metadata = metadataResult.data || {};
+    const mediaUrl = metadata.url;
     if (!mediaUrl) {
       return {
         ok: false,
@@ -220,6 +342,14 @@ async function transcribeFromWhatsAppMedia({
       mediaUrl,
       accessToken,
     });
+    if (!downloaded.ok) {
+      return {
+        ok: false,
+        reason: downloaded.reason || 'audio_pipeline_error',
+        failureType: downloaded.reason === 'media_timeout' ? 'timing' : 'audio',
+        retries: Number(downloaded.retries || 0),
+      };
+    }
 
     const mimeType = mimeTypeHint || metadata.mime_type || downloaded.contentType || 'audio/ogg';
     const filename = filenameHint || `${mediaId}.ogg`;
@@ -243,6 +373,10 @@ async function transcribeFromWhatsAppMedia({
       ...transcript,
       sizeBytes,
       mimeType,
+      retries:
+        Number(transcript.retries || 0) +
+        Number(metadataResult.retries || 0) +
+        Number(downloaded.retries || 0),
     };
   } catch (err) {
     logger.error(`AUDIO media pipeline failed: ${err.stack || err.message}`);

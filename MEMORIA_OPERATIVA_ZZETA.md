@@ -107,6 +107,46 @@ Formato sugerido:
 - Confirmar si se desea commitear cambios pendientes de `audioPipeline` y reportes.
 - Commit(s): Pendiente (no realizado en esta sesion).
 
+### Sesion 2026-02-21 (auditoria audio WhatsApp + hardening)
+- Fecha: 2026-02-21
+- Objetivo: Auditar y blindar canal de audio WhatsApp para produccion real.
+- Cambios realizados:
+- Investigacion tecnica de Media Object/Media URL/Audio message en docs oficiales de Meta/SDK.
+- Hardening en `audioPipeline`:
+- cola de STT con timeout seguro (sin doble resolucion tardia),
+- clasificacion de fallos `media_*`,
+- validacion MIME mas estricta (acepta audio valido y rechaza no-audio).
+- Hardening en `audioStt`:
+- fallback defensivo de `GROQ_BASE_URL`,
+- retries con backoff para metadata/download/STT,
+- `FormData` recreado por intento,
+- clasificacion de errores (`media_auth_error`, `media_url_expired_or_not_found`, `stt_auth_error`, etc.),
+- soporte `phone_number_id` en metadata fetch.
+- Ruta webhook actualizada para pasar `phoneNumberId` al pipeline.
+- Tests nuevos:
+- `backend/tests/audioStt.service.test.js` (fallback URL, media 401/404, STT 401, retry 5xx->ok).
+- caso extra en `metaWebhookAudioReliability.test.js` para rechazar `application/pdf`.
+- Se ejecutaron:
+- `npx jest tests/audioStt.service.test.js tests/metaWebhookAudioReliability.test.js --runInBand`
+- `npm test -- --runInBand` (56/56 OK)
+- `npm run load:webhook`
+- `npm run load:audio`
+- Se documento auditoria completa en `backend/docs/audio-whatsapp-production-audit.md`.
+- Archivos tocados:
+- `backend/services/audioPipeline.service.js`
+- `backend/services/audioStt.service.js`
+- `backend/routes/metaWebhook.routes.js`
+- `backend/tests/audioStt.service.test.js`
+- `backend/tests/metaWebhookAudioReliability.test.js`
+- `backend/docs/audio-whatsapp-production-audit.md`
+- `MEMORIA_OPERATIVA_ZZETA.md`
+- Resultado:
+- Pipeline mas robusto ante expiracion de URL de media, credenciales invalidas, retries y errores silenciosos.
+- Mejor trazabilidad para diagnostico en produccion.
+- Pendiente siguiente:
+- Deploy a Railway y validar audio real de usuarios (no debug transcript) revisando `reasonCounts` en `/metrics`.
+- Commit(s): Pendiente.
+
 ## 9) Seguridad operativa (importante)
 - Nunca copiar tokens reales en chats ni commits.
 - Si un token se expone, rotarlo inmediatamente.

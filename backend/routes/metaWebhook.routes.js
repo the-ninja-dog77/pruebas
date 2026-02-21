@@ -1216,6 +1216,7 @@ router.post('/', async (req, res) => {
         from,
         accessToken,
         graphVersion: GRAPH_VERSION,
+        phoneNumberId,
         buildReply,
       });
       replyText = String(audioResult?.reply || '').trim();

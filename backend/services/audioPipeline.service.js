@@ -97,18 +97,37 @@ function enqueueTask(task) {
   audioMetrics.recordQueueDepth(queue.length + 1);
 
   return new Promise((resolve, reject) => {
+    let settled = false;
+    let cancelled = false;
     const timeout = setTimeout(() => {
       audioMetrics.recordQueueTimeout();
-      reject(new Error('audio_queue_timeout'));
+      cancelled = true;
+      if (!settled) {
+        settled = true;
+        reject(new Error('audio_queue_timeout'));
+      }
     }, AUDIO_QUEUE_TIMEOUT_MS);
 
     queue.push({
       task: async () => {
         clearTimeout(timeout);
+        if (cancelled) {
+          throw new Error('audio_queue_timeout');
+        }
         return task();
       },
-      resolve,
-      reject,
+      resolve: value => {
+        if (!settled) {
+          settled = true;
+          resolve(value);
+        }
+      },
+      reject: err => {
+        if (!settled) {
+          settled = true;
+          reject(err);
+        }
+      },
     });
     runQueuedTask();
   });
@@ -171,21 +190,7 @@ function unsupportedMime(mimeType) {
     return false;
   }
 
-  // Incoming message is already type=audio, so we only block clearly wrong media families.
-  if (
-    normalized.startsWith('video/') ||
-    normalized.startsWith('image/') ||
-    normalized.startsWith('text/')
-  ) {
-    return true;
-  }
-
-  if (!loggedUnknownAudioMimes.has(normalized)) {
-    loggedUnknownAudioMimes.add(normalized);
-    logger.warn(`AUDIO unknown mime accepted defensively: ${normalized}`);
-  }
-
-  return false;
+  return true;
 }
 
 function fallbackReplyByReason(reason) {
@@ -206,6 +211,8 @@ function fallbackReplyByReason(reason) {
       return 'Tuve un problema temporal al transcribir el audio. Podes reenviarlo o escribir en texto.';
     case 'stt_provider_error':
       return 'El servicio de transcripcion devolvio un error temporal. Reenvia el audio en unos segundos o escribime en texto.';
+    case 'stt_auth_error':
+      return 'La configuracion de transcripcion tiene un problema de autenticacion. Escribime en texto por ahora.';
     case 'stt_empty_transcript':
       return 'No pude extraer texto util del audio. Podrias repetirlo o escribir en texto?';
     case 'stt_not_configured':
@@ -216,6 +223,14 @@ function fallbackReplyByReason(reason) {
       return 'No pude obtener el archivo de audio desde WhatsApp. Reenvialo por favor.';
     case 'audio_pipeline_error':
       return 'No pude descargar o procesar ese audio desde WhatsApp. Reenvialo por favor o escribime en texto.';
+    case 'media_auth_error':
+      return 'No pude acceder al archivo de audio en WhatsApp. Reenvialo por favor.';
+    case 'media_not_found':
+      return 'No encontre ese archivo de audio en WhatsApp. Reenvialo por favor.';
+    case 'media_url_expired_or_not_found':
+      return 'El enlace del audio expiro. Reenvialo por favor.';
+    case 'media_timeout':
+      return 'La descarga del audio demoro demasiado. Reenvialo por favor.';
     case 'missing_media_id':
       return 'No recibi bien el audio. Reenvialo por favor o escribime en texto.';
     default:
@@ -225,12 +240,22 @@ function fallbackReplyByReason(reason) {
 
 function classifyFailureType(reason) {
   if (
-    ['audio_too_short', 'audio_too_long', 'audio_noise_or_silence', 'unsupported_audio_mime'].includes(
-      reason
-    )
+    [
+      'audio_too_short',
+      'audio_too_long',
+      'audio_noise_or_silence',
+      'unsupported_audio_mime',
+      'missing_media_id',
+      'missing_media_url',
+      'audio_pipeline_error',
+      'media_auth_error',
+      'media_not_found',
+      'media_url_expired_or_not_found',
+    ].includes(reason)
   ) {
     return 'audio';
   }
+  if (reason === 'media_timeout') return 'timing';
   if (reason && reason.startsWith('stt_')) return 'stt';
   if (reason && reason.startsWith('audio_queue')) return 'timing';
   return 'intent';
@@ -241,6 +266,7 @@ async function processAudioMessage({
   from,
   accessToken,
   graphVersion,
+  phoneNumberId,
   buildReply,
 }) {
   const startedAt = nowMs();
@@ -331,6 +357,7 @@ async function processAudioMessage({
           mediaId,
           accessToken,
           graphVersion,
+          phoneNumberId,
           mimeTypeHint: mimeType,
           filenameHint: `${mediaId}.ogg`,
         })

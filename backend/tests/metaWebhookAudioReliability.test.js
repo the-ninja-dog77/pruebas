@@ -347,6 +347,33 @@ describe('WhatsApp audio reliability pipeline', () => {
     });
   });
 
+  test('rejects unknown non-audio mime type (application/pdf)', async () => {
+    const from = '595985570022';
+    const response = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'mime-pdf-reject',
+        mimeType: 'application/pdf',
+        debugTranscript: 'turno',
+        debugConfidence: 0.95,
+        debugDurationSec: 3,
+      })
+    );
+
+    expect(response.res.statusCode).toBe(200);
+    expect(response.reply).toContain('formato de audio no esta soportado');
+    recordCase({
+      dimension: 'A',
+      caseName: 'non-audio-application-pdf-rejected',
+      input: { mime_type: 'application/pdf' },
+      previousState: 'idle',
+      expected: 'rechazar mime no-audio desconocido',
+      actual: response.reply,
+      latencyMs: response.latencyMs,
+      fallback: response.reply,
+    });
+  });
+
   test('low confidence audio does not advance dangerous action', async () => {
     const from = '595985570012';
 
