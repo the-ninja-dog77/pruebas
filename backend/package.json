@@ -6,7 +6,10 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "test": "jest --runInBand"
+    "test": "jest --runInBand",
+    "test:reliability": "jest tests/metaWebhookConversation.test.js tests/metaWebhookReliability.test.js tests/metaWebhookProductionMatrix.test.js --runInBand",
+    "test:matrix": "jest tests/metaWebhookProductionMatrix.test.js --runInBand",
+    "load:webhook": "node scripts/runWebhookLoadChaos.js"
   },
   "keywords": [],
   "author": "",

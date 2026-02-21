@@ -1,6 +1,10 @@
 const logger = require('../logger');
 
 function errorMiddleware(err, req, res, next) {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    return res.status(400).json({ message: 'JSON invalido' });
+  }
+
   logger.error(err.stack || err.message);
 
   const status = err.status || 500;

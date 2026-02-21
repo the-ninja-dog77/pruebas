@@ -49,7 +49,13 @@ app.set('trust proxy', 1);
 
 app.use(cors());
 app.use(helmet());
-app.use(express.json());
+app.use(
+  express.json({
+    verify: (req, _res, buf) => {
+      req.rawBody = Buffer.from(buf || []).toString('utf8');
+    },
+  })
+);
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const logger = require('../logger');
 const turnosService = require('../services/turnos.service');
 const clientesRepo = require('../repositories/clientes.repository');
@@ -10,6 +11,16 @@ const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
 const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
 const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
+const SESSION_TTL_MS = Number(process.env.WHATSAPP_SESSION_TTL_MS || 30 * 60 * 1000);
+const MESSAGE_DEDUPE_TTL_MS = Number(process.env.WHATSAPP_DEDUPE_TTL_MS || 10 * 60 * 1000);
+const MAX_EVENT_AGE_SEC = Number(process.env.WHATSAPP_MAX_EVENT_AGE_SEC || 60 * 60 * 24);
+const MAX_OUT_OF_ORDER_SEC = Number(process.env.WHATSAPP_MAX_OUT_OF_ORDER_SEC || 120);
+const SIGNATURE_REQUIRED =
+  String(process.env.WHATSAPP_SIGNATURE_REQUIRED || '').toLowerCase() === 'true';
+const META_APP_SECRET = process.env.META_APP_SECRET || '';
+const SIGNATURE_MAX_SKEW_SEC = Number(
+  process.env.WHATSAPP_SIGNATURE_MAX_SKEW_SEC || 10 * 60
+);
 
 logger.info(
   `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
@@ -18,6 +29,8 @@ logger.info(
 );
 
 const sessions = new Map();
+const processedMessageIds = new Map();
+const lastInboundTimestampBySender = new Map();
 const START_INTENTS = ['turno', 'reserv', 'agend', 'cita'];
 const GREETING_INTENTS = ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'];
 const THANKS_INTENTS = ['gracias', 'muchas gracias', 'te agradezco', 'thanks'];
@@ -42,6 +55,19 @@ const MANAGE_RESCHEDULE_INTENTS = [
   'mover turno',
   'pasar turno',
 ];
+const VALID_STAGES = new Set([
+  'idle',
+  'collecting',
+  'awaiting_service',
+  'awaiting_date',
+  'awaiting_time',
+  'awaiting_name',
+  'awaiting_payment',
+  'awaiting_confirm',
+  'manage_cancel_collect',
+  'manage_reschedule_collect_current',
+  'manage_reschedule_collect_new',
+]);
 
 function normalizeText(texto) {
   return String(texto || '')
@@ -53,6 +79,154 @@ function normalizeText(texto) {
 
 function containsAny(texto, needles) {
   return needles.some(needle => texto.includes(needle));
+}
+
+function nowMs() {
+  return Date.now();
+}
+
+function cleanupMapByTtl(map, ttlMs) {
+  const now = nowMs();
+  for (const [key, value] of map.entries()) {
+    if (!value || typeof value.at !== 'number') {
+      map.delete(key);
+      continue;
+    }
+    if (now - value.at > ttlMs) {
+      map.delete(key);
+    }
+  }
+}
+
+function parseInboundTimestampSeconds(rawValue) {
+  const value = Number(rawValue);
+  if (!Number.isFinite(value) || value <= 0) return null;
+  return Math.floor(value);
+}
+
+function isStaleInboundEvent(tsSeconds) {
+  if (!tsSeconds || !MAX_EVENT_AGE_SEC) return false;
+  const ageSec = Math.floor(nowMs() / 1000) - tsSeconds;
+  return ageSec > MAX_EVENT_AGE_SEC;
+}
+
+function isOutOfOrderInboundEvent(from, tsSeconds) {
+  if (!from || !tsSeconds) return false;
+  cleanupLastInboundTimestamps();
+  const previous = lastInboundTimestampBySender.get(from);
+  if (!previous) return false;
+
+  return tsSeconds < previous - MAX_OUT_OF_ORDER_SEC;
+}
+
+function cleanupLastInboundTimestamps() {
+  const nowSec = Math.floor(nowMs() / 1000);
+  const ttlSec = Math.max(MAX_EVENT_AGE_SEC * 2, 3600);
+  for (const [sender, ts] of lastInboundTimestampBySender.entries()) {
+    if (!Number.isFinite(ts) || nowSec - ts > ttlSec) {
+      lastInboundTimestampBySender.delete(sender);
+    }
+  }
+}
+
+function rememberInboundTimestamp(from, tsSeconds) {
+  if (!from || !tsSeconds) return;
+  cleanupLastInboundTimestamps();
+  const previous = lastInboundTimestampBySender.get(from) || 0;
+  if (tsSeconds > previous) {
+    lastInboundTimestampBySender.set(from, tsSeconds);
+  }
+}
+
+function getSignatureHeader(req) {
+  return (
+    req.get('x-hub-signature-256') ||
+    req.get('X-Hub-Signature-256') ||
+    req.get('x-hub-signature') ||
+    req.get('X-Hub-Signature') ||
+    ''
+  );
+}
+
+function getSignatureTimestampHeader(req) {
+  const raw =
+    req.get('x-meta-request-timestamp') ||
+    req.get('X-Meta-Request-Timestamp') ||
+    req.get('x-signature-timestamp') ||
+    req.get('X-Signature-Timestamp') ||
+    '';
+  const asNumber = Number(raw);
+  return Number.isFinite(asNumber) && asNumber > 0 ? Math.floor(asNumber) : null;
+}
+
+function validateSignatureTimestamp(req) {
+  const ts = getSignatureTimestampHeader(req);
+  if (!ts || !SIGNATURE_MAX_SKEW_SEC) return true;
+  const skew = Math.abs(Math.floor(nowMs() / 1000) - ts);
+  return skew <= SIGNATURE_MAX_SKEW_SEC;
+}
+
+function getRawBodyString(req) {
+  if (typeof req.rawBody === 'string' && req.rawBody.length) return req.rawBody;
+  try {
+    return JSON.stringify(req.body || {});
+  } catch (_err) {
+    return '';
+  }
+}
+
+function validateMetaSignature(req) {
+  if (!META_APP_SECRET) {
+    return { ok: !SIGNATURE_REQUIRED, reason: 'missing_app_secret' };
+  }
+
+  const signature = getSignatureHeader(req);
+  if (!signature) {
+    return { ok: !SIGNATURE_REQUIRED, reason: 'missing_signature' };
+  }
+
+  if (!validateSignatureTimestamp(req)) {
+    return { ok: false, reason: 'expired_signature' };
+  }
+
+  const normalized = signature.startsWith('sha256=') ? signature : `sha256=${signature}`;
+  const expected = `sha256=${crypto
+    .createHmac('sha256', META_APP_SECRET)
+    .update(getRawBodyString(req))
+    .digest('hex')}`;
+
+  const isSameLength = normalized.length === expected.length;
+  const matches =
+    isSameLength &&
+    crypto.timingSafeEqual(Buffer.from(normalized), Buffer.from(expected));
+
+  if (!matches) {
+    return { ok: false, reason: 'invalid_signature' };
+  }
+
+  return { ok: true, reason: 'ok' };
+}
+
+function markMessageProcessing(messageId) {
+  if (!messageId) return;
+  cleanupMapByTtl(processedMessageIds, MESSAGE_DEDUPE_TTL_MS);
+  processedMessageIds.set(messageId, { at: nowMs(), state: 'processing' });
+}
+
+function markMessageProcessed(messageId) {
+  if (!messageId) return;
+  processedMessageIds.set(messageId, { at: nowMs(), state: 'done' });
+}
+
+function markMessageProcessedError(messageId) {
+  if (!messageId) return;
+  processedMessageIds.set(messageId, { at: nowMs(), state: 'error' });
+}
+
+function isDuplicateMessageId(messageId) {
+  if (!messageId) return false;
+  cleanupMapByTtl(processedMessageIds, MESSAGE_DEDUPE_TTL_MS);
+  return processedMessageIds.has(messageId);
 }
 
 function normalizeIntentText(texto) {
@@ -259,6 +433,7 @@ function extractNameForManage(rawText) {
 }
 
 function createEmptySession(seed = {}) {
+  const createdAt = nowMs();
   return {
     stage: 'idle',
     draft: {
@@ -284,15 +459,33 @@ function createEmptySession(seed = {}) {
     memory: {
       lastReferencedDate: seed.lastReferencedDate || null,
     },
+    meta: {
+      createdAt,
+      updatedAt: createdAt,
+      expiredFromStage: seed.expiredFromStage || null,
+    },
   };
 }
 
 function getSession(from) {
-  if (!sessions.has(from)) {
-    sessions.set(from, createEmptySession());
+  const current = sessions.get(from);
+  if (!current) {
+    const created = createEmptySession();
+    sessions.set(from, created);
+    return created;
   }
 
-  return sessions.get(from);
+  const updatedAt = Number(current.meta?.updatedAt || 0);
+  if (updatedAt && nowMs() - updatedAt > SESSION_TTL_MS) {
+    const recreated = createEmptySession({
+      lastReferencedDate: current?.memory?.lastReferencedDate || current?.draft?.fecha || null,
+      expiredFromStage: current.stage,
+    });
+    sessions.set(from, recreated);
+    return recreated;
+  }
+
+  return current;
 }
 
 function resetSession(from) {
@@ -305,6 +498,45 @@ function resetSession(from) {
     null;
 
   sessions.set(from, createEmptySession({ lastReferencedDate }));
+}
+
+function touchSession(session) {
+  if (!session.meta) {
+    session.meta = { createdAt: nowMs(), updatedAt: nowMs(), expiredFromStage: null };
+  }
+  session.meta.updatedAt = nowMs();
+}
+
+function ensureSessionIntegrity(session) {
+  if (!VALID_STAGES.has(session.stage)) {
+    session.stage = 'idle';
+  }
+
+  if (session.stage === 'awaiting_confirm') {
+    const required = [
+      session.draft.servicio,
+      session.draft.fecha,
+      session.draft.hora,
+      session.draft.nombre,
+      session.draft.metodo_pago,
+    ];
+    if (required.some(v => !v)) {
+      session.stage = 'collecting';
+    }
+  }
+
+  if (
+    session.stage === 'manage_reschedule_collect_new' &&
+    !session.manage.turnoId
+  ) {
+    session.stage = 'manage_reschedule_collect_current';
+  }
+
+  if (session.stage === 'awaiting_payment' && !session.draft.nombre) {
+    session.stage = 'awaiting_name';
+  }
+
+  touchSession(session);
 }
 
 function getCurrentSlotAvailability(fecha, hora) {
@@ -408,6 +640,7 @@ async function maybeAiFallback(texto, session) {
 async function buildReply(from, texto) {
   const msg = normalizeText(texto);
   let session = getSession(from);
+  ensureSessionIntegrity(session);
   const intentText = normalizeIntentText(msg);
 
   if (!msg) {
@@ -462,6 +695,7 @@ async function buildReply(from, texto) {
     resetSession(from);
     session = getSession(from);
     session.stage = 'collecting';
+    touchSession(session);
     return 'Perfecto. Empecemos de nuevo. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)';
   }
 
@@ -506,6 +740,7 @@ async function buildReply(from, texto) {
   }
 
   applyDetections(session, msg);
+  ensureSessionIntegrity(session);
 
   if (session.stage === 'awaiting_name') {
     const name = parseClientName(texto);
@@ -845,6 +1080,15 @@ router.get('/', (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const debugMode = req.headers['x-webhook-debug'] === '1';
+    const signature = validateMetaSignature(req);
+    if (!signature.ok) {
+      logger.warn(`WHATSAPP signature rejected reason=${signature.reason}`);
+      if (debugMode) {
+        return res.status(403).json({ ok: false, reason: signature.reason });
+      }
+      return res.sendStatus(403);
+    }
+
     const botEnabled = settingsRepo.getBoolean('bot_enabled', true);
 
     if (!botEnabled) {
@@ -858,7 +1102,6 @@ router.post('/', async (req, res) => {
     const value = req.body?.entry?.[0]?.changes?.[0]?.value;
     const incoming = value?.messages?.[0];
 
-    // Always return 200 to avoid Meta retry loops.
     if (!incoming) {
       if (debugMode) {
         return res.status(200).json({ ok: true, reason: 'no_message_event' });
@@ -866,13 +1109,51 @@ router.post('/', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const from = incoming.from;
+    const from = String(incoming.from || '').trim();
+    if (!from) {
+      logger.warn('WHATSAPP inbound ignored: missing sender');
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'invalid_inbound_payload' });
+      }
+      return res.sendStatus(200);
+    }
+
+    const inboundTimestamp = parseInboundTimestampSeconds(incoming.timestamp);
+    if (isStaleInboundEvent(inboundTimestamp)) {
+      logger.info(`WHATSAPP stale inbound ignored from=${from} ts=${incoming.timestamp}`);
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'stale_event' });
+      }
+      return res.sendStatus(200);
+    }
+
+    if (isOutOfOrderInboundEvent(from, inboundTimestamp)) {
+      logger.info(`WHATSAPP out-of-order inbound ignored from=${from} ts=${incoming.timestamp}`);
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'out_of_order_event' });
+      }
+      return res.sendStatus(200);
+    }
+
     const texto =
       incoming.text?.body ||
       incoming.button?.text ||
       incoming.interactive?.button_reply?.title ||
+      incoming.interactive?.list_reply?.title ||
       '';
     logger.info(`WHATSAPP inbound from=${from} text="${texto}"`);
+
+    const incomingMessageId = String(incoming.id || '').trim();
+    const dedupeId = incomingMessageId || null;
+    if (isDuplicateMessageId(dedupeId)) {
+      logger.info(`WHATSAPP duplicate inbound ignored messageId=${dedupeId}`);
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'duplicate_event' });
+      }
+      return res.sendStatus(200);
+    }
+    markMessageProcessing(dedupeId);
+    rememberInboundTimestamp(from, inboundTimestamp);
 
     const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
     const accessToken = process.env.WHATSAPP_TOKEN;
@@ -890,6 +1171,7 @@ router.post('/', async (req, res) => {
           graphVersion: GRAPH_VERSION,
         });
       }
+      markMessageProcessedError(dedupeId);
       return res.sendStatus(200);
     }
 
@@ -913,6 +1195,7 @@ router.post('/', async (req, res) => {
     if (!response.ok) {
       const errText = await response.text();
       logger.error(`WHATSAPP send failed status=${response.status} body=${errText}`);
+      markMessageProcessedError(dedupeId);
       if (debugMode) {
         return res.status(response.status).json({
           ok: false,
@@ -925,11 +1208,16 @@ router.post('/', async (req, res) => {
 
     const data = await response.json();
     logger.info(`WHATSAPP outbound ok messageId=${data.messages?.[0]?.id || 'n/a'}`);
+    markMessageProcessed(dedupeId);
     if (debugMode) {
       return res.status(200).json({ ok: true, outbound: data });
     }
     return res.sendStatus(200);
   } catch (err) {
+    const incoming = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    if (incoming?.id) {
+      markMessageProcessedError(String(incoming.id));
+    }
     logger.error(`WHATSAPP webhook error: ${err.stack || err.message}`);
     if (req.headers['x-webhook-debug'] === '1') {
       return res.status(500).json({ ok: false, error: err.message });

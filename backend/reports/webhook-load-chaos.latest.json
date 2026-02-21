@@ -1,0 +1,119 @@
+{
+  "generatedAt": "2026-02-21T02:00:15.215Z",
+  "baseline": {
+    "name": "baseline",
+    "chaos": false,
+    "elapsedMs": 3434.58,
+    "throughputReqPerSec": 110.64,
+    "totalRequests": 380,
+    "failures": 0,
+    "errorRatePercent": 0,
+    "retries": 0,
+    "retryRatioPercent": 0,
+    "statusHistogram": {
+      "200": 380
+    },
+    "http429": 0,
+    "http5xx": 0,
+    "latencyMs": {
+      "min": 18,
+      "max": 123,
+      "avg": 63.57,
+      "p50": 63,
+      "p95": 101,
+      "p99": 112
+    },
+    "maxInFlight": 18,
+    "cpuPercent": 60.97,
+    "memory": {
+      "start": {
+        "rss": 81461248,
+        "heapUsed": 19852440,
+        "heapTotal": 35532800
+      },
+      "end": {
+        "rss": 97136640,
+        "heapUsed": 26345416,
+        "heapTotal": 55717888
+      },
+      "max": {
+        "rss": 97193984,
+        "heapUsed": 32062376,
+        "heapTotal": 55717888
+      },
+      "growthBytes": {
+        "rss": 15675392,
+        "heapUsed": 6492976
+      }
+    },
+    "eventLoopDelayMs": {
+      "mean": 21.28,
+      "max": 41.75,
+      "p99": 26.69
+    }
+  },
+  "stressChaos": {
+    "name": "stress-chaos",
+    "chaos": true,
+    "elapsedMs": 12031.72,
+    "throughputReqPerSec": 68.07,
+    "totalRequests": 819,
+    "failures": 119,
+    "errorRatePercent": 14.53,
+    "retries": 119,
+    "retryRatioPercent": 14.53,
+    "statusHistogram": {
+      "200": 700,
+      "500": 119
+    },
+    "http429": 0,
+    "http5xx": 119,
+    "latencyMs": {
+      "min": 3,
+      "max": 1171,
+      "avg": 199.13,
+      "p50": 69,
+      "p95": 915,
+      "p99": 1117
+    },
+    "maxInFlight": 36,
+    "cpuPercent": 32.46,
+    "memory": {
+      "start": {
+        "rss": 100962304,
+        "heapUsed": 30238008,
+        "heapTotal": 55717888
+      },
+      "end": {
+        "rss": 112017408,
+        "heapUsed": 28665728,
+        "heapTotal": 61747200
+      },
+      "max": {
+        "rss": 112803840,
+        "heapUsed": 40209472,
+        "heapTotal": 61747200
+      },
+      "growthBytes": {
+        "rss": 11055104,
+        "heapUsed": -1572280
+      }
+    },
+    "eventLoopDelayMs": {
+      "mean": 20.84,
+      "max": 37.75,
+      "p99": 28.23
+    }
+  },
+  "comparison": {
+    "latencyP95DeltaMs": 814,
+    "latencyP99DeltaMs": 1005,
+    "errorRateDeltaPercent": 14.53,
+    "retryRatioDeltaPercent": 14.53,
+    "throughputDeltaReqPerSec": -42.57,
+    "memoryGrowthDeltaBytes": {
+      "rss": -4620288,
+      "heapUsed": -8065256
+    }
+  }
+}

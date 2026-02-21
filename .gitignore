@@ -4,3 +4,4 @@ zzeta.db
 zzeta.test.db
 logs
 backups
+backend/zzeta.*.db
