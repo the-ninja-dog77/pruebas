@@ -1,26 +1,26 @@
 # Webhook Load + Chaos Report
 
-Generated: 2026-02-21T02:00:15.215Z
+Generated: 2026-02-21T02:47:35.467Z
 
 ## Baseline
 - Total requests: 380
 - Error rate: 0%
-- Latency p95/p99: 101ms / 112ms
-- Throughput: 110.64 req/s
+- Latency p95/p99: 98ms / 106ms
+- Throughput: 114.08 req/s
 
 ## Stress + Chaos
-- Total requests: 819
-- Error rate: 14.53%
-- Retry ratio: 14.53%
+- Total requests: 791
+- Error rate: 11.5%
+- Retry ratio: 11.5%
 - HTTP 429: 0
-- Latency p95/p99: 915ms / 1117ms
-- Throughput: 68.07 req/s
+- Latency p95/p99: 906ms / 1139ms
+- Throughput: 72.68 req/s
 
 ## Delta (Stress - Baseline)
-- p95 delta: 814ms
-- p99 delta: 1005ms
-- Error rate delta: 14.53%
-- Retry ratio delta: 14.53%
-- Throughput delta: -42.57 req/s
+- p95 delta: 808ms
+- p99 delta: 1033ms
+- Error rate delta: 11.5%
+- Retry ratio delta: 11.5%
+- Throughput delta: -41.4 req/s
 
 JSON report: C:\Users\ACER\Desktop\proyecto bot definitivo1.0\backend\reports\webhook-load-chaos.latest.json

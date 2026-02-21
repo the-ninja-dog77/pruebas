@@ -266,6 +266,87 @@ describe('WhatsApp audio reliability pipeline', () => {
     });
   });
 
+  test('accepts uncommon audio mime types (ex: audio/aac)', async () => {
+    const from = '595985570019';
+    const response = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'mime-aac-ok',
+        mimeType: 'audio/aac',
+        debugTranscript: 'turno',
+        debugConfidence: 0.9,
+        debugDurationSec: 4,
+      })
+    );
+
+    expect(response.res.statusCode).toBe(200);
+    expect(response.reply).toContain('Que servicio queres');
+    recordCase({
+      dimension: 'A',
+      caseName: 'audio-mime-aac-accepted',
+      input: { mime_type: 'audio/aac' },
+      previousState: 'idle',
+      expected: 'aceptar audio/* aunque no este en allowlist fija',
+      actual: response.reply,
+      latencyMs: response.latencyMs,
+      fallback: response.reply,
+    });
+  });
+
+  test('accepts ambiguous mime from mobile clients (application/octet-stream)', async () => {
+    const from = '595985570021';
+    const response = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'mime-octet-ok',
+        mimeType: 'application/octet-stream',
+        debugTranscript: 'turno',
+        debugConfidence: 0.9,
+        debugDurationSec: 4,
+      })
+    );
+
+    expect(response.res.statusCode).toBe(200);
+    expect(response.reply).toContain('Que servicio queres');
+    recordCase({
+      dimension: 'A',
+      caseName: 'audio-mime-octet-stream-accepted',
+      input: { mime_type: 'application/octet-stream' },
+      previousState: 'idle',
+      expected: 'aceptar mime ambiguo y continuar flujo',
+      actual: response.reply,
+      latencyMs: response.latencyMs,
+      fallback: response.reply,
+    });
+  });
+
+  test('rejects non-audio mime type', async () => {
+    const from = '595985570020';
+    const response = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'mime-video-reject',
+        mimeType: 'video/mp4',
+        debugTranscript: 'turno',
+        debugConfidence: 0.95,
+        debugDurationSec: 3,
+      })
+    );
+
+    expect(response.res.statusCode).toBe(200);
+    expect(response.reply).toContain('formato de audio no esta soportado');
+    recordCase({
+      dimension: 'A',
+      caseName: 'non-audio-mime-rejected',
+      input: { mime_type: 'video/mp4' },
+      previousState: 'idle',
+      expected: 'rechazar formato no-audio',
+      actual: response.reply,
+      latencyMs: response.latencyMs,
+      fallback: response.reply,
+    });
+  });
+
   test('low confidence audio does not advance dangerous action', async () => {
     const from = '595985570012';
 

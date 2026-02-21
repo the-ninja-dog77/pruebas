@@ -32,6 +32,7 @@ const SUPPORTED_AUDIO_MIME = String(
 
 const queue = [];
 let active = 0;
+const loggedUnknownAudioMimes = new Set();
 
 function nowMs() {
   return Date.now();
@@ -147,7 +148,44 @@ function processDebugTranscript(audioObj) {
 function unsupportedMime(mimeType) {
   if (!mimeType) return false;
   const normalized = normalizeMimeType(mimeType);
-  return !SUPPORTED_AUDIO_MIME.includes(normalized);
+  if (SUPPORTED_AUDIO_MIME.includes(normalized)) return false;
+
+  if (normalized.startsWith('audio/')) {
+    if (!loggedUnknownAudioMimes.has(normalized)) {
+      loggedUnknownAudioMimes.add(normalized);
+      logger.warn(`AUDIO mime not in allowlist but accepted: ${normalized}`);
+    }
+    return false;
+  }
+
+  const ambiguousAudioMime = new Set([
+    'application/octet-stream',
+    'application/ogg',
+    'application/x-ogg',
+  ]);
+  if (ambiguousAudioMime.has(normalized)) {
+    if (!loggedUnknownAudioMimes.has(normalized)) {
+      loggedUnknownAudioMimes.add(normalized);
+      logger.warn(`AUDIO ambiguous mime accepted as audio: ${normalized}`);
+    }
+    return false;
+  }
+
+  // Incoming message is already type=audio, so we only block clearly wrong media families.
+  if (
+    normalized.startsWith('video/') ||
+    normalized.startsWith('image/') ||
+    normalized.startsWith('text/')
+  ) {
+    return true;
+  }
+
+  if (!loggedUnknownAudioMimes.has(normalized)) {
+    loggedUnknownAudioMimes.add(normalized);
+    logger.warn(`AUDIO unknown mime accepted defensively: ${normalized}`);
+  }
+
+  return false;
 }
 
 function fallbackReplyByReason(reason) {
