@@ -1,6 +1,6 @@
 {
-  "generatedAt": "2026-02-21T02:58:45.405Z",
-  "totalCases": 159,
+  "generatedAt": "2026-02-21T03:48:15.914Z",
+  "totalCases": 162,
   "cases": [
     {
       "dimension": "A",
@@ -17,7 +17,7 @@
       "previousState": "idle/active",
       "expected": "fallback sin romper estado",
       "actual": "El audio fue demasiado corto. Podrias repetirlo un poco mas claro o escribir en texto?",
-      "latencyMs": 14,
+      "latencyMs": 48,
       "fallback": "El audio fue demasiado corto. Podrias repetirlo un poco mas claro o escribir en texto?"
     },
     {
@@ -35,7 +35,7 @@
       "previousState": "idle/active",
       "expected": "fallback sin romper estado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 7,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -75,7 +75,7 @@
       "previousState": "idle/active",
       "expected": "fallback sin romper estado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 6,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -112,9 +112,9 @@
       },
       "previousState": "idle/active",
       "expected": "fallback sin romper estado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 3,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
+      "latencyMs": 6,
+      "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
       "dimension": "A",
@@ -129,13 +129,49 @@
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
+      "dimension": "A",
+      "caseName": "audio-mime-aac-accepted",
+      "input": {
+        "mime_type": "audio/aac"
+      },
+      "previousState": "idle",
+      "expected": "aceptar audio/* aunque no este en allowlist fija",
+      "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
+      "latencyMs": 5,
+      "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
+    },
+    {
+      "dimension": "A",
+      "caseName": "audio-mime-octet-stream-accepted",
+      "input": {
+        "mime_type": "application/octet-stream"
+      },
+      "previousState": "idle",
+      "expected": "aceptar mime ambiguo y continuar flujo",
+      "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
+      "latencyMs": 6,
+      "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
+    },
+    {
+      "dimension": "A",
+      "caseName": "non-audio-mime-rejected",
+      "input": {
+        "mime_type": "video/mp4"
+      },
+      "previousState": "idle",
+      "expected": "rechazar formato no-audio",
+      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
+      "latencyMs": 5,
+      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+    },
+    {
       "dimension": "B",
       "caseName": "destructive-low-confidence",
       "input": "cancelar turno (audio)",
       "previousState": "turno activo confirmado",
       "expected": "no ejecutar accion, pedir confirmacion en texto",
       "actual": "Escuche \"cancelar turno\". Para evitar errores en una accion sensible, escribime ese comando en texto (ej: \"cancelar turno\").",
-      "latencyMs": 6,
+      "latencyMs": 4,
       "fallback": "confirmacion obligatoria"
     },
     {
@@ -145,7 +181,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\".",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\"."
     },
     {
@@ -155,7 +191,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -165,7 +201,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)"
     },
     {
@@ -185,7 +221,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Perfecto. A nombre de quien agendo el turno?",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Perfecto. A nombre de quien agendo el turno?"
     },
     {
@@ -215,7 +251,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Listo Juan Perez, turno confirmado para 2099-12-31 a las 15:00 (Corte). Pago: Efectivo. Recorda que abonas despues del corte.",
-      "latencyMs": 23,
+      "latencyMs": 21,
       "fallback": "Listo Juan Perez, turno confirmado para 2099-12-31 a las 15:00 (Corte). Pago: Efectivo. Recorda que abonas despues del corte."
     },
     {
@@ -265,7 +301,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 6,
+      "latencyMs": 5,
       "fallback": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -285,7 +321,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Te resumo: Carla Duarte, Recorte/Tratamiento de Barba, 2099-12-30 a las 10:00, pago Tarjeta. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde \"confirmar\".",
-      "latencyMs": 6,
+      "latencyMs": 4,
       "fallback": "Te resumo: Carla Duarte, Recorte/Tratamiento de Barba, 2099-12-30 a las 10:00, pago Tarjeta. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde \"confirmar\"."
     },
     {
@@ -295,7 +331,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Listo Carla Duarte, turno confirmado para 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Pago: Tarjeta. Recorda que abonas despues del corte.",
-      "latencyMs": 12,
+      "latencyMs": 10,
       "fallback": "Listo Carla Duarte, turno confirmado para 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Pago: Tarjeta. Recorda que abonas despues del corte."
     },
     {
@@ -305,7 +341,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Encontre tu proximo turno (2099-12-30 10:00). Decime la nueva fecha y hora (ej: 2026-02-25 16:00).",
-      "latencyMs": 5,
+      "latencyMs": 6,
       "fallback": "Encontre tu proximo turno (2099-12-30 10:00). Decime la nueva fecha y hora (ej: 2026-02-25 16:00)."
     },
     {
@@ -315,7 +351,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Listo, reprogramado: Carla Duarte paso de 2099-12-30 10:00 a 2099-12-30 11:00.",
-      "latencyMs": 11,
+      "latencyMs": 10,
       "fallback": "Listo, reprogramado: Carla Duarte paso de 2099-12-30 10:00 a 2099-12-30 11:00."
     },
     {
@@ -325,7 +361,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Listo, cancele tu turno del 2099-12-30 a las 11:00 (Recorte/Tratamiento de Barba).",
-      "latencyMs": 16,
+      "latencyMs": 15,
       "fallback": "Listo, cancele tu turno del 2099-12-30 a las 11:00 (Recorte/Tratamiento de Barba)."
     },
     {
@@ -335,7 +371,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -345,7 +381,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)"
     },
     {
@@ -355,7 +391,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 6,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -375,7 +411,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -385,7 +421,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -395,7 +431,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-31 a las 15:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -405,7 +441,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Si, 2026-02-25 a las 11:00 esta disponible. Si queres reservar, decime el servicio.",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Si, 2026-02-25 a las 11:00 esta disponible. Si queres reservar, decime el servicio."
     },
     {
@@ -415,7 +451,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "De nada. Cuando quieras, estoy para ayudarte.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "De nada. Cuando quieras, estoy para ayudarte."
     },
     {
@@ -435,7 +471,7 @@
       "previousState": "audio-only long session",
       "expected": "coherencia conversacional sin estado imposible",
       "actual": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)"
     },
     {
@@ -443,20 +479,19 @@
       "caseName": "audio-fuzz-0",
       "input": {
         "id": "media-fuzz-audio-0",
-        "mime_type": "audio/ogg",
-        "file_size": 22563597,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.568009271688808,
-        "debug_duration_sec": 7.573018554797111,
+        "mime_type": "audio/wav",
+        "file_size": 23259239,
+        "debug_transcript": "",
+        "debug_confidence": 0.758582613929263,
+        "debug_duration_sec": 178.30225704575216,
         "debug_flags": [
-          "noise_only",
-          "silence"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -464,54 +499,53 @@
       "caseName": "audio-fuzz-1",
       "input": {
         "id": "media-fuzz-audio-1",
-        "mime_type": "audio/webm",
-        "file_size": 16859813,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.6416837412765608,
-        "debug_duration_sec": 227.4595853054122,
+        "mime_type": "audio/wav",
+        "file_size": 15272546,
+        "debug_transcript": "",
+        "debug_confidence": 0.8366747096245162,
+        "debug_duration_sec": 20.78359317668991,
         "debug_flags": [
-          "silence"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-2",
       "input": {
         "id": "media-fuzz-audio-2",
-        "mime_type": "audio/webm",
-        "file_size": 19523069,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.29560514537673166,
-        "debug_duration_sec": 23.452752914704746,
+        "mime_type": "audio/ogg",
+        "file_size": 3905017,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.506007534886892,
+        "debug_duration_sec": 9.78469064778627,
         "debug_flags": [
-          "noise_only",
-          "silence"
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-3",
       "input": {
         "id": "media-fuzz-audio-3",
-        "mime_type": "audio/webm",
-        "file_size": 17927619,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.14613870454453437,
-        "debug_duration_sec": 165.02839581821902,
+        "mime_type": "audio/flac",
+        "file_size": 19882658,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.9371223703880335,
+        "debug_duration_sec": 177.43044108197245,
         "debug_flags": [
-          "clipping"
+          "silence"
         ]
       },
       "previousState": "random",
@@ -525,167 +559,11 @@
       "caseName": "audio-fuzz-4",
       "input": {
         "id": "media-fuzz-audio-4",
-        "mime_type": "audio/webm",
-        "file_size": 25498723,
-        "debug_transcript": "",
-        "debug_confidence": 0.8262437905741873,
-        "debug_duration_sec": 308.5333043695268,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-5",
-      "input": {
-        "id": "media-fuzz-audio-5",
-        "mime_type": "audio/flac",
-        "file_size": 1661968,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.9399835637152054,
-        "debug_duration_sec": 319.5215570228161,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-6",
-      "input": {
-        "id": "media-fuzz-audio-6",
-        "mime_type": "audio/ogg",
-        "file_size": 9037421,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.5974488660336046,
-        "debug_duration_sec": 347.9046397891092,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 10,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-7",
-      "input": {
-        "id": "media-fuzz-audio-7",
-        "mime_type": "audio/flac",
-        "file_size": 5347594,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.7405284411489755,
-        "debug_duration_sec": 90.64369324304158,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 5,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-8",
-      "input": {
-        "id": "media-fuzz-audio-8",
-        "mime_type": "audio/webm",
-        "file_size": 25026187,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.45442168445589604,
-        "debug_duration_sec": 18.467417480817193,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-9",
-      "input": {
-        "id": "media-fuzz-audio-9",
-        "mime_type": "audio/mp4",
-        "file_size": 25414012,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.11710418550908508,
-        "debug_duration_sec": 104.29606249160587,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-10",
-      "input": {
-        "id": "media-fuzz-audio-10",
         "mime_type": "audio/wav",
-        "file_size": 19418076,
+        "file_size": 13121861,
         "debug_transcript": "",
-        "debug_confidence": 0.16949461472517935,
-        "debug_duration_sec": 243.02721617319494,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-11",
-      "input": {
-        "id": "media-fuzz-audio-11",
-        "mime_type": "audio/wav",
-        "file_size": 2213341,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.6679706308250075,
-        "debug_duration_sec": 97.2895315934899,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-12",
-      "input": {
-        "id": "media-fuzz-audio-12",
-        "mime_type": "audio/mp4",
-        "file_size": 2830150,
-        "debug_transcript": "",
-        "debug_confidence": 0.7948369461105943,
-        "debug_duration_sec": 66.75258325596586,
+        "debug_confidence": 0.09101831376337444,
+        "debug_duration_sec": 94.7023759541321,
         "debug_flags": []
       },
       "previousState": "random",
@@ -696,16 +574,57 @@
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-13",
+      "caseName": "audio-fuzz-5",
       "input": {
-        "id": "media-fuzz-audio-13",
-        "mime_type": "audio/wav",
-        "file_size": 18235445,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.5972791592803737,
-        "debug_duration_sec": 122.19543970781217,
+        "id": "media-fuzz-audio-5",
+        "mime_type": "audio/webm",
+        "file_size": 7664091,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.5635731054447063,
+        "debug_duration_sec": 295.04433925516514,
         "debug_flags": [
-          "low_volume"
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-6",
+      "input": {
+        "id": "media-fuzz-audio-6",
+        "mime_type": "audio/ogg",
+        "file_size": 4555797,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.587074033911052,
+        "debug_duration_sec": 158.28456161401874,
+        "debug_flags": [
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 5,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-7",
+      "input": {
+        "id": "media-fuzz-audio-7",
+        "mime_type": "audio/wav",
+        "file_size": 24709073,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.5081827663508222,
+        "debug_duration_sec": 280.32282359272074,
+        "debug_flags": [
+          "silence"
         ]
       },
       "previousState": "random",
@@ -716,14 +635,52 @@
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-14",
+      "caseName": "audio-fuzz-8",
       "input": {
-        "id": "media-fuzz-audio-14",
+        "id": "media-fuzz-audio-8",
         "mime_type": "audio/webm",
-        "file_size": 502105,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.974173520024102,
-        "debug_duration_sec": 38.40297906750269,
+        "file_size": 4566870,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.695460500405117,
+        "debug_duration_sec": 355.9294778749409,
+        "debug_flags": [
+          "abrupt_cut"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-9",
+      "input": {
+        "id": "media-fuzz-audio-9",
+        "mime_type": "audio/wav",
+        "file_size": 9657473,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.5745389065935024,
+        "debug_duration_sec": 302.0512235420738,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-10",
+      "input": {
+        "id": "media-fuzz-audio-10",
+        "mime_type": "audio/flac",
+        "file_size": 3268804,
+        "debug_transcript": "",
+        "debug_confidence": 0.08304950954140222,
+        "debug_duration_sec": 76.69929846465794,
         "debug_flags": [
           "abrupt_cut"
         ]
@@ -731,7 +688,88 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-11",
+      "input": {
+        "id": "media-fuzz-audio-11",
+        "mime_type": "audio/ogg",
+        "file_size": 25760159,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.544477953322493,
+        "debug_duration_sec": 243.7902505049808,
+        "debug_flags": [
+          "abrupt_cut"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-12",
+      "input": {
+        "id": "media-fuzz-audio-12",
+        "mime_type": "audio/flac",
+        "file_size": 25210630,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.6503748560981026,
+        "debug_duration_sec": 180.6862590232659,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-13",
+      "input": {
+        "id": "media-fuzz-audio-13",
+        "mime_type": "audio/mp4",
+        "file_size": 1491962,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.43218497484040974,
+        "debug_duration_sec": 194.8756421017059,
+        "debug_flags": [
+          "abrupt_cut"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-14",
+      "input": {
+        "id": "media-fuzz-audio-14",
+        "mime_type": "audio/wav",
+        "file_size": 2274012,
+        "debug_transcript": "",
+        "debug_confidence": 0.858339915223274,
+        "debug_duration_sec": 214.32130036106045,
+        "debug_flags": [
+          "abrupt_cut"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -740,28 +778,31 @@
       "input": {
         "id": "media-fuzz-audio-15",
         "mime_type": "audio/flac",
-        "file_size": 14823209,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.659342389951657,
-        "debug_duration_sec": 222.96357593243044,
-        "debug_flags": []
+        "file_size": 7148405,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.538798484843357,
+        "debug_duration_sec": 33.61344061111494,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 6,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-16",
       "input": {
         "id": "media-fuzz-audio-16",
-        "mime_type": "audio/ogg",
-        "file_size": 20196437,
+        "mime_type": "audio/webm",
+        "file_size": 25892280,
         "debug_transcript": "turno",
-        "debug_confidence": 0.6631909069830726,
-        "debug_duration_sec": 283.39466581719785,
+        "debug_confidence": 0.5191173887613183,
+        "debug_duration_sec": 340.87736043900685,
         "debug_flags": [
           "noise_only",
           "silence"
@@ -770,7 +811,7 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 2,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -779,109 +820,32 @@
       "input": {
         "id": "media-fuzz-audio-17",
         "mime_type": "audio/flac",
-        "file_size": 24071599,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.9776422517169073,
-        "debug_duration_sec": 52.17029973047825,
+        "file_size": 13157421,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.18689109459709996,
+        "debug_duration_sec": 260.79252217542927,
         "debug_flags": [
-          "clipping"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-18",
       "input": {
         "id": "media-fuzz-audio-18",
-        "mime_type": "audio/wav",
-        "file_size": 10832031,
-        "debug_transcript": "",
-        "debug_confidence": 0.6131394450651372,
-        "debug_duration_sec": 47.90522826114635,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-19",
-      "input": {
-        "id": "media-fuzz-audio-19",
-        "mime_type": "audio/wav",
-        "file_size": 22414118,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.9920777706654981,
-        "debug_duration_sec": 348.5103923994387,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-20",
-      "input": {
-        "id": "media-fuzz-audio-20",
         "mime_type": "audio/mp4",
-        "file_size": 18283593,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.5615971289878511,
-        "debug_duration_sec": 153.32817545315888,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-21",
-      "input": {
-        "id": "media-fuzz-audio-21",
-        "mime_type": "audio/mp4",
-        "file_size": 14673425,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.041871883571966695,
-        "debug_duration_sec": 45.77066069030312,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-22",
-      "input": {
-        "id": "media-fuzz-audio-22",
-        "mime_type": "audio/flac",
-        "file_size": 8790718,
+        "file_size": 19924815,
         "debug_transcript": "turno",
-        "debug_confidence": 0.08502744490427916,
-        "debug_duration_sec": 342.5622004899448,
+        "debug_confidence": 0.7762410226504499,
+        "debug_duration_sec": 214.46623033835704,
         "debug_flags": [
-          "silence"
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
@@ -892,114 +856,34 @@
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-23",
+      "caseName": "audio-fuzz-19",
       "input": {
-        "id": "media-fuzz-audio-23",
-        "mime_type": "audio/mp4",
-        "file_size": 13198700,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.5673752657302004,
-        "debug_duration_sec": 124.18411882238306,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-24",
-      "input": {
-        "id": "media-fuzz-audio-24",
-        "mime_type": "audio/flac",
-        "file_size": 4934082,
-        "debug_transcript": "",
-        "debug_confidence": 0.046761362104474014,
-        "debug_duration_sec": 170.7949332075377,
+        "id": "media-fuzz-audio-19",
+        "mime_type": "audio/ogg",
+        "file_size": 25994210,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.8909283715768368,
+        "debug_duration_sec": 201.7336718892771,
         "debug_flags": [
           "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 5,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-25",
-      "input": {
-        "id": "media-fuzz-audio-25",
-        "mime_type": "audio/wav",
-        "file_size": 12596029,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.22542160113674636,
-        "debug_duration_sec": 255.17018287650933,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-26",
-      "input": {
-        "id": "media-fuzz-audio-26",
-        "mime_type": "audio/ogg",
-        "file_size": 7841144,
-        "debug_transcript": "",
-        "debug_confidence": 0.1595579425764787,
-        "debug_duration_sec": 331.09513289461745,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-27",
+      "caseName": "audio-fuzz-20",
       "input": {
-        "id": "media-fuzz-audio-27",
-        "mime_type": "audio/ogg",
-        "file_size": 3826293,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.03422425750354996,
-        "debug_duration_sec": 49.547128534629074,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-28",
-      "input": {
-        "id": "media-fuzz-audio-28",
+        "id": "media-fuzz-audio-20",
         "mime_type": "audio/flac",
-        "file_size": 10954697,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.5226093156562274,
-        "debug_duration_sec": 190.02718361279707,
+        "file_size": 22118432,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.4139804433008243,
+        "debug_duration_sec": 98.38249598995266,
         "debug_flags": [
           "noise_only",
           "silence"
@@ -1007,48 +891,206 @@
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 49,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-29",
+      "caseName": "audio-fuzz-21",
       "input": {
-        "id": "media-fuzz-audio-29",
-        "mime_type": "audio/mp4",
-        "file_size": 882983,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.7721077765057087,
-        "debug_duration_sec": 134.29041178644695,
+        "id": "media-fuzz-audio-21",
+        "mime_type": "audio/webm",
+        "file_size": 11300338,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.4634792335175799,
+        "debug_duration_sec": 67.54532583731319,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.",
+      "latencyMs": 5,
+      "fallback": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-22",
+      "input": {
+        "id": "media-fuzz-audio-22",
+        "mime_type": "audio/ogg",
+        "file_size": 11583154,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.8612714149469111,
+        "debug_duration_sec": 67.33912212720273,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\".",
+      "latencyMs": 5,
+      "fallback": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\"."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-23",
+      "input": {
+        "id": "media-fuzz-audio-23",
+        "mime_type": "audio/flac",
+        "file_size": 3476994,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.34180116343204114,
+        "debug_duration_sec": 209.95253542514368,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-24",
+      "input": {
+        "id": "media-fuzz-audio-24",
+        "mime_type": "audio/ogg",
+        "file_size": 13337762,
+        "debug_transcript": "",
+        "debug_confidence": 0.7864072272048332,
+        "debug_duration_sec": 170.96027883363334,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-25",
+      "input": {
+        "id": "media-fuzz-audio-25",
+        "mime_type": "audio/ogg",
+        "file_size": 23699219,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.9025023997546194,
+        "debug_duration_sec": 65.61369471317593,
         "debug_flags": [
           "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 11,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-30",
+      "caseName": "audio-fuzz-26",
       "input": {
-        "id": "media-fuzz-audio-30",
+        "id": "media-fuzz-audio-26",
+        "mime_type": "audio/ogg",
+        "file_size": 20205127,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.5576657241616993,
+        "debug_duration_sec": 276.2128938104037,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-27",
+      "input": {
+        "id": "media-fuzz-audio-27",
+        "mime_type": "audio/webm",
+        "file_size": 19006608,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.41834648807074326,
+        "debug_duration_sec": 340.48608374040157,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-28",
+      "input": {
+        "id": "media-fuzz-audio-28",
         "mime_type": "audio/mp4",
-        "file_size": 16700914,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.44585798882930305,
-        "debug_duration_sec": 217.80241471665107,
+        "file_size": 3653511,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.2763993142928969,
+        "debug_duration_sec": 354.0586234846643,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-29",
+      "input": {
+        "id": "media-fuzz-audio-29",
+        "mime_type": "audio/wav",
+        "file_size": 18299764,
+        "debug_transcript": "",
+        "debug_confidence": 0.2847362448185604,
+        "debug_duration_sec": 201.69901843858614,
         "debug_flags": [
           "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-30",
+      "input": {
+        "id": "media-fuzz-audio-30",
+        "mime_type": "audio/wav",
+        "file_size": 9369890,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.8237385442508677,
+        "debug_duration_sec": 267.195045927103,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 7,
+      "latencyMs": 2,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1056,39 +1098,40 @@
       "caseName": "audio-fuzz-31",
       "input": {
         "id": "media-fuzz-audio-31",
-        "mime_type": "audio/flac",
-        "file_size": 22222135,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.7919452658065946,
-        "debug_duration_sec": 127.72046922361623,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-32",
-      "input": {
-        "id": "media-fuzz-audio-32",
         "mime_type": "audio/webm",
-        "file_size": 12603200,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.5046603846226116,
-        "debug_duration_sec": 29.99845455316519,
+        "file_size": 13910638,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.13800800055316642,
+        "debug_duration_sec": 65.03495856244506,
         "debug_flags": [
+          "noise_only",
           "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 11,
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-32",
+      "input": {
+        "id": "media-fuzz-audio-32",
+        "mime_type": "audio/ogg",
+        "file_size": 7343699,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.08405945972777396,
+        "debug_duration_sec": 247.17330313943094,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1097,168 +1140,30 @@
       "input": {
         "id": "media-fuzz-audio-33",
         "mime_type": "audio/flac",
-        "file_size": 16610211,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.06168191746430529,
-        "debug_duration_sec": 321.04716693485483,
+        "file_size": 8689860,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.11219911574184738,
+        "debug_duration_sec": 100.91360918348856,
         "debug_flags": [
-          "clipping"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 11,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-34",
       "input": {
         "id": "media-fuzz-audio-34",
-        "mime_type": "audio/mp4",
-        "file_size": 19483999,
+        "mime_type": "audio/wav",
+        "file_size": 16123139,
         "debug_transcript": "hola@@###",
-        "debug_confidence": 0.3459002629587258,
-        "debug_duration_sec": 43.872739430412864,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 8,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-35",
-      "input": {
-        "id": "media-fuzz-audio-35",
-        "mime_type": "audio/ogg",
-        "file_size": 767186,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.7023673382846924,
-        "debug_duration_sec": 317.8072035158361,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-36",
-      "input": {
-        "id": "media-fuzz-audio-36",
-        "mime_type": "audio/mp4",
-        "file_size": 10383858,
-        "debug_transcript": "",
-        "debug_confidence": 0.5917855391882263,
-        "debug_duration_sec": 151.46832992136567,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 8,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-37",
-      "input": {
-        "id": "media-fuzz-audio-37",
-        "mime_type": "audio/ogg",
-        "file_size": 322593,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.08671342520875036,
-        "debug_duration_sec": 357.3229890812491,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-38",
-      "input": {
-        "id": "media-fuzz-audio-38",
-        "mime_type": "audio/mp4",
-        "file_size": 19685062,
-        "debug_transcript": "",
-        "debug_confidence": 0.4148588607142756,
-        "debug_duration_sec": 202.18675558140234,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-39",
-      "input": {
-        "id": "media-fuzz-audio-39",
-        "mime_type": "audio/mp4",
-        "file_size": 9057347,
-        "debug_transcript": "",
-        "debug_confidence": 0.815408647379321,
-        "debug_duration_sec": 168.49669852735812,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-40",
-      "input": {
-        "id": "media-fuzz-audio-40",
-        "mime_type": "audio/webm",
-        "file_size": 6449164,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.7682763218988415,
-        "debug_duration_sec": 186.5601721111108,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "Escuche \"cancelar turno\". Para evitar errores en una accion sensible, escribime ese comando en texto (ej: \"cancelar turno\").",
-      "latencyMs": 6,
-      "fallback": "Escuche \"cancelar turno\". Para evitar errores en una accion sensible, escribime ese comando en texto (ej: \"cancelar turno\")."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-41",
-      "input": {
-        "id": "media-fuzz-audio-41",
-        "mime_type": "audio/ogg",
-        "file_size": 13859407,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.03901366413039509,
-        "debug_duration_sec": 143.2143472616561,
+        "debug_confidence": 0.9807116551142937,
+        "debug_duration_sec": 200.52979290701708,
         "debug_flags": [
           "low_volume"
         ]
@@ -1266,27 +1171,167 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 7,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-35",
+      "input": {
+        "id": "media-fuzz-audio-35",
+        "mime_type": "audio/webm",
+        "file_size": 6721549,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.17964691760477625,
+        "debug_duration_sec": 121.8362472105976,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-36",
+      "input": {
+        "id": "media-fuzz-audio-36",
+        "mime_type": "audio/flac",
+        "file_size": 26182972,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.3052407972875081,
+        "debug_duration_sec": 258.24948167754724,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-37",
+      "input": {
+        "id": "media-fuzz-audio-37",
+        "mime_type": "audio/flac",
+        "file_size": 13371481,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.7966649599009158,
+        "debug_duration_sec": 162.8370744383058,
+        "debug_flags": [
+          "clipping"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-38",
+      "input": {
+        "id": "media-fuzz-audio-38",
+        "mime_type": "audio/mp4",
+        "file_size": 9300104,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.8427338447268522,
+        "debug_duration_sec": 232.70653404313393,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-39",
+      "input": {
+        "id": "media-fuzz-audio-39",
+        "mime_type": "audio/wav",
+        "file_size": 4087217,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.8522509636056402,
+        "debug_duration_sec": 305.5877323213483,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-40",
+      "input": {
+        "id": "media-fuzz-audio-40",
+        "mime_type": "audio/mp4",
+        "file_size": 6115985,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.15987533873122828,
+        "debug_duration_sec": 231.00185841272597,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-41",
+      "input": {
+        "id": "media-fuzz-audio-41",
+        "mime_type": "audio/webm",
+        "file_size": 16187934,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.9924475407664295,
+        "debug_duration_sec": 263.3204289051135,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "Puedo ayudarte a reservar. Escribi \"turno\" para empezar.",
+      "latencyMs": 3,
+      "fallback": "Puedo ayudarte a reservar. Escribi \"turno\" para empezar."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-42",
       "input": {
         "id": "media-fuzz-audio-42",
-        "mime_type": "audio/wav",
-        "file_size": 15381106,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.16403742640397212,
-        "debug_duration_sec": 43.75649892073605,
+        "mime_type": "audio/ogg",
+        "file_size": 11739192,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.7996330728481655,
+        "debug_duration_sec": 174.95307259899263,
         "debug_flags": [
-          "abrupt_cut"
+          "clipping"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 9,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1295,17 +1340,19 @@
       "input": {
         "id": "media-fuzz-audio-43",
         "mime_type": "audio/mp4",
-        "file_size": 14510780,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.0783415133407509,
-        "debug_duration_sec": 65.2609922872227,
-        "debug_flags": []
+        "file_size": 8089600,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.9577284507557464,
+        "debug_duration_sec": 59.667647027125724,
+        "debug_flags": [
+          "noise_only"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.",
-      "latencyMs": 8,
-      "fallback": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
@@ -1313,52 +1360,30 @@
       "input": {
         "id": "media-fuzz-audio-44",
         "mime_type": "audio/webm",
-        "file_size": 25214986,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.8530441242947718,
-        "debug_duration_sec": 229.06875704590618,
+        "file_size": 15674454,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.9104972807652476,
+        "debug_duration_sec": 289.31312882033393,
         "debug_flags": [
-          "noise_only",
-          "silence"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-45",
       "input": {
         "id": "media-fuzz-audio-45",
-        "mime_type": "audio/mp4",
-        "file_size": 1182384,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.8126825619992283,
-        "debug_duration_sec": 14.022811349362389,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-46",
-      "input": {
-        "id": "media-fuzz-audio-46",
-        "mime_type": "audio/mp4",
-        "file_size": 22264966,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.39679134509178315,
-        "debug_duration_sec": 149.4398173351501,
+        "mime_type": "audio/flac",
+        "file_size": 20013899,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.7281091910923841,
+        "debug_duration_sec": 226.51236250979386,
         "debug_flags": [
           "noise_only",
           "silence"
@@ -1367,67 +1392,86 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
+      "latencyMs": 2,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-46",
+      "input": {
+        "id": "media-fuzz-audio-46",
+        "mime_type": "audio/ogg",
+        "file_size": 10692626,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.15580506635092517,
+        "debug_duration_sec": 81.07766619459179,
+        "debug_flags": [
+          "clipping"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-47",
       "input": {
         "id": "media-fuzz-audio-47",
-        "mime_type": "audio/mp4",
-        "file_size": 9077212,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.9960529212725028,
-        "debug_duration_sec": 273.1736523117914,
-        "debug_flags": [
-          "low_volume"
-        ]
+        "mime_type": "audio/webm",
+        "file_size": 24551096,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.324495356945918,
+        "debug_duration_sec": 9.12518344500793,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 8,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-48",
       "input": {
         "id": "media-fuzz-audio-48",
-        "mime_type": "audio/flac",
-        "file_size": 7260153,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.8198425677969808,
-        "debug_duration_sec": 299.09591432918006,
+        "mime_type": "audio/webm",
+        "file_size": 4150479,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.2807772719401076,
+        "debug_duration_sec": 126.77764966073481,
         "debug_flags": [
-          "abrupt_cut"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 6,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-49",
       "input": {
         "id": "media-fuzz-audio-49",
-        "mime_type": "audio/webm",
-        "file_size": 14093508,
+        "mime_type": "audio/wav",
+        "file_size": 3910197,
         "debug_transcript": "hola@@###",
-        "debug_confidence": 0.47101339338929216,
-        "debug_duration_sec": 116.67453016809016,
+        "debug_confidence": 0.658532833900474,
+        "debug_duration_sec": 69.81558452238731,
         "debug_flags": [
-          "low_volume"
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1435,19 +1479,19 @@
       "caseName": "audio-fuzz-50",
       "input": {
         "id": "media-fuzz-audio-50",
-        "mime_type": "audio/ogg",
-        "file_size": 7153115,
-        "debug_transcript": "",
-        "debug_confidence": 0.36941185905747576,
-        "debug_duration_sec": 168.01812948651414,
+        "mime_type": "audio/mp4",
+        "file_size": 5789139,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.9638761546038734,
+        "debug_duration_sec": 52.13846378293965,
         "debug_flags": [
-          "noise_only"
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1455,39 +1499,35 @@
       "caseName": "audio-fuzz-51",
       "input": {
         "id": "media-fuzz-audio-51",
-        "mime_type": "audio/flac",
-        "file_size": 26091624,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.8135149894430511,
-        "debug_duration_sec": 331.74368218576603,
-        "debug_flags": [
-          "clipping"
-        ]
+        "mime_type": "audio/webm",
+        "file_size": 14410088,
+        "debug_transcript": "",
+        "debug_confidence": 0.5379743691592271,
+        "debug_duration_sec": 289.62459772879026,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude procesar ese audio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude procesar ese audio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-52",
       "input": {
         "id": "media-fuzz-audio-52",
-        "mime_type": "audio/wav",
-        "file_size": 6110601,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.6247354392389655,
-        "debug_duration_sec": 334.7679101133019,
-        "debug_flags": [
-          "noise_only"
-        ]
+        "mime_type": "audio/ogg",
+        "file_size": 22461340,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.5975108375548056,
+        "debug_duration_sec": 292.8112997600477,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -1495,19 +1535,20 @@
       "caseName": "audio-fuzz-53",
       "input": {
         "id": "media-fuzz-audio-53",
-        "mime_type": "audio/mp4",
-        "file_size": 12856452,
-        "debug_transcript": "",
-        "debug_confidence": 0.41658119559815265,
-        "debug_duration_sec": 287.17903921617705,
+        "mime_type": "audio/ogg",
+        "file_size": 6114574,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.28975616485822575,
+        "debug_duration_sec": 164.63101291984142,
         "debug_flags": [
-          "low_volume"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 7,
+      "latencyMs": 4,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1515,59 +1556,60 @@
       "caseName": "audio-fuzz-54",
       "input": {
         "id": "media-fuzz-audio-54",
-        "mime_type": "audio/webm",
-        "file_size": 18692492,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.7849875135435886,
-        "debug_duration_sec": 195.43143660252417,
+        "mime_type": "audio/ogg",
+        "file_size": 12964319,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.3727936664639735,
+        "debug_duration_sec": 277.99050339774027,
         "debug_flags": [
-          "low_volume"
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-55",
       "input": {
         "id": "media-fuzz-audio-55",
-        "mime_type": "audio/wav",
-        "file_size": 23275490,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.10386116996505468,
-        "debug_duration_sec": 182.38299515640503,
+        "mime_type": "audio/mp4",
+        "file_size": 1231905,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.8198006674814651,
+        "debug_duration_sec": 72.53122519384988,
         "debug_flags": [
-          "low_volume"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-56",
       "input": {
         "id": "media-fuzz-audio-56",
-        "mime_type": "audio/ogg",
-        "file_size": 9255933,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.8140222466964425,
-        "debug_duration_sec": 178.19536579609505,
+        "mime_type": "audio/wav",
+        "file_size": 829322,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.5807363432489543,
+        "debug_duration_sec": 174.79994005553428,
         "debug_flags": [
-          "low_volume"
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1575,39 +1617,37 @@
       "caseName": "audio-fuzz-57",
       "input": {
         "id": "media-fuzz-audio-57",
-        "mime_type": "audio/webm",
-        "file_size": 3159554,
+        "mime_type": "audio/flac",
+        "file_size": 9416979,
         "debug_transcript": "turno",
-        "debug_confidence": 0.34812177456584514,
-        "debug_duration_sec": 105.95190079517523,
-        "debug_flags": [
-          "noise_only"
-        ]
+        "debug_confidence": 0.15099642757554765,
+        "debug_duration_sec": 294.0110838670387,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "actual": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.",
+      "latencyMs": 3,
+      "fallback": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-58",
       "input": {
         "id": "media-fuzz-audio-58",
-        "mime_type": "audio/flac",
-        "file_size": 17353232,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.5670014072543355,
-        "debug_duration_sec": 224.69120978822608,
+        "mime_type": "audio/wav",
+        "file_size": 18085167,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.6519858294499302,
+        "debug_duration_sec": 249.71360940970777,
         "debug_flags": [
-          "silence"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -1615,91 +1655,11 @@
       "caseName": "audio-fuzz-59",
       "input": {
         "id": "media-fuzz-audio-59",
-        "mime_type": "audio/webm",
-        "file_size": 18083726,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.30315375451321025,
-        "debug_duration_sec": 171.08570936765094,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 7,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-60",
-      "input": {
-        "id": "media-fuzz-audio-60",
-        "mime_type": "audio/wav",
-        "file_size": 24257325,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.4230366224669825,
-        "debug_duration_sec": 320.47674626895616,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-61",
-      "input": {
-        "id": "media-fuzz-audio-61",
-        "mime_type": "audio/mp4",
-        "file_size": 14197954,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.8161132901148939,
-        "debug_duration_sec": 225.1546917646707,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-62",
-      "input": {
-        "id": "media-fuzz-audio-62",
-        "mime_type": "audio/ogg",
-        "file_size": 25568837,
+        "mime_type": "audio/flac",
+        "file_size": 8546283,
         "debug_transcript": "hola@@###",
-        "debug_confidence": 0.790266569790436,
-        "debug_duration_sec": 109.4309598316892,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-63",
-      "input": {
-        "id": "media-fuzz-audio-63",
-        "mime_type": "audio/wav",
-        "file_size": 16738725,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.23754904987796366,
-        "debug_duration_sec": 76.98339589940963,
+        "debug_confidence": 0.9385501790163767,
+        "debug_duration_sec": 137.88318761744384,
         "debug_flags": [
           "low_volume"
         ]
@@ -1707,7 +1667,88 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-60",
+      "input": {
+        "id": "media-fuzz-audio-60",
+        "mime_type": "audio/webm",
+        "file_size": 11722555,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.9522735777002939,
+        "debug_duration_sec": 84.49935118621728,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-61",
+      "input": {
+        "id": "media-fuzz-audio-61",
+        "mime_type": "audio/ogg",
+        "file_size": 868807,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.12438287005937188,
+        "debug_duration_sec": 151.8385803098386,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-62",
+      "input": {
+        "id": "media-fuzz-audio-62",
+        "mime_type": "audio/wav",
+        "file_size": 7900366,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.5069738180373498,
+        "debug_duration_sec": 29.907634510952423,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-63",
+      "input": {
+        "id": "media-fuzz-audio-63",
+        "mime_type": "audio/webm",
+        "file_size": 5503398,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.7479978736952074,
+        "debug_duration_sec": 60.426553175177446,
+        "debug_flags": [
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1716,31 +1757,10 @@
       "input": {
         "id": "media-fuzz-audio-64",
         "mime_type": "audio/webm",
-        "file_size": 13690808,
+        "file_size": 25417211,
         "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.6280855823431324,
-        "debug_duration_sec": 245.38313291195496,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-65",
-      "input": {
-        "id": "media-fuzz-audio-65",
-        "mime_type": "audio/ogg",
-        "file_size": 21951345,
-        "debug_transcript": "",
-        "debug_confidence": 0.38689499545502803,
-        "debug_duration_sec": 110.49942402657717,
+        "debug_confidence": 0.9369397268955347,
+        "debug_duration_sec": 178.4497235157477,
         "debug_flags": [
           "noise_only"
         ]
@@ -1748,27 +1768,47 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-65",
+      "input": {
+        "id": "media-fuzz-audio-65",
+        "mime_type": "audio/wav",
+        "file_size": 12659666,
+        "debug_transcript": "",
+        "debug_confidence": 0.19880054387593316,
+        "debug_duration_sec": 157.12304481390606,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-66",
       "input": {
         "id": "media-fuzz-audio-66",
-        "mime_type": "audio/webm",
-        "file_size": 25916581,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.8064975892149678,
-        "debug_duration_sec": 135.36661679669822,
+        "mime_type": "audio/wav",
+        "file_size": 25587723,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.7835501216930605,
+        "debug_duration_sec": 305.8479533030528,
         "debug_flags": [
-          "silence"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -1776,13 +1816,54 @@
       "caseName": "audio-fuzz-67",
       "input": {
         "id": "media-fuzz-audio-67",
-        "mime_type": "audio/ogg",
-        "file_size": 2898010,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.9271139694468448,
-        "debug_duration_sec": 25.721728509469628,
+        "mime_type": "audio/wav",
+        "file_size": 16985844,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.9684840691784311,
+        "debug_duration_sec": 116.97179009478678,
         "debug_flags": [
-          "low_volume"
+          "clipping"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-68",
+      "input": {
+        "id": "media-fuzz-audio-68",
+        "mime_type": "audio/flac",
+        "file_size": 2536584,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.29378956636237197,
+        "debug_duration_sec": 310.0069669005259,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-69",
+      "input": {
+        "id": "media-fuzz-audio-69",
+        "mime_type": "audio/mp4",
+        "file_size": 10391820,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.00569483141853333,
+        "debug_duration_sec": 96.96042663130132,
+        "debug_flags": [
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
@@ -1793,116 +1874,14 @@
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-68",
-      "input": {
-        "id": "media-fuzz-audio-68",
-        "mime_type": "audio/wav",
-        "file_size": 6222667,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.02754288137089933,
-        "debug_duration_sec": 155.97719126235137,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-69",
-      "input": {
-        "id": "media-fuzz-audio-69",
-        "mime_type": "audio/ogg",
-        "file_size": 8154984,
-        "debug_transcript": "",
-        "debug_confidence": 0.12503233277438608,
-        "debug_duration_sec": 340.71396648910064,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
       "caseName": "audio-fuzz-70",
       "input": {
         "id": "media-fuzz-audio-70",
-        "mime_type": "audio/ogg",
-        "file_size": 22678551,
-        "debug_transcript": "",
-        "debug_confidence": 0.901373728889906,
-        "debug_duration_sec": 109.5733332239293,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-71",
-      "input": {
-        "id": "media-fuzz-audio-71",
-        "mime_type": "audio/webm",
-        "file_size": 21348532,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.8553009947208993,
-        "debug_duration_sec": 100.09283423607091,
-        "debug_flags": [
-          "clipping"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-72",
-      "input": {
-        "id": "media-fuzz-audio-72",
-        "mime_type": "audio/wav",
-        "file_size": 19107358,
-        "debug_transcript": "",
-        "debug_confidence": 0.2037012463708514,
-        "debug_duration_sec": 241.8246856578691,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 13,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-73",
-      "input": {
-        "id": "media-fuzz-audio-73",
-        "mime_type": "audio/mp4",
-        "file_size": 15832477,
+        "mime_type": "audio/flac",
+        "file_size": 6007177,
         "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.4987187212214902,
-        "debug_duration_sec": 275.82517150077626,
+        "debug_confidence": 0.8723542598503315,
+        "debug_duration_sec": 5.840185298152791,
         "debug_flags": [
           "low_volume"
         ]
@@ -1910,7 +1889,63 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-71",
+      "input": {
+        "id": "media-fuzz-audio-71",
+        "mime_type": "audio/ogg",
+        "file_size": 6036383,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.7804396148660744,
+        "debug_duration_sec": 315.2154802784363,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-72",
+      "input": {
+        "id": "media-fuzz-audio-72",
+        "mime_type": "audio/ogg",
+        "file_size": 11739132,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.6899603868394837,
+        "debug_duration_sec": 16.903331382528442,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\".",
+      "latencyMs": 3,
+      "fallback": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\"."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-73",
+      "input": {
+        "id": "media-fuzz-audio-73",
+        "mime_type": "audio/webm",
+        "file_size": 10459633,
+        "debug_transcript": "",
+        "debug_confidence": 0.9022105281935603,
+        "debug_duration_sec": 149.37563635554406,
+        "debug_flags": [
+          "abrupt_cut"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -1919,10 +1954,30 @@
       "input": {
         "id": "media-fuzz-audio-74",
         "mime_type": "audio/flac",
-        "file_size": 12096195,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.021303548811016815,
-        "debug_duration_sec": 29.135817018815985,
+        "file_size": 11416806,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.9265503444379823,
+        "debug_duration_sec": 66.49733415600637,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-75",
+      "input": {
+        "id": "media-fuzz-audio-75",
+        "mime_type": "audio/flac",
+        "file_size": 13066519,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.37620500828418013,
+        "debug_duration_sec": 246.47729773549463,
         "debug_flags": [
           "noise_only",
           "silence"
@@ -1930,29 +1985,9 @@
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 6,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-75",
-      "input": {
-        "id": "media-fuzz-audio-75",
-        "mime_type": "audio/webm",
-        "file_size": 25419482,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.5567019712770174,
-        "debug_duration_sec": 304.93013953384786,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
@@ -1960,10 +1995,130 @@
       "input": {
         "id": "media-fuzz-audio-76",
         "mime_type": "audio/mp4",
-        "file_size": 23727319,
+        "file_size": 647559,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.5012323229499891,
+        "debug_duration_sec": 309.13336875123457,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-77",
+      "input": {
+        "id": "media-fuzz-audio-77",
+        "mime_type": "audio/mp4",
+        "file_size": 16373987,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.36884628237514006,
+        "debug_duration_sec": 201.60874076405972,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.",
+      "latencyMs": 3,
+      "fallback": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-78",
+      "input": {
+        "id": "media-fuzz-audio-78",
+        "mime_type": "audio/wav",
+        "file_size": 11823742,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.28719130944315663,
+        "debug_duration_sec": 126.3295064222311,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-79",
+      "input": {
+        "id": "media-fuzz-audio-79",
+        "mime_type": "audio/flac",
+        "file_size": 22520727,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.463594221332693,
+        "debug_duration_sec": 315.9042011656266,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-80",
+      "input": {
+        "id": "media-fuzz-audio-80",
+        "mime_type": "audio/ogg",
+        "file_size": 15287850,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.9693482540233763,
+        "debug_duration_sec": 288.838002285066,
+        "debug_flags": [
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-81",
+      "input": {
+        "id": "media-fuzz-audio-81",
+        "mime_type": "audio/wav",
+        "file_size": 24480561,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.3978148241570362,
+        "debug_duration_sec": 185.9793004878233,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-82",
+      "input": {
+        "id": "media-fuzz-audio-82",
+        "mime_type": "audio/flac",
+        "file_size": 3209144,
         "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.38938181179955333,
-        "debug_duration_sec": 171.98866166454985,
+        "debug_confidence": 0.09798798626997751,
+        "debug_duration_sec": 305.87687011833776,
         "debug_flags": [
           "noise_only",
           "silence"
@@ -1977,215 +2132,54 @@
     },
     {
       "dimension": "Fuzz",
-      "caseName": "audio-fuzz-77",
-      "input": {
-        "id": "media-fuzz-audio-77",
-        "mime_type": "audio/wav",
-        "file_size": 3777894,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.5152102765715717,
-        "debug_duration_sec": 219.42758243213865,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-78",
-      "input": {
-        "id": "media-fuzz-audio-78",
-        "mime_type": "audio/ogg",
-        "file_size": 14741655,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.38939274152244563,
-        "debug_duration_sec": 286.79165009542885,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-79",
-      "input": {
-        "id": "media-fuzz-audio-79",
-        "mime_type": "audio/flac",
-        "file_size": 19106709,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.40089764544802864,
-        "debug_duration_sec": 247.35988141731065,
-        "debug_flags": [
-          "noise_only",
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-80",
-      "input": {
-        "id": "media-fuzz-audio-80",
-        "mime_type": "audio/webm",
-        "file_size": 4698091,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.7169858115218338,
-        "debug_duration_sec": 58.158845314411934,
-        "debug_flags": [
-          "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-81",
-      "input": {
-        "id": "media-fuzz-audio-81",
-        "mime_type": "audio/wav",
-        "file_size": 5866187,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.963599923062739,
-        "debug_duration_sec": 359.4869959445846,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-82",
-      "input": {
-        "id": "media-fuzz-audio-82",
-        "mime_type": "audio/webm",
-        "file_size": 11017166,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.5002565465854902,
-        "debug_duration_sec": 139.5654655978803,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
       "caseName": "audio-fuzz-83",
       "input": {
         "id": "media-fuzz-audio-83",
-        "mime_type": "audio/ogg",
-        "file_size": 7884344,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.6783926588974727,
-        "debug_duration_sec": 25.772041486605804,
+        "mime_type": "audio/flac",
+        "file_size": 25335634,
+        "debug_transcript": "",
+        "debug_confidence": 0.048351129927304615,
+        "debug_duration_sec": 28.4318912759092,
         "debug_flags": [
-          "low_volume"
+          "clipping"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-84",
       "input": {
         "id": "media-fuzz-audio-84",
-        "mime_type": "audio/wav",
-        "file_size": 24699265,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.743332978668288,
-        "debug_duration_sec": 171.94926766589987,
+        "mime_type": "audio/webm",
+        "file_size": 5008523,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.5363255058381086,
+        "debug_duration_sec": 17.201501959085515,
         "debug_flags": [
-          "silence"
+          "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-85",
       "input": {
         "id": "media-fuzz-audio-85",
-        "mime_type": "audio/flac",
-        "file_size": 23580613,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.41784801148881634,
-        "debug_duration_sec": 231.8152235855412,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-86",
-      "input": {
-        "id": "media-fuzz-audio-86",
         "mime_type": "audio/ogg",
-        "file_size": 10206685,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.4002488511338709,
-        "debug_duration_sec": 112.6063820437517,
-        "debug_flags": [
-          "low_volume"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-87",
-      "input": {
-        "id": "media-fuzz-audio-87",
-        "mime_type": "audio/ogg",
-        "file_size": 6649719,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.0019458133337046934,
-        "debug_duration_sec": 212.33590644577657,
+        "file_size": 6923670,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.6927214721455054,
+        "debug_duration_sec": 171.61848532306175,
         "debug_flags": [
           "clipping"
         ]
@@ -2193,28 +2187,67 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-86",
+      "input": {
+        "id": "media-fuzz-audio-86",
+        "mime_type": "audio/ogg",
+        "file_size": 23746325,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.9663120098917735,
+        "debug_duration_sec": 249.77215554576432,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-87",
+      "input": {
+        "id": "media-fuzz-audio-87",
+        "mime_type": "audio/wav",
+        "file_size": 26172241,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.3026350583749937,
+        "debug_duration_sec": 303.9212738495557,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-88",
       "input": {
         "id": "media-fuzz-audio-88",
-        "mime_type": "audio/wav",
-        "file_size": 24632308,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.21629765902721632,
-        "debug_duration_sec": 202.5110798009217,
+        "mime_type": "audio/mp4",
+        "file_size": 25983655,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.14140841449819175,
+        "debug_duration_sec": 32.82185815773158,
         "debug_flags": [
-          "noise_only",
-          "silence"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2222,13 +2255,13 @@
       "caseName": "audio-fuzz-89",
       "input": {
         "id": "media-fuzz-audio-89",
-        "mime_type": "audio/wav",
-        "file_size": 3240064,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.5166383809009447,
-        "debug_duration_sec": 6.209163887956195,
+        "mime_type": "audio/mp4",
+        "file_size": 8841050,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.882058949586242,
+        "debug_duration_sec": 41.412602454449924,
         "debug_flags": [
-          "abrupt_cut"
+          "low_volume"
         ]
       },
       "previousState": "random",
@@ -2242,39 +2275,37 @@
       "caseName": "audio-fuzz-90",
       "input": {
         "id": "media-fuzz-audio-90",
-        "mime_type": "audio/wav",
-        "file_size": 3350030,
-        "debug_transcript": "",
-        "debug_confidence": 0.2280178995112333,
-        "debug_duration_sec": 267.60590683473606,
-        "debug_flags": [
-          "low_volume"
-        ]
+        "mime_type": "audio/mp4",
+        "file_size": 2949971,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.671561099748635,
+        "debug_duration_sec": 325.44205422094115,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-91",
       "input": {
         "id": "media-fuzz-audio-91",
-        "mime_type": "audio/mp4",
-        "file_size": 25616471,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.6574383258606119,
-        "debug_duration_sec": 147.52816196315072,
+        "mime_type": "audio/webm",
+        "file_size": 26109504,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.6359418019646856,
+        "debug_duration_sec": 343.0196875645682,
         "debug_flags": [
-          "silence"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2282,19 +2313,19 @@
       "caseName": "audio-fuzz-92",
       "input": {
         "id": "media-fuzz-audio-92",
-        "mime_type": "audio/webm",
-        "file_size": 13729489,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.13780106383916058,
-        "debug_duration_sec": 359.4058861769329,
+        "mime_type": "audio/mp4",
+        "file_size": 11066858,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.5948921427543262,
+        "debug_duration_sec": 338.310941387582,
         "debug_flags": [
-          "clipping"
+          "noise_only"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2302,51 +2333,35 @@
       "caseName": "audio-fuzz-93",
       "input": {
         "id": "media-fuzz-audio-93",
-        "mime_type": "audio/flac",
-        "file_size": 23740379,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.6083023186359482,
-        "debug_duration_sec": 196.9369683609594,
-        "debug_flags": []
+        "mime_type": "audio/wav",
+        "file_size": 3193700,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.9241588398302738,
+        "debug_duration_sec": 225.05203217406083,
+        "debug_flags": [
+          "noise_only",
+          "silence"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-94",
       "input": {
         "id": "media-fuzz-audio-94",
-        "mime_type": "audio/wav",
-        "file_size": 19633223,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.8489482668550612,
-        "debug_duration_sec": 195.96645662627648,
+        "mime_type": "audio/ogg",
+        "file_size": 13806590,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.05964344356601514,
+        "debug_duration_sec": 165.47783416928587,
         "debug_flags": [
+          "noise_only",
           "silence"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-95",
-      "input": {
-        "id": "media-fuzz-audio-95",
-        "mime_type": "audio/webm",
-        "file_size": 13187046,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.16356035187125617,
-        "debug_duration_sec": 56.16713033934121,
-        "debug_flags": [
-          "low_volume"
         ]
       },
       "previousState": "random",
@@ -2357,22 +2372,41 @@
     },
     {
       "dimension": "Fuzz",
+      "caseName": "audio-fuzz-95",
+      "input": {
+        "id": "media-fuzz-audio-95",
+        "mime_type": "audio/wav",
+        "file_size": 10842068,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.15323674313965674,
+        "debug_duration_sec": 254.59144613850424,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.",
+      "latencyMs": 3,
+      "fallback": "No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto."
+    },
+    {
+      "dimension": "Fuzz",
       "caseName": "audio-fuzz-96",
       "input": {
         "id": "media-fuzz-audio-96",
-        "mime_type": "audio/webm",
-        "file_size": 15235549,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.1389047254532656,
-        "debug_duration_sec": 288.98334519897617,
+        "mime_type": "audio/mp4",
+        "file_size": 11651301,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.2512545197564896,
+        "debug_duration_sec": 53.31891810680464,
         "debug_flags": [
-          "clipping"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -2380,17 +2414,19 @@
       "caseName": "audio-fuzz-97",
       "input": {
         "id": "media-fuzz-audio-97",
-        "mime_type": "audio/webm",
-        "file_size": 25070559,
-        "debug_transcript": "turno",
-        "debug_confidence": 0.8559444623165547,
-        "debug_duration_sec": 321.7006311005753,
-        "debug_flags": []
+        "mime_type": "audio/flac",
+        "file_size": 6169058,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.14898930836565816,
+        "debug_duration_sec": 355.37362425489295,
+        "debug_flags": [
+          "low_volume"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2399,30 +2435,108 @@
       "input": {
         "id": "media-fuzz-audio-98",
         "mime_type": "audio/mp4",
-        "file_size": 21794633,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.6941904473022062,
-        "debug_duration_sec": 39.59304372376276,
+        "file_size": 13574539,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.2761129628656248,
+        "debug_duration_sec": 42.10317895339135,
         "debug_flags": [
           "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 4,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-99",
       "input": {
         "id": "media-fuzz-audio-99",
-        "mime_type": "audio/webm",
-        "file_size": 14944647,
+        "mime_type": "audio/ogg",
+        "file_size": 4652507,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.7322022737392127,
+        "debug_duration_sec": 92.06574382458938,
+        "debug_flags": []
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\".",
+      "latencyMs": 3,
+      "fallback": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\"."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-100",
+      "input": {
+        "id": "media-fuzz-audio-100",
+        "mime_type": "audio/mp4",
+        "file_size": 10370720,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.2919084502297431,
+        "debug_duration_sec": 322.60667364717625,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-101",
+      "input": {
+        "id": "media-fuzz-audio-101",
+        "mime_type": "audio/ogg",
+        "file_size": 23059005,
+        "debug_transcript": "hola@@###",
+        "debug_confidence": 0.10513693812409475,
+        "debug_duration_sec": 63.29891686274861,
+        "debug_flags": [
+          "low_volume"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-102",
+      "input": {
+        "id": "media-fuzz-audio-102",
+        "mime_type": "audio/flac",
+        "file_size": 24453729,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.42182230275276233,
+        "debug_duration_sec": 96.80609283614663,
+        "debug_flags": [
+          "noise_only"
+        ]
+      },
+      "previousState": "random",
+      "expected": "sin crash y fallback controlado",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+    },
+    {
+      "dimension": "Fuzz",
+      "caseName": "audio-fuzz-103",
+      "input": {
+        "id": "media-fuzz-audio-103",
+        "mime_type": "audio/flac",
+        "file_size": 6210791,
         "debug_transcript": "turno",
-        "debug_confidence": 0.6258553787858251,
-        "debug_duration_sec": 7.78226373812692,
+        "debug_confidence": 0.4503968553703509,
+        "debug_duration_sec": 211.52151896763058,
         "debug_flags": [
           "clipping"
         ]
@@ -2430,85 +2544,7 @@
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-100",
-      "input": {
-        "id": "media-fuzz-audio-100",
-        "mime_type": "audio/wav",
-        "file_size": 8853677,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.22725678976313535,
-        "debug_duration_sec": 63.02817382200231,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-101",
-      "input": {
-        "id": "media-fuzz-audio-101",
-        "mime_type": "audio/mp4",
-        "file_size": 7518777,
-        "debug_transcript": "",
-        "debug_confidence": 0.12848120790393924,
-        "debug_duration_sec": 67.22143830765279,
-        "debug_flags": [
-          "abrupt_cut"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-102",
-      "input": {
-        "id": "media-fuzz-audio-102",
-        "mime_type": "audio/wav",
-        "file_size": 7904362,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.6306409681666032,
-        "debug_duration_sec": 102.75832026295349,
-        "debug_flags": []
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "Escuche \"reprogramar mi turno\". Para evitar errores en una accion sensible, escribime ese comando en texto (ej: \"cancelar turno\").",
-      "latencyMs": 5,
-      "fallback": "Escuche \"reprogramar mi turno\". Para evitar errores en una accion sensible, escribime ese comando en texto (ej: \"cancelar turno\")."
-    },
-    {
-      "dimension": "Fuzz",
-      "caseName": "audio-fuzz-103",
-      "input": {
-        "id": "media-fuzz-audio-103",
-        "mime_type": "audio/webm",
-        "file_size": 5646947,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.35496590462845556,
-        "debug_duration_sec": 26.15624494730745,
-        "debug_flags": [
-          "noise_only"
-        ]
-      },
-      "previousState": "random",
-      "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -2516,39 +2552,39 @@
       "caseName": "audio-fuzz-104",
       "input": {
         "id": "media-fuzz-audio-104",
-        "mime_type": "audio/wav",
-        "file_size": 24652189,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.3322015820915094,
-        "debug_duration_sec": 43.08130219848066,
+        "mime_type": "audio/mp4",
+        "file_size": 6757331,
+        "debug_transcript": "",
+        "debug_confidence": 0.07256488352385382,
+        "debug_duration_sec": 56.33039023189496,
         "debug_flags": [
-          "noise_only"
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-105",
       "input": {
         "id": "media-fuzz-audio-105",
-        "mime_type": "audio/mp4",
-        "file_size": 5626943,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.33944723273273625,
-        "debug_duration_sec": 243.89092094877782,
+        "mime_type": "audio/flac",
+        "file_size": 15020282,
+        "debug_transcript": "",
+        "debug_confidence": 0.699724240019424,
+        "debug_duration_sec": 266.66982023899396,
         "debug_flags": [
-          "abrupt_cut"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 6,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -2556,35 +2592,39 @@
       "caseName": "audio-fuzz-106",
       "input": {
         "id": "media-fuzz-audio-106",
-        "mime_type": "audio/flac",
-        "file_size": 5908423,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.30380128809896634,
-        "debug_duration_sec": 194.7176306263807,
-        "debug_flags": []
+        "mime_type": "audio/mp4",
+        "file_size": 16556064,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.11372802739266485,
+        "debug_duration_sec": 159.84590737955594,
+        "debug_flags": [
+          "silence"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 6,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-107",
       "input": {
         "id": "media-fuzz-audio-107",
-        "mime_type": "audio/ogg",
-        "file_size": 23819779,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.4182990494607657,
-        "debug_duration_sec": 165.749342109115,
-        "debug_flags": []
+        "mime_type": "audio/flac",
+        "file_size": 21118174,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.5788373810806734,
+        "debug_duration_sec": 61.20613936287765,
+        "debug_flags": [
+          "noise_only"
+        ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2592,39 +2632,40 @@
       "caseName": "audio-fuzz-108",
       "input": {
         "id": "media-fuzz-audio-108",
-        "mime_type": "audio/webm",
-        "file_size": 22636829,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.045989008648055996,
-        "debug_duration_sec": 273.6285578476541,
+        "mime_type": "audio/wav",
+        "file_size": 4904711,
+        "debug_transcript": "turno",
+        "debug_confidence": 0.42375502325368253,
+        "debug_duration_sec": 48.30002037519485,
         "debug_flags": [
           "abrupt_cut"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-109",
       "input": {
         "id": "media-fuzz-audio-109",
-        "mime_type": "audio/webm",
-        "file_size": 14360239,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.736131029177661,
-        "debug_duration_sec": 87.20883229765833,
+        "mime_type": "audio/flac",
+        "file_size": 3843908,
+        "debug_transcript": "",
+        "debug_confidence": 0.15366017214582484,
+        "debug_duration_sec": 109.29840736935829,
         "debug_flags": [
-          "noise_only"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 3,
+      "latencyMs": 2,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -2633,18 +2674,18 @@
       "input": {
         "id": "media-fuzz-audio-110",
         "mime_type": "audio/mp4",
-        "file_size": 19253736,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.0443581507005808,
-        "debug_duration_sec": 131.18054442283616,
+        "file_size": 21844064,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.9442405898481004,
+        "debug_duration_sec": 355.21028318866905,
         "debug_flags": [
-          "silence"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2652,31 +2693,29 @@
       "caseName": "audio-fuzz-111",
       "input": {
         "id": "media-fuzz-audio-111",
-        "mime_type": "audio/webm",
-        "file_size": 12426596,
-        "debug_transcript": "a nombre de juan perez",
-        "debug_confidence": 0.7991960423249346,
-        "debug_duration_sec": 296.19608014431157,
-        "debug_flags": [
-          "silence"
-        ]
+        "mime_type": "audio/flac",
+        "file_size": 19412202,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.45800969757539733,
+        "debug_duration_sec": 130.94168027672717,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
       "latencyMs": 3,
-      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
+      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-112",
       "input": {
         "id": "media-fuzz-audio-112",
-        "mime_type": "audio/wav",
-        "file_size": 1557332,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.7103472844301855,
-        "debug_duration_sec": 301.9666454220165,
+        "mime_type": "audio/mp4",
+        "file_size": 17412699,
+        "debug_transcript": "mañana no perdon viernes",
+        "debug_confidence": 0.1618742674137037,
+        "debug_duration_sec": 13.451412069783885,
         "debug_flags": [
           "silence"
         ]
@@ -2692,17 +2731,17 @@
       "caseName": "audio-fuzz-113",
       "input": {
         "id": "media-fuzz-audio-113",
-        "mime_type": "audio/ogg",
-        "file_size": 25151105,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.750638869196406,
-        "debug_duration_sec": 348.98439999421726,
+        "mime_type": "audio/mp4",
+        "file_size": 21893550,
+        "debug_transcript": "",
+        "debug_confidence": 0.7237092175711033,
+        "debug_duration_sec": 329.343393822823,
         "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2710,39 +2749,38 @@
       "caseName": "audio-fuzz-114",
       "input": {
         "id": "media-fuzz-audio-114",
-        "mime_type": "audio/mp4",
-        "file_size": 21886511,
-        "debug_transcript": "",
-        "debug_confidence": 0.19864898435471334,
-        "debug_duration_sec": 264.8477368619725,
+        "mime_type": "audio/flac",
+        "file_size": 15251708,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.8226960400514766,
+        "debug_duration_sec": 266.4438037330697,
         "debug_flags": [
-          "clipping"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
-      "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
+      "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 2,
+      "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-115",
       "input": {
         "id": "media-fuzz-audio-115",
-        "mime_type": "audio/flac",
-        "file_size": 22451467,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.9439873941379447,
-        "debug_duration_sec": 38.58713867662849,
-        "debug_flags": [
-          "low_volume"
-        ]
+        "mime_type": "audio/ogg",
+        "file_size": 21313978,
+        "debug_transcript": "reprogramar mi turno",
+        "debug_confidence": 0.9372272003247587,
+        "debug_duration_sec": 285.25860849470644,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
+      "latencyMs": 2,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2750,19 +2788,19 @@
       "caseName": "audio-fuzz-116",
       "input": {
         "id": "media-fuzz-audio-116",
-        "mime_type": "audio/webm",
-        "file_size": 5128530,
-        "debug_transcript": "cancelar turno",
-        "debug_confidence": 0.8448441939023493,
-        "debug_duration_sec": 174.8362886222437,
+        "mime_type": "audio/mp4",
+        "file_size": 14813626,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.33176894239805543,
+        "debug_duration_sec": 177.64913378677673,
         "debug_flags": [
-          "abrupt_cut"
+          "low_volume"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto.",
-      "latencyMs": 5,
+      "latencyMs": 3,
       "fallback": "No pude entender el audio por ruido o silencio. Repetilo por favor o escribime en texto."
     },
     {
@@ -2770,19 +2808,19 @@
       "caseName": "audio-fuzz-117",
       "input": {
         "id": "media-fuzz-audio-117",
-        "mime_type": "audio/webm",
-        "file_size": 19816215,
-        "debug_transcript": "reprogramar mi turno",
-        "debug_confidence": 0.43473915971099275,
-        "debug_duration_sec": 261.5271665656479,
+        "mime_type": "audio/mp4",
+        "file_size": 17310561,
+        "debug_transcript": "cancelar turno",
+        "debug_confidence": 0.5040322178500165,
+        "debug_duration_sec": 281.8068335242598,
         "debug_flags": [
-          "low_volume"
+          "clipping"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2790,39 +2828,38 @@
       "caseName": "audio-fuzz-118",
       "input": {
         "id": "media-fuzz-audio-118",
-        "mime_type": "audio/flac",
-        "file_size": 15486005,
-        "debug_transcript": "hola@@###",
-        "debug_confidence": 0.7068678910767252,
-        "debug_duration_sec": 281.8738112405645,
-        "debug_flags": [
-          "clipping"
-        ]
+        "mime_type": "audio/wav",
+        "file_size": 13038478,
+        "debug_transcript": "",
+        "debug_confidence": 0.8782579988667039,
+        "debug_duration_sec": 201.2520401681708,
+        "debug_flags": []
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
-      "actual": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.",
-      "latencyMs": 4,
-      "fallback": "Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto."
+      "actual": "No pude procesar ese audio. Repetilo por favor o escribime en texto.",
+      "latencyMs": 3,
+      "fallback": "No pude procesar ese audio. Repetilo por favor o escribime en texto."
     },
     {
       "dimension": "Fuzz",
       "caseName": "audio-fuzz-119",
       "input": {
         "id": "media-fuzz-audio-119",
-        "mime_type": "audio/ogg",
-        "file_size": 20673293,
-        "debug_transcript": "mañana no perdon viernes",
-        "debug_confidence": 0.6503548985501946,
-        "debug_duration_sec": 104.33673481676898,
+        "mime_type": "audio/wav",
+        "file_size": 24949200,
+        "debug_transcript": "a nombre de juan perez",
+        "debug_confidence": 0.30370001328000495,
+        "debug_duration_sec": 11.843977335073799,
         "debug_flags": [
-          "low_volume"
+          "noise_only",
+          "silence"
         ]
       },
       "previousState": "random",
       "expected": "sin crash y fallback controlado",
       "actual": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto.",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "El audio es muy largo para procesarlo completo. Enviame uno mas corto o escribime en texto."
     },
     {
@@ -2832,7 +2869,7 @@
       "previousState": "dos usuarios en idle",
       "expected": "misma decision logica",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas) || Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "none"
     }
   ]

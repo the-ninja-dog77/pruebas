@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-21T02:46:56.914Z",
+  "generatedAt": "2026-02-21T03:49:00.813Z",
   "baseline": {
     "name": "audio-baseline",
     "chaos": false,
@@ -8,54 +8,53 @@
     "retries": 0,
     "retryRatioPercent": 0,
     "errorRatePercent": 0,
-    "throughputReqPerSec": 197.39,
+    "throughputReqPerSec": 192.1,
     "latencyMs": {
-      "p50": 51,
-      "p95": 84,
-      "p99": 102,
-      "avg": 52.98
+      "p50": 54,
+      "p95": 81,
+      "p99": 116,
+      "avg": 53.84
     },
     "statusHistogram": {
       "200": 420
     },
     "maxInFlight": 16,
-    "cpuPercent": 77.08,
+    "cpuPercent": 87.86,
     "eventLoopDelayMs": {
-      "p99": 25.92,
-      "max": 29.11
+      "p99": 28,
+      "max": 47.61
     },
     "audioMetrics": {
       "totals": {
         "total": 420,
         "processed": 199,
         "discarded": 221,
-        "clarification": 153,
-        "lowConfidence": 153,
+        "clarification": 181,
+        "lowConfidence": 181,
         "confirmedActions": 0,
         "executedActions": 0,
         "sttRetries": 0,
         "outOfOrder": 0
       },
       "ratios": {
-        "lowConfidencePct": 36.43,
-        "clarificationPct": 36.43,
+        "lowConfidencePct": 43.1,
+        "clarificationPct": 43.1,
         "executedVsConfirmedPct": 0
       },
       "failureByType": {
-        "audio": 108,
+        "audio": 82,
         "stt": 0,
-        "intent": 124,
-        "state": 29,
+        "intent": 151,
+        "state": 30,
         "timing": 0
       },
       "reasonCounts": {
-        "audio_processed": 159,
-        "audio_too_short": 54,
-        "low_confidence": 113,
-        "destructive_low_confidence": 29,
-        "audio_noise_or_silence": 42,
-        "actionable_low_confidence": 11,
-        "unsupported_audio_mime": 12
+        "audio_processed": 157,
+        "destructive_low_confidence": 30,
+        "audio_too_short": 37,
+        "low_confidence": 139,
+        "audio_noise_or_silence": 45,
+        "actionable_low_confidence": 12
       },
       "latencyMs": {
         "p50": 0,
@@ -63,7 +62,7 @@
         "p99": 1
       },
       "confidence": {
-        "avg": 0.6273,
+        "avg": 0.6088,
         "p10": 0.3,
         "p50": 0.6,
         "p90": 0.91
@@ -78,60 +77,59 @@
   "stress": {
     "name": "audio-stress-chaos",
     "chaos": true,
-    "totalRequests": 854,
-    "failures": 74,
-    "retries": 74,
-    "retryRatioPercent": 8.67,
-    "errorRatePercent": 8.67,
-    "throughputReqPerSec": 128.38,
+    "totalRequests": 849,
+    "failures": 69,
+    "retries": 69,
+    "retryRatioPercent": 8.13,
+    "errorRatePercent": 8.13,
+    "throughputReqPerSec": 129.18,
     "latencyMs": {
-      "p50": 71,
+      "p50": 70,
       "p95": 708,
-      "p99": 912,
-      "avg": 171.4
+      "p99": 910,
+      "avg": 168.87
     },
     "statusHistogram": {
       "200": 780,
-      "500": 74
+      "500": 69
     },
     "maxInFlight": 28,
-    "cpuPercent": 46.27,
+    "cpuPercent": 46.62,
     "eventLoopDelayMs": {
-      "p99": 23.43,
-      "max": 39.85
+      "p99": 23.51,
+      "max": 27.53
     },
     "audioMetrics": {
       "totals": {
         "total": 1200,
-        "processed": 621,
-        "discarded": 579,
-        "clarification": 436,
-        "lowConfidence": 436,
-        "confirmedActions": 2,
+        "processed": 619,
+        "discarded": 581,
+        "clarification": 461,
+        "lowConfidence": 461,
+        "confirmedActions": 5,
         "executedActions": 1,
         "sttRetries": 0,
         "outOfOrder": 0
       },
       "ratios": {
-        "lowConfidencePct": 36.33,
-        "clarificationPct": 36.33,
-        "executedVsConfirmedPct": 50
+        "lowConfidencePct": 38.42,
+        "clarificationPct": 38.42,
+        "executedVsConfirmedPct": 20
       },
       "failureByType": {
-        "audio": 266,
+        "audio": 231,
         "stt": 0,
-        "intent": 351,
+        "intent": 376,
         "state": 85,
         "timing": 0
       },
       "reasonCounts": {
-        "audio_processed": 498,
-        "audio_too_short": 130,
-        "low_confidence": 313,
+        "audio_processed": 508,
         "destructive_low_confidence": 85,
-        "audio_noise_or_silence": 103,
-        "actionable_low_confidence": 38,
-        "unsupported_audio_mime": 33
+        "audio_too_short": 127,
+        "low_confidence": 350,
+        "audio_noise_or_silence": 104,
+        "actionable_low_confidence": 26
       },
       "latencyMs": {
         "p50": 0,
@@ -139,9 +137,9 @@
         "p99": 1
       },
       "confidence": {
-        "avg": 0.6372,
+        "avg": 0.6288,
         "p10": 0.3,
-        "p50": 0.6,
+        "p50": 0.72,
         "p90": 0.91
       },
       "queue": {
@@ -152,10 +150,10 @@
     }
   },
   "comparison": {
-    "p95DeltaMs": 624,
-    "p99DeltaMs": 810,
-    "errorRateDeltaPercent": 8.67,
-    "retryDeltaPercent": 8.67,
-    "throughputDeltaReqPerSec": -69.01
+    "p95DeltaMs": 627,
+    "p99DeltaMs": 794,
+    "errorRateDeltaPercent": 8.13,
+    "retryDeltaPercent": 8.13,
+    "throughputDeltaReqPerSec": -62.92
   }
 }

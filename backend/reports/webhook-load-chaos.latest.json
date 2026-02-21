@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-02-21T02:47:35.467Z",
+  "generatedAt": "2026-02-21T03:48:44.971Z",
   "baseline": {
     "name": "baseline",
     "chaos": false,
-    "elapsedMs": 3331.04,
-    "throughputReqPerSec": 114.08,
+    "elapsedMs": 3259.53,
+    "throughputReqPerSec": 116.58,
     "totalRequests": 380,
     "failures": 0,
     "errorRatePercent": 0,
@@ -16,104 +16,104 @@
     "http429": 0,
     "http5xx": 0,
     "latencyMs": {
-      "min": 19,
-      "max": 115,
-      "avg": 63.41,
-      "p50": 63,
-      "p95": 98,
-      "p99": 106
+      "min": 18,
+      "max": 133,
+      "avg": 59.41,
+      "p50": 59,
+      "p95": 97,
+      "p99": 109
     },
     "maxInFlight": 18,
-    "cpuPercent": 46.89,
+    "cpuPercent": 53.72,
     "memory": {
       "start": {
-        "rss": 82030592,
-        "heapUsed": 20272528,
-        "heapTotal": 35532800
+        "rss": 86204416,
+        "heapUsed": 20524528,
+        "heapTotal": 36057088
       },
       "end": {
-        "rss": 96751616,
-        "heapUsed": 25506856,
-        "heapTotal": 55980032
+        "rss": 101687296,
+        "heapUsed": 27270696,
+        "heapTotal": 55717888
       },
       "max": {
-        "rss": 96751616,
-        "heapUsed": 28578104,
-        "heapTotal": 55980032
+        "rss": 101687296,
+        "heapUsed": 31321480,
+        "heapTotal": 55717888
       },
       "growthBytes": {
-        "rss": 14721024,
-        "heapUsed": 5234328
+        "rss": 15482880,
+        "heapUsed": 6746168
       }
     },
     "eventLoopDelayMs": {
-      "mean": 20.94,
-      "max": 32.92,
-      "p99": 25.23
+      "mean": 20.86,
+      "max": 35.26,
+      "p99": 24.74
     }
   },
   "stressChaos": {
     "name": "stress-chaos",
     "chaos": true,
-    "elapsedMs": 10883.42,
-    "throughputReqPerSec": 72.68,
-    "totalRequests": 791,
-    "failures": 91,
-    "errorRatePercent": 11.5,
-    "retries": 91,
-    "retryRatioPercent": 11.5,
+    "elapsedMs": 11061.06,
+    "throughputReqPerSec": 73.41,
+    "totalRequests": 812,
+    "failures": 112,
+    "errorRatePercent": 13.79,
+    "retries": 112,
+    "retryRatioPercent": 13.79,
     "statusHistogram": {
       "200": 700,
-      "500": 91
+      "500": 112
     },
     "http429": 0,
-    "http5xx": 91,
+    "http5xx": 112,
     "latencyMs": {
       "min": 2,
       "max": 1204,
-      "avg": 178.57,
-      "p50": 72,
+      "avg": 184.95,
+      "p50": 70,
       "p95": 906,
-      "p99": 1139
+      "p99": 1108
     },
     "maxInFlight": 36,
-    "cpuPercent": 28.86,
+    "cpuPercent": 26.7,
     "memory": {
       "start": {
-        "rss": 102072320,
-        "heapUsed": 30851928,
-        "heapTotal": 55980032
+        "rss": 104939520,
+        "heapUsed": 30515152,
+        "heapTotal": 55717888
       },
       "end": {
-        "rss": 114139136,
-        "heapUsed": 31378224,
+        "rss": 117456896,
+        "heapUsed": 21553744,
         "heapTotal": 90058752
       },
       "max": {
-        "rss": 114139136,
-        "heapUsed": 35097952,
+        "rss": 118173696,
+        "heapUsed": 40104512,
         "heapTotal": 90058752
       },
       "growthBytes": {
-        "rss": 12066816,
-        "heapUsed": 526296
+        "rss": 12517376,
+        "heapUsed": -8961408
       }
     },
     "eventLoopDelayMs": {
-      "mean": 20.72,
-      "max": 45.94,
-      "p99": 25.48
+      "mean": 20.67,
+      "max": 38.86,
+      "p99": 24.63
     }
   },
   "comparison": {
-    "latencyP95DeltaMs": 808,
-    "latencyP99DeltaMs": 1033,
-    "errorRateDeltaPercent": 11.5,
-    "retryRatioDeltaPercent": 11.5,
-    "throughputDeltaReqPerSec": -41.4,
+    "latencyP95DeltaMs": 809,
+    "latencyP99DeltaMs": 999,
+    "errorRateDeltaPercent": 13.79,
+    "retryRatioDeltaPercent": 13.79,
+    "throughputDeltaReqPerSec": -43.17,
     "memoryGrowthDeltaBytes": {
-      "rss": -2654208,
-      "heapUsed": -4708032
+      "rss": -2965504,
+      "heapUsed": -15707576
     }
   }
 }
