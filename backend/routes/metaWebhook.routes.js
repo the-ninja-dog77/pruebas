@@ -157,26 +157,52 @@ function parseDate(msg) {
 }
 
 function parseTime(msg) {
-  let match = msg.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);
+  let match = msg.match(/\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?\b/i);
   if (match) {
-    return `${pad2(Number(match[1]))}:${pad2(Number(match[2]))}`;
+    let hour = Number(match[1]);
+    const minutes = Number(match[2]);
+    const suffix = String(match[3] || '')
+      .toLowerCase()
+      .replace(/\s+/g, '')
+      .replace(/\./g, '');
+
+    if (suffix === 'pm' && hour < 12) hour += 12;
+    if (suffix === 'am' && hour === 12) hour = 0;
+
+    if (!suffix && hour >= 1 && hour <= 8) {
+      hour += 12;
+    }
+
+    return `${pad2(hour)}:${pad2(minutes)}`;
   }
 
-  match = msg.match(/(?:a\s*las|alas|para\s*las|a\s*la)\s*([0-2]?\d)(?:\s*hs?)?\b/);
+  match = msg.match(
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*hs?)?\b/i
+  );
   if (!match) {
-    match = msg.match(/\b([0-2]?\d)\s*hs\b/);
+    match = msg.match(/\b([0-2]?\d)(?::([0-5]\d))?\s*hs\b/i);
   }
 
   if (!match) return null;
 
   let hour = Number(match[1]);
-  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
+  const minutes = Number(match[2] || 0);
+  const suffix = String(match[3] || '')
+    .toLowerCase()
+    .replace(/\s+/g, '')
+    .replace(/\./g, '');
 
-  if (hour >= 0 && hour <= 8) {
+  if (!Number.isInteger(hour) || hour < 0 || hour > 23) return null;
+  if (!Number.isInteger(minutes) || minutes < 0 || minutes > 59) return null;
+
+  if (suffix === 'pm' && hour < 12) hour += 12;
+  if (suffix === 'am' && hour === 12) hour = 0;
+
+  if (!suffix && hour >= 0 && hour <= 8) {
     hour += 12;
   }
 
-  return `${pad2(hour)}:00`;
+  return `${pad2(hour)}:${pad2(minutes)}`;
 }
 
 function detectService(msg) {

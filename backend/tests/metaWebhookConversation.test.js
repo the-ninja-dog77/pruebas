@@ -586,4 +586,40 @@ describe('WhatsApp webhook conversation flow', () => {
       `Horarios disponibles para ${fecha}`
     );
   });
+
+  test('understands "de las 3" as 15:00 in booking flow', async () => {
+    const from = '595985544438';
+    const fecha = '2099-12-29';
+    const ip = '10.0.0.238';
+    const sequence = ['turno', 'corte', fecha, 'quiero el turno de las 3'];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('understands "las 3:00" as 15:00 when user does not specify am/pm', async () => {
+    const from = '595985544439';
+    const fecha = '2099-12-30';
+    const ip = '10.0.0.239';
+    const sequence = ['turno', 'corte', fecha, 'las 3:00'];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
 });
