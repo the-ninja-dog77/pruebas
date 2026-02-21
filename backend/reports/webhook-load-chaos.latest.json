@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-02-21T03:48:44.971Z",
+  "generatedAt": "2026-02-21T04:06:51.967Z",
   "baseline": {
     "name": "baseline",
     "chaos": false,
-    "elapsedMs": 3259.53,
-    "throughputReqPerSec": 116.58,
+    "elapsedMs": 3300.72,
+    "throughputReqPerSec": 115.13,
     "totalRequests": 380,
     "failures": 0,
     "errorRatePercent": 0,
@@ -17,103 +17,103 @@
     "http5xx": 0,
     "latencyMs": {
       "min": 18,
-      "max": 133,
-      "avg": 59.41,
-      "p50": 59,
+      "max": 124,
+      "avg": 61.23,
+      "p50": 60,
       "p95": 97,
       "p99": 109
     },
     "maxInFlight": 18,
-    "cpuPercent": 53.72,
+    "cpuPercent": 45.47,
     "memory": {
       "start": {
-        "rss": 86204416,
-        "heapUsed": 20524528,
+        "rss": 81661952,
+        "heapUsed": 20095664,
         "heapTotal": 36057088
       },
       "end": {
-        "rss": 101687296,
-        "heapUsed": 27270696,
-        "heapTotal": 55717888
+        "rss": 99667968,
+        "heapUsed": 25165056,
+        "heapTotal": 55455744
       },
       "max": {
-        "rss": 101687296,
-        "heapUsed": 31321480,
-        "heapTotal": 55717888
+        "rss": 99667968,
+        "heapUsed": 27839600,
+        "heapTotal": 55455744
       },
       "growthBytes": {
-        "rss": 15482880,
-        "heapUsed": 6746168
+        "rss": 18006016,
+        "heapUsed": 5069392
       }
     },
     "eventLoopDelayMs": {
-      "mean": 20.86,
-      "max": 35.26,
-      "p99": 24.74
+      "mean": 21.03,
+      "max": 48.07,
+      "p99": 25.28
     }
   },
   "stressChaos": {
     "name": "stress-chaos",
     "chaos": true,
-    "elapsedMs": 11061.06,
-    "throughputReqPerSec": 73.41,
-    "totalRequests": 812,
-    "failures": 112,
-    "errorRatePercent": 13.79,
-    "retries": 112,
-    "retryRatioPercent": 13.79,
+    "elapsedMs": 11719.91,
+    "throughputReqPerSec": 70.22,
+    "totalRequests": 823,
+    "failures": 123,
+    "errorRatePercent": 14.95,
+    "retries": 123,
+    "retryRatioPercent": 14.95,
     "statusHistogram": {
       "200": 700,
-      "500": 112
+      "500": 123
     },
     "http429": 0,
-    "http5xx": 112,
+    "http5xx": 123,
     "latencyMs": {
       "min": 2,
-      "max": 1204,
-      "avg": 184.95,
-      "p50": 70,
-      "p95": 906,
-      "p99": 1108
+      "max": 1197,
+      "avg": 199.74,
+      "p50": 69,
+      "p95": 907,
+      "p99": 1117
     },
     "maxInFlight": 36,
-    "cpuPercent": 26.7,
+    "cpuPercent": 28.39,
     "memory": {
       "start": {
-        "rss": 104939520,
-        "heapUsed": 30515152,
-        "heapTotal": 55717888
+        "rss": 104230912,
+        "heapUsed": 30412032,
+        "heapTotal": 55455744
       },
       "end": {
-        "rss": 117456896,
-        "heapUsed": 21553744,
+        "rss": 118726656,
+        "heapUsed": 34085672,
         "heapTotal": 90058752
       },
       "max": {
-        "rss": 118173696,
-        "heapUsed": 40104512,
+        "rss": 119521280,
+        "heapUsed": 39900880,
         "heapTotal": 90058752
       },
       "growthBytes": {
-        "rss": 12517376,
-        "heapUsed": -8961408
+        "rss": 14495744,
+        "heapUsed": 3673640
       }
     },
     "eventLoopDelayMs": {
-      "mean": 20.67,
-      "max": 38.86,
-      "p99": 24.63
+      "mean": 20.68,
+      "max": 31.51,
+      "p99": 23.76
     }
   },
   "comparison": {
-    "latencyP95DeltaMs": 809,
-    "latencyP99DeltaMs": 999,
-    "errorRateDeltaPercent": 13.79,
-    "retryRatioDeltaPercent": 13.79,
-    "throughputDeltaReqPerSec": -43.17,
+    "latencyP95DeltaMs": 810,
+    "latencyP99DeltaMs": 1008,
+    "errorRateDeltaPercent": 14.95,
+    "retryRatioDeltaPercent": 14.95,
+    "throughputDeltaReqPerSec": -44.91,
     "memoryGrowthDeltaBytes": {
-      "rss": -2965504,
-      "heapUsed": -15707576
+      "rss": -3510272,
+      "heapUsed": -1395752
     }
   }
 }
