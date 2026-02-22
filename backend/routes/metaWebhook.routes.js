@@ -1222,7 +1222,7 @@ async function buildReply(from, texto, _context = {}) {
       };
 
       if (isAvailable) {
-        return `Si, ${session.draft.fecha} a las ${session.draft.hora} esta disponible. Si queres reservar, decime el servicio.`;
+        return `Si, ${session.draft.fecha} a las ${session.draft.hora} esta disponible ahora. Si queres reservar, decime el servicio (la disponibilidad se confirma al agendar).`;
       }
       return `No, ${session.draft.fecha} a las ${session.draft.hora} no esta disponible. ${buildAvailabilityMessage(
         session.draft.fecha
@@ -1230,6 +1230,28 @@ async function buildReply(from, texto, _context = {}) {
     }
 
     return buildAvailabilityMessage(session.draft.fecha);
+  }
+
+  if (
+    session.draft.fecha &&
+    session.draft.hora &&
+    !session.draft.servicio &&
+    wantsStart
+  ) {
+    const isAvailable = getCurrentSlotAvailability(session.draft.fecha, session.draft.hora);
+    session.lastAvailability = {
+      fecha: session.draft.fecha,
+      hora: session.draft.hora,
+      available: isAvailable,
+    };
+
+    if (!isAvailable) {
+      session.stage = 'awaiting_time';
+      session.draft.hora = null;
+      return `Ese horario se ocupo recien. ${buildAvailabilityMessage(
+        session.draft.fecha
+      )} Decime otra hora.`;
+    }
   }
 
   if (

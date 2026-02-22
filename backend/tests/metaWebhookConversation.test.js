@@ -199,6 +199,49 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(outboundMessages[outboundMessages.length - 1]).toContain('esta disponible');
   });
 
+  test('re-validates slot instantly when user moves from inquiry to reservation intent', async () => {
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    expect(login.statusCode).toBe(200);
+    const token = login.body.token;
+
+    const fecha = '2099-12-22';
+    const hora = '09:00';
+    const from = '595985544429';
+    const ip = '10.0.0.229';
+
+    const freeCheck = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(`hay turno el ${fecha} a las ${hora}?`, from));
+    expect(freeCheck.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('esta disponible');
+
+    const createFromPanel = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 30000,
+      });
+    expect(createFromPanel.statusCode).toBe(201);
+
+    const reserveIntent = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(`si, quiero reservar turno el ${fecha} a las ${hora}`, from));
+    expect(reserveIntent.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('se ocupo recien');
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime otra hora');
+  });
+
   test('reassures availability on follow-up "seguro?" before selecting service', async () => {
     const from = '595985544425';
     const fecha = '2099-12-31';
@@ -296,6 +339,7 @@ describe('WhatsApp webhook conversation flow', () => {
   test('cancels booking by name and date via WhatsApp', async () => {
     const from = '595985544429';
     const fecha = '2099-12-30';
+    const ip = '10.0.0.228';
     const sequenceCreate = [
       'turno',
       'corte',
@@ -310,6 +354,7 @@ describe('WhatsApp webhook conversation flow', () => {
       const res = await request(app)
         .post('/meta-webhook')
         .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
         .send(messagePayload(msg, from));
       expect(res.statusCode).toBe(200);
     }
@@ -317,6 +362,7 @@ describe('WhatsApp webhook conversation flow', () => {
     const cancel = await request(app)
       .post('/meta-webhook')
       .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
       .send(messagePayload(`cancelar turno de Mario Lopez el ${fecha}`, from));
 
     expect(cancel.statusCode).toBe(200);
@@ -324,15 +370,19 @@ describe('WhatsApp webhook conversation flow', () => {
 
     const login = await request(app)
       .post('/auth/login')
+      .set('x-forwarded-for', ip)
       .send({
         username: 'gonzabarber',
         password: 'barber312',
       });
+    expect(login.statusCode).toBe(200);
     const token = login.body.token;
 
     const day = await request(app)
       .get(`/api/barber-panel/day/${fecha}`)
+      .set('x-forwarded-for', ip)
       .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
     const exists = day.body.agenda.some(t => t.hora === '13:00' && t.cliente === 'Mario Lopez');
     expect(exists).toBe(false);
   });
@@ -340,6 +390,7 @@ describe('WhatsApp webhook conversation flow', () => {
   test('reschedules booking by name and date via WhatsApp', async () => {
     const from = '595985544430';
     const fecha = '2099-12-29';
+    const ip = '10.0.0.230';
     const sequenceCreate = [
       'turno',
       'corte',
@@ -354,6 +405,7 @@ describe('WhatsApp webhook conversation flow', () => {
       const res = await request(app)
         .post('/meta-webhook')
         .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
         .send(messagePayload(msg, from));
       expect(res.statusCode).toBe(200);
     }
@@ -361,6 +413,7 @@ describe('WhatsApp webhook conversation flow', () => {
     const startReschedule = await request(app)
       .post('/meta-webhook')
       .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
       .send(messagePayload(`reprogramar turno de Laura Diaz el ${fecha}`, from));
     expect(startReschedule.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime la nueva fecha y hora');
@@ -368,21 +421,26 @@ describe('WhatsApp webhook conversation flow', () => {
     const applyReschedule = await request(app)
       .post('/meta-webhook')
       .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
       .send(messagePayload(`${fecha} 16:00`, from));
     expect(applyReschedule.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('reprogramado');
 
     const login = await request(app)
       .post('/auth/login')
+      .set('x-forwarded-for', ip)
       .send({
         username: 'gonzabarber',
         password: 'barber312',
       });
+    expect(login.statusCode).toBe(200);
     const token = login.body.token;
 
     const day = await request(app)
       .get(`/api/barber-panel/day/${fecha}`)
+      .set('x-forwarded-for', ip)
       .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
 
     const movedExists = day.body.agenda.some(
       t => t.hora === '16:00' && t.cliente === 'Laura Diaz'
