@@ -21,6 +21,8 @@ EXPOSE 3000
 
 # Variables por defecto
 ENV NODE_ENV=production
+ENV DB_PATH=/app/data/zzeta.db
+ENV BACKUP_DIR=/app/data/backups
 
 # Comando de inicio
 CMD ["node", "index.js"]

@@ -2,7 +2,26 @@ const fs = require('fs');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const dbPath = process.env.DB_PATH || 'zzeta.db';
+function resolveDefaultDbPath() {
+  if (process.env.NODE_ENV === 'production') {
+    return '/app/data/zzeta.db';
+  }
+  return 'zzeta.db';
+}
+
+function resolveDbPath() {
+  const configuredDbPath = process.env.DB_PATH || resolveDefaultDbPath();
+  if (path.isAbsolute(configuredDbPath)) return configuredDbPath;
+
+  if (process.env.NODE_ENV === 'production') {
+    const persistentBase = process.env.PERSISTENT_DATA_DIR || '/app/data';
+    return path.join(persistentBase, configuredDbPath);
+  }
+
+  return path.join(__dirname, configuredDbPath);
+}
+
+const dbPath = resolveDbPath();
 const dbDir = path.dirname(dbPath);
 
 if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
@@ -10,6 +29,7 @@ if (dbDir && dbDir !== '.' && !fs.existsSync(dbDir)) {
 }
 
 const db = new Database(dbPath);
+process.env.DB_PATH = dbPath;
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS migrations (

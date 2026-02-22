@@ -152,6 +152,53 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(outboundMessages[outboundMessages.length - 1]).toContain('no esta disponible');
   });
 
+  test('after deleting a panel booking, bot reports the slot as available again', async () => {
+    const login = await request(app)
+      .post('/auth/login')
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    expect(login.statusCode).toBe(200);
+    const token = login.body.token;
+
+    const fecha = '2099-12-30';
+    const hora = '11:00';
+    const from = '595985544426';
+    const ip = '10.0.0.226';
+
+    const createFromPanel = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 30000,
+      });
+    expect(createFromPanel.statusCode).toBe(201);
+
+    const unavailableCheck = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(`hay turno el ${fecha} a las ${hora}?`, from));
+    expect(unavailableCheck.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('no esta disponible');
+
+    const removeFromPanel = await request(app)
+      .delete(`/api/barber-panel/day/${fecha}/turnos/${createFromPanel.body.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(removeFromPanel.statusCode).toBe(200);
+
+    const availableCheck = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(`hay turno el ${fecha} a las ${hora}?`, from));
+    expect(availableCheck.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('esta disponible');
+  });
+
   test('reassures availability on follow-up "seguro?" before selecting service', async () => {
     const from = '595985544425';
     const fecha = '2099-12-31';
@@ -346,6 +393,7 @@ describe('WhatsApp webhook conversation flow', () => {
   test('cancels nearest upcoming booking with natural cancel message', async () => {
     const from = '595985544431';
     const fecha = '2099-12-28';
+    const ip = '10.0.0.231';
     const createSequence = [
       'turno',
       'corte',
@@ -360,6 +408,7 @@ describe('WhatsApp webhook conversation flow', () => {
       const res = await request(app)
         .post('/meta-webhook')
         .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
         .send(messagePayload(msg, from));
       expect(res.statusCode).toBe(200);
     }
@@ -367,6 +416,7 @@ describe('WhatsApp webhook conversation flow', () => {
     const cancel = await request(app)
       .post('/meta-webhook')
       .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
       .send(messagePayload('bro quiero cancelar no voy a poder ir ese dia', from));
 
     expect(cancel.statusCode).toBe(200);
@@ -374,15 +424,19 @@ describe('WhatsApp webhook conversation flow', () => {
 
     const login = await request(app)
       .post('/auth/login')
+      .set('x-forwarded-for', ip)
       .send({
         username: 'gonzabarber',
         password: 'barber312',
       });
+    expect(login.statusCode).toBe(200);
     const token = login.body.token;
 
     const day = await request(app)
       .get(`/api/barber-panel/day/${fecha}`)
+      .set('x-forwarded-for', ip)
       .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
 
     const stillExists = day.body.agenda.some(
       t => t.hora === '11:00' && t.cliente === 'Pedro Ruiz'
@@ -674,6 +728,168 @@ describe('WhatsApp webhook conversation flow', () => {
       expect(res.statusCode).toBe(200);
     }
 
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('keeps active flow when user says thanks before final confirmation', async () => {
+    const from = '595985544443';
+    const fecha = '2099-12-30';
+    const ip = '10.0.0.243';
+    const setup = ['turno', 'corte', fecha, '15:00', 'Fernando Vallejos', 'efectivo'];
+
+    for (const msg of setup) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const thanks = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('gracias bro', from));
+    expect(thanks.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('De nada');
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Si queres seguir');
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('confirmar', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('turno confirmado');
+  });
+
+  test('returns context-aware help when user asks "que me falta?" mid flow', async () => {
+    const from = '595985544444';
+    const ip = '10.0.0.244';
+    const seq = ['turno', 'corte'];
+    for (const msg of seq) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const help = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('bro que me falta?', from));
+    expect(help.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('falta la fecha');
+  });
+
+  test('asks user to choose when cancel and reschedule intents are mixed in one message', async () => {
+    const from = '595985544445';
+    const ip = '10.0.0.245';
+    const mixed = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('quiero cancelar y reprogramar turno', from));
+
+    expect(mixed.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('cancelar o reprogramar');
+  });
+
+  test('requests explicit confirmation when date/time are corrected in the same message', async () => {
+    const from = '595985544446';
+    const ip = '10.0.0.246';
+    const seq = ['turno', 'corte', 'quiero el 2099-12-27 a las 4 no mejor 2099-12-28 a las 5'];
+
+    for (const msg of seq) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const prompt = outboundMessages[outboundMessages.length - 1];
+    expect(prompt).toContain('Para evitar errores');
+    expect(prompt).toContain('fecha 2099-12-28');
+    expect(prompt).toContain('hora 17:00');
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('si', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('allows a second correction while temporal confirmation is pending', async () => {
+    const from = '595985544447';
+    const ip = '10.0.0.247';
+    const setup = ['turno', 'corte', '2099-12-27 a las 4 no, mejor 2099-12-28 a las 5'];
+
+    for (const msg of setup) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const correction = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('mejor 2099-12-29 a las 6', from));
+    expect(correction.statusCode).toBe(200);
+
+    const correctionPrompt = outboundMessages[outboundMessages.length - 1];
+    expect(correctionPrompt).toContain('Seguimos pendientes de esta confirmacion');
+    expect(correctionPrompt).toContain('fecha 2099-12-29');
+    expect(correctionPrompt).toContain('hora 18:00');
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('si', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('clears temporal pending when user rejects and accepts fresh date/time', async () => {
+    const from = '595985544448';
+    const ip = '10.0.0.248';
+    const setup = ['turno', 'corte', '2099-12-27 a las 4 no mejor 2099-12-28 a las 5'];
+
+    for (const msg of setup) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const reject = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('no', from));
+    expect(reject.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Decime de nuevo fecha y hora');
+
+    const freshTemporal = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('2099-12-30 a las 16', from));
+    expect(freshTemporal.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
   });
 });

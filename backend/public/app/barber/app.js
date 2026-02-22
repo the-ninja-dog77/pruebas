@@ -4,6 +4,7 @@ const API = {
   calendar: '/api/barber-panel/calendar',
   day: fecha => `/api/barber-panel/day/${fecha}`,
   createTurno: fecha => `/api/barber-panel/day/${fecha}/turnos`,
+  deleteTurno: (fecha, id) => `/api/barber-panel/day/${fecha}/turnos/${id}`,
   botStatus: '/api/barber-panel/bot-status',
 };
 
@@ -33,6 +34,7 @@ const nextMonthBtn = document.getElementById('nextMonthBtn');
 const selectedDateLabel = document.getElementById('selectedDateLabel');
 const selectedBusinessHours = document.getElementById('selectedBusinessHours');
 const dayAgendaList = document.getElementById('dayAgendaList');
+const dayActionFeedback = document.getElementById('dayActionFeedback');
 const daySlots = document.getElementById('daySlots');
 const weeklyHoursList = document.getElementById('weeklyHoursList');
 const createTurnoCard = document.getElementById('createTurnoCard');
@@ -263,6 +265,11 @@ function renderWeeklyHours(weeklyHours) {
   });
 }
 
+function setDayActionFeedback(text, kind = '') {
+  dayActionFeedback.textContent = text || '';
+  dayActionFeedback.className = `day-feedback${kind ? ` ${kind}` : ''}`;
+}
+
 async function loadCalendar() {
   const month = monthToken(currentMonthDate);
   const data = await apiFetch(`${API.calendar}?month=${month}`);
@@ -283,6 +290,7 @@ async function loadCalendar() {
 function renderDayDetails(data) {
   selectedDateLabel.textContent = `${formatLongDate(data.fecha)} (${data.fecha})`;
   selectedBusinessHours.textContent = `Horario: ${data.businessHours}`;
+  setDayActionFeedback('');
 
   dayAgendaList.innerHTML = '';
   if (!data.agenda || !data.agenda.length) {
@@ -292,9 +300,33 @@ function renderDayDetails(data) {
   } else {
     data.agenda.forEach(t => {
       const li = document.createElement('li');
+      li.className = 'agenda-item';
+      const details = document.createElement('span');
       const origen = t.origen ? ` [${t.origen}]` : '';
       const pago = t.metodo_pago ? ` - Pago: ${t.metodo_pago}` : '';
-      li.textContent = `${t.hora} - ${t.servicio} (${t.cliente})${pago}${origen}`;
+      details.textContent = `${t.hora} - ${t.servicio} (${t.cliente})${pago}${origen}`;
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.type = 'button';
+      deleteBtn.className = 'agenda-delete-btn';
+      deleteBtn.textContent = 'Borrar';
+      deleteBtn.addEventListener('click', async () => {
+        const ok = window.confirm(
+          `Eliminar turno de ${t.cliente} (${t.fecha} ${t.hora})?`
+        );
+        if (!ok) return;
+
+        try {
+          await apiFetch(API.deleteTurno(selectedDate, t.id), { method: 'DELETE' });
+          setDayActionFeedback('Turno eliminado.', 'ok');
+          await Promise.all([loadSummary(), loadCalendar()]);
+        } catch (err) {
+          setDayActionFeedback(err.message || 'No se pudo eliminar el turno.', 'error');
+        }
+      });
+
+      li.appendChild(details);
+      li.appendChild(deleteBtn);
       dayAgendaList.appendChild(li);
     });
   }

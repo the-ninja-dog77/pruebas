@@ -6,8 +6,14 @@ const AUDIO_MIN_DURATION_SEC = Number(process.env.AUDIO_MIN_DURATION_SEC || 0.3)
 const AUDIO_MAX_DURATION_SEC = Number(process.env.AUDIO_MAX_DURATION_SEC || 300);
 const AUDIO_MAX_BYTES = Number(process.env.AUDIO_MAX_BYTES || 16 * 1024 * 1024);
 const AUDIO_QUEUE_LIMIT = Number(process.env.AUDIO_QUEUE_LIMIT || 200);
+const AUDIO_QUEUE_SOFT_LIMIT = Number(process.env.AUDIO_QUEUE_SOFT_LIMIT || 140);
 const AUDIO_QUEUE_TIMEOUT_MS = Number(process.env.AUDIO_QUEUE_TIMEOUT_MS || 15000);
 const AUDIO_STT_CONCURRENCY = Number(process.env.AUDIO_STT_CONCURRENCY || 6);
+const AUDIO_PRESSURE_QUEUE_DEPTH = Number(
+  process.env.AUDIO_PRESSURE_QUEUE_DEPTH || Math.max(24, Math.floor(AUDIO_QUEUE_SOFT_LIMIT * 0.55))
+);
+const AUDIO_PRESSURE_TIMEOUT_MS = Number(process.env.AUDIO_PRESSURE_TIMEOUT_MS || 9000);
+const AUDIO_SHORT_GRACE_SEC = Number(process.env.AUDIO_SHORT_GRACE_SEC || 0.14);
 const AUDIO_CONFIDENCE_MIN = Number(process.env.AUDIO_CONFIDENCE_MIN || 0.55);
 const AUDIO_CONFIDENCE_ACTION = Number(process.env.AUDIO_CONFIDENCE_ACTION || 0.72);
 const AUDIO_CONFIDENCE_DESTRUCTIVE = Number(
@@ -33,6 +39,8 @@ const SUPPORTED_AUDIO_MIME = String(
 const queue = [];
 let active = 0;
 const loggedUnknownAudioMimes = new Set();
+const HARD_NOISE_FLAGS = new Set(['silence', 'noise_only']);
+const SOFT_NOISE_FLAGS = new Set(['noise', 'abrupt_cut', 'low_volume', 'clipping']);
 
 function nowMs() {
   return Date.now();
@@ -84,8 +92,17 @@ function runQueuedTask() {
     });
 }
 
+function getQueueSnapshot() {
+  return {
+    queued: queue.length,
+    active,
+    inFlight: queue.length + active,
+  };
+}
+
 function enqueueTask(task) {
-  if (queue.length >= AUDIO_QUEUE_LIMIT) {
+  const snapshot = getQueueSnapshot();
+  if (snapshot.queued >= AUDIO_QUEUE_LIMIT) {
     audioMetrics.recordQueueRejection();
     return Promise.resolve({
       ok: false,
@@ -94,7 +111,17 @@ function enqueueTask(task) {
     });
   }
 
-  audioMetrics.recordQueueDepth(queue.length + 1);
+  if (snapshot.queued >= AUDIO_QUEUE_SOFT_LIMIT) {
+    audioMetrics.recordQueueRejection();
+    return Promise.resolve({
+      ok: false,
+      reason: 'audio_queue_busy',
+      failureType: 'timing',
+      queueDepth: snapshot.inFlight,
+    });
+  }
+
+  audioMetrics.recordQueueDepth(snapshot.queued + 1);
 
   return new Promise((resolve, reject) => {
     let settled = false;
@@ -147,13 +174,54 @@ function parseDebugFlags(audioObj) {
   return [];
 }
 
-function processDebugTranscript(audioObj) {
+function summarizeFlags(flags = []) {
+  const normalized = Array.isArray(flags) ? flags.map(normalizeText).filter(Boolean) : [];
+  const hasHardNoise = normalized.some(flag => HARD_NOISE_FLAGS.has(flag));
+  const hasSoftNoise = normalized.some(flag => SOFT_NOISE_FLAGS.has(flag));
+  return { normalized, hasHardNoise, hasSoftNoise };
+}
+
+function containsStrongBookingSignals(text) {
+  const msg = normalizeText(text);
+  let score = 0;
+
+  if (/(^|\s)(turno|reserv|agend|confirmar|cancelar|reprogramar)(\s|$)/.test(msg)) score += 1;
+  if (/(^|\s)(corte|barba|cejas|perfilado)(\s|$)/.test(msg)) score += 1;
+  if (/\b\d{1,2}:\d{2}\b/.test(msg) || /\ba las \d{1,2}\b/.test(msg)) score += 1;
+  if (
+    /\b\d{4}-\d{2}-\d{2}\b/.test(msg) ||
+    /\b\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/.test(msg) ||
+    /\b(hoy|manana|martes|miercoles|jueves|viernes|sabado|domingo)\b/.test(msg)
+  ) {
+    score += 1;
+  }
+
+  return score >= 2;
+}
+
+function buildLowConfidenceHint(text, risk) {
+  const normalized = normalizeText(text);
+  if (risk === 'destructive') {
+    return `Escuche "${text}". Para evitar errores, escribime el comando exacto en texto (ej: "cancelar turno").`;
+  }
+
+  if (containsStrongBookingSignals(normalized)) {
+    return `Escuche "${text}". Si esta bien, escribi "si". Si no, reenviame en texto: servicio + fecha + hora.`;
+  }
+
+  return 'No te entendi con suficiente claridad. Proba de nuevo en audio mas corto y claro, o escribime en texto.';
+}
+
+function processDebugTranscript(audioObj, options = {}) {
   const text = String(audioObj?.debug_transcript || '').trim();
   if (!text) return null;
   const confidenceRaw = Number(audioObj?.debug_confidence);
-  const confidence = Number.isFinite(confidenceRaw)
+  let confidence = Number.isFinite(confidenceRaw)
     ? Math.max(0, Math.min(1, confidenceRaw))
     : 0.75;
+
+  if (options.softNoise) confidence = Math.max(0, confidence - 0.08);
+  if (options.hardNoise) confidence = Math.max(0, confidence - 0.2);
 
   return {
     ok: true,
@@ -205,6 +273,8 @@ function fallbackReplyByReason(reason) {
       return 'Ese formato de audio no esta soportado. Si queres, escribime el mensaje en texto.';
     case 'audio_queue_full':
       return 'Estoy recibiendo muchos audios al mismo tiempo. Reintenta en unos segundos, por favor.';
+    case 'audio_queue_busy':
+      return 'Estoy con alta demanda de audios ahora. Si queres avanzar rapido, escribime: turno + servicio + fecha + hora.';
     case 'audio_queue_timeout':
       return 'Se demoro demasiado el procesamiento del audio. Reenvialo por favor.';
     case 'stt_timeout_or_network':
@@ -271,15 +341,40 @@ async function processAudioMessage({
 }) {
   const startedAt = nowMs();
   const audioObj = incoming?.audio || {};
+  const hasDebugTranscriptField = Object.prototype.hasOwnProperty.call(
+    Object(audioObj),
+    'debug_transcript'
+  );
   const mimeType = normalizeMimeType(audioObj.mime_type);
   const mediaId = String(audioObj.id || '').trim();
   const durationSec = Number(
     audioObj.duration_sec || audioObj.duration || audioObj.debug_duration_sec
   );
   const fileSize = Number(audioObj.file_size || audioObj.debug_file_size || 0);
-  const flags = parseDebugFlags(audioObj);
+  const flagSummary = summarizeFlags(parseDebugFlags(audioObj));
+  let transcript = processDebugTranscript(audioObj, {
+    softNoise: flagSummary.hasSoftNoise,
+    hardNoise: flagSummary.hasHardNoise,
+  });
+  if (!transcript && hasDebugTranscriptField) {
+    transcript = {
+      ok: false,
+      reason: 'stt_empty_transcript',
+      failureType: 'stt',
+      retries: 0,
+    };
+  }
 
-  if (Number.isFinite(durationSec) && durationSec > 0 && durationSec < AUDIO_MIN_DURATION_SEC) {
+  const isShortAudio =
+    Number.isFinite(durationSec) && durationSec > 0 && durationSec < AUDIO_MIN_DURATION_SEC;
+  const hasDebugGrace =
+    Boolean(transcript?.text) &&
+    transcript.text.trim().length >= 2 &&
+    Number.isFinite(durationSec) &&
+    durationSec >= AUDIO_SHORT_GRACE_SEC &&
+    transcript.confidence >= AUDIO_CONFIDENCE_MIN;
+
+  if (isShortAudio && !hasDebugGrace) {
     const reason = 'audio_too_short';
     audioMetrics.record({
       discarded: true,
@@ -323,11 +418,7 @@ async function processAudioMessage({
     return { ok: true, reply: fallbackReplyByReason(reason), reason };
   }
 
-  if (
-    flags.some(flag =>
-      ['silence', 'noise', 'noise_only', 'abrupt_cut', 'low_volume', 'clipping'].includes(flag)
-    )
-  ) {
+  if (flagSummary.hasHardNoise && !(transcript && transcript.confidence >= AUDIO_CONFIDENCE_ACTION)) {
     const reason = 'audio_noise_or_silence';
     audioMetrics.record({
       discarded: true,
@@ -338,7 +429,6 @@ async function processAudioMessage({
     return { ok: true, reply: fallbackReplyByReason(reason), reason };
   }
 
-  let transcript = processDebugTranscript(audioObj);
   if (!transcript) {
     if (!mediaId) {
       const reason = 'missing_media_id';
@@ -352,6 +442,20 @@ async function processAudioMessage({
     }
 
     try {
+      const queueSnapshot = getQueueSnapshot();
+      const underPressure = queueSnapshot.inFlight >= AUDIO_PRESSURE_QUEUE_DEPTH;
+      const retryProfile = underPressure
+        ? {
+            metadataRetries: 0,
+            downloadRetries: 0,
+            sttRetries: 0,
+            metadataTimeoutMs: AUDIO_PRESSURE_TIMEOUT_MS,
+            downloadTimeoutMs: AUDIO_PRESSURE_TIMEOUT_MS,
+            sttTimeoutMs: AUDIO_PRESSURE_TIMEOUT_MS,
+            backoffMs: 120,
+          }
+        : undefined;
+
       transcript = await enqueueTask(() =>
         audioStt.transcribeFromWhatsAppMedia({
           mediaId,
@@ -360,6 +464,7 @@ async function processAudioMessage({
           phoneNumberId,
           mimeTypeHint: mimeType,
           filenameHint: `${mediaId}.ogg`,
+          retryProfile,
         })
       );
     } catch (_err) {
@@ -407,6 +512,39 @@ async function processAudioMessage({
 
   if (confidence < AUDIO_CONFIDENCE_MIN) {
     const reason = 'low_confidence';
+    const canProgressSafely =
+      risk !== 'destructive' &&
+      containsStrongBookingSignals(text) &&
+      confidence >= Math.max(0.42, AUDIO_CONFIDENCE_MIN - 0.13);
+
+    if (canProgressSafely) {
+      const reply = await buildReply(from, text, {
+        source: 'audio',
+        confidence,
+        intentRisk: risk,
+        degradedAudio: true,
+      });
+
+      audioMetrics.record({
+        processed: true,
+        clarification: true,
+        lowConfidence: true,
+        reason: 'low_confidence_guided_progress',
+        failureType: 'intent',
+        latencyMs: nowMs() - startedAt,
+        confidence,
+        sttRetry: Number(transcript.retries || 0) > 0,
+      });
+
+      return {
+        ok: true,
+        reply,
+        reason: 'low_confidence_guided_progress',
+        confidence,
+        transcript: text,
+      };
+    }
+
     audioMetrics.record({
       discarded: true,
       clarification: true,
@@ -418,8 +556,7 @@ async function processAudioMessage({
     });
     return {
       ok: true,
-      reply:
-        'No entendi con suficiente claridad ese audio. Repetilo por favor o escribime el mensaje en texto.',
+      reply: buildLowConfidenceHint(text, risk),
       reason,
       confidence,
       transcript: text,
@@ -448,6 +585,38 @@ async function processAudioMessage({
 
   if (risk === 'actionable' && confidence < AUDIO_CONFIDENCE_ACTION) {
     const reason = 'actionable_low_confidence';
+    const canProgress =
+      containsStrongBookingSignals(text) &&
+      confidence >= Math.max(AUDIO_CONFIDENCE_MIN, AUDIO_CONFIDENCE_ACTION - 0.12);
+
+    if (canProgress) {
+      const reply = await buildReply(from, text, {
+        source: 'audio',
+        confidence,
+        intentRisk: risk,
+        degradedAudio: true,
+      });
+
+      audioMetrics.record({
+        processed: true,
+        clarification: true,
+        lowConfidence: true,
+        reason: 'actionable_confidence_boosted',
+        failureType: 'intent',
+        latencyMs: nowMs() - startedAt,
+        confidence,
+        sttRetry: Number(transcript.retries || 0) > 0,
+      });
+
+      return {
+        ok: true,
+        reply,
+        reason: 'actionable_confidence_boosted',
+        confidence,
+        transcript: text,
+      };
+    }
+
     audioMetrics.record({
       processed: true,
       clarification: true,
@@ -459,7 +628,7 @@ async function processAudioMessage({
     });
     return {
       ok: true,
-      reply: `Escuche "${text}", pero necesito un poco mas de claridad. Repetilo o escribilo en texto.`,
+      reply: buildLowConfidenceHint(text, risk),
       reason,
       confidence,
       transcript: text,

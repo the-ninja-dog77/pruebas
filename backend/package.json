@@ -11,7 +11,10 @@
     "test:matrix": "jest tests/metaWebhookProductionMatrix.test.js --runInBand",
     "test:audio": "jest tests/metaWebhookAudioReliability.test.js --runInBand",
     "load:webhook": "node scripts/runWebhookLoadChaos.js",
-    "load:audio": "node scripts/runAudioLoadChaos.js"
+    "load:audio": "node scripts/runAudioLoadChaos.js",
+    "load:soak:1h": "node scripts/runOneHourBotSoak.js",
+    "evolve:cycle:auto": "node scripts/runBotEvolutionCycle.js",
+    "evolve:cycle:force": "node scripts/runBotEvolutionCycle.js --force"
   },
   "keywords": [],
   "author": "",

@@ -1,0 +1,46 @@
+{
+  "generatedAt": "2026-02-22T00:12:11.423Z",
+  "mode": "auto",
+  "config": {
+    "runSoak": false,
+    "runReliability": false,
+    "runAudio": false,
+    "runQuickVerify": false,
+    "quickScale": "0.08"
+  },
+  "soakBefore": {
+    "generatedAt": "2026-02-21T23:40:57.723Z",
+    "score": 95.62,
+    "grade": "A",
+    "adjustedEventFailureRatePercent": 0,
+    "retryRatioPercent": 6.48,
+    "audioFailureRatePercent": 8.21,
+    "p95Ms": 993,
+    "throughputReqPerSec": 6.26,
+    "eventsTotal": 21076,
+    "eventsFailedNonChaos": 0
+  },
+  "soakAfterQuick": null,
+  "priorities": [
+    {
+      "priority": "P1",
+      "area": "resilience",
+      "title": "Reducir retries innecesarios",
+      "why": "retry ratio 6.48% > 5%",
+      "action": "Revisar timeouts y errores recuperables/no recuperables en STT y media download.",
+      "verifyWith": "retry ratio <= 5% sostenido."
+    },
+    {
+      "priority": "P1",
+      "area": "audio",
+      "title": "Fortalecer manejo de audio dificil",
+      "why": "audio failures 8.21% > 8%",
+      "action": "Ajustar retries/media timeout y forzar aclaracion temprana cuando confidence sea baja.",
+      "verifyWith": "audio failure <= 8% en fase acero."
+    }
+  ],
+  "forceAdjustments": [],
+  "steps": [],
+  "success": true,
+  "recommendation": "Ciclo completado. Seguir con otra corrida normal de 1h para consolidar tendencia."
+}

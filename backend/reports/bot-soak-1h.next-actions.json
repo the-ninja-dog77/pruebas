@@ -1,0 +1,134 @@
+{
+  "generatedAt": "2026-02-22T00:30:30.156Z",
+  "score": 92.35,
+  "grade": "A",
+  "summary": "Score 92.35/100 (A)",
+  "priorities": [
+    {
+      "priority": "P1",
+      "area": "resilience",
+      "title": "Reducir retries innecesarios",
+      "why": "retry ratio 5.82% > 5%",
+      "action": "Revisar timeouts y errores recuperables/no recuperables en STT y media download.",
+      "verifyWith": "retry ratio <= 5% sostenido."
+    },
+    {
+      "priority": "P1",
+      "area": "audio",
+      "title": "Fortalecer manejo de audio dificil",
+      "why": "audio failures 10.34% > 8%",
+      "action": "Ajustar retries/media timeout y forzar aclaracion temprana cuando confidence sea baja.",
+      "verifyWith": "audio failure <= 8% en fase acero."
+    },
+    {
+      "priority": "P2",
+      "area": "testing",
+      "title": "Subir volumen minimo por fase",
+      "why": "Cobertura de fases 25%",
+      "action": "Incrementar SOAK_DURATION_MS o SOAK_PHASE_SCALE para obtener al menos 50 eventos por fase.",
+      "verifyWith": "Todas las fases con >= 50 eventos."
+    }
+  ],
+  "topFailures": {
+    "statuses": [
+      {
+        "key": "200",
+        "count": 178
+      },
+      {
+        "key": "500",
+        "count": 11
+      }
+    ],
+    "reasons": [
+      {
+        "key": "duplicate_event",
+        "count": 29
+      },
+      {
+        "key": "out_of_order_event",
+        "count": 1
+      }
+    ],
+    "audioReasons": [
+      {
+        "key": "audio_processed",
+        "count": 43
+      },
+      {
+        "key": "audio_too_short",
+        "count": 14
+      },
+      {
+        "key": "destructive_low_confidence",
+        "count": 11
+      },
+      {
+        "key": "actionable_low_confidence",
+        "count": 7
+      },
+      {
+        "key": "audio_noise_or_silence",
+        "count": 4
+      },
+      {
+        "key": "media_not_found",
+        "count": 4
+      },
+      {
+        "key": "media_timeout",
+        "count": 3
+      },
+      {
+        "key": "low_confidence",
+        "count": 3
+      }
+    ]
+  },
+  "nextRunAdaptiveProfile": {
+    "version": 1,
+    "updatedAt": "2026-02-22T00:30:30.158Z",
+    "lastScore": 92.35,
+    "notes": "Perfil adaptativo de carga; no modifica codigo del bot.",
+    "phaseAdjustments": {
+      "normal": {
+        "audioRatioDelta": 0,
+        "weirdRatioDelta": 0,
+        "rudeRatioDelta": 0,
+        "duplicateChanceDelta": 0,
+        "outOfOrderChanceDelta": 0,
+        "nonDebugAudioChanceDelta": 0
+      },
+      "raras": {
+        "audioRatioDelta": 0.11000000000000001,
+        "weirdRatioDelta": 0,
+        "rudeRatioDelta": 0,
+        "duplicateChanceDelta": 0,
+        "outOfOrderChanceDelta": 0,
+        "nonDebugAudioChanceDelta": 0.14
+      },
+      "desubicados": {
+        "audioRatioDelta": 0.11000000000000001,
+        "weirdRatioDelta": 0,
+        "rudeRatioDelta": 0,
+        "duplicateChanceDelta": 0.03,
+        "outOfOrderChanceDelta": 0.03,
+        "nonDebugAudioChanceDelta": 0.14
+      },
+      "acero": {
+        "audioRatioDelta": 0.11000000000000001,
+        "weirdRatioDelta": 0,
+        "rudeRatioDelta": 0,
+        "duplicateChanceDelta": 0.03,
+        "outOfOrderChanceDelta": 0.03,
+        "nonDebugAudioChanceDelta": 0.14
+      }
+    }
+  },
+  "runCommands": [
+    "cd backend",
+    "npm run load:soak:1h",
+    "npm run test:reliability",
+    "npm run test:audio"
+  ]
+}

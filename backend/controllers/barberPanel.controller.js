@@ -68,6 +68,29 @@ function createDayTurno(req, res, next) {
   }
 }
 
+function removeDayTurno(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const { fecha } = req.params;
+    const id = Number(req.params.id);
+
+    if (!Number.isInteger(id) || id <= 0) {
+      return res.status(400).json({ message: 'ID de turno invalido' });
+    }
+
+    const result = barberPanelService.removeDayTurno({
+      barberId,
+      fecha,
+      id,
+      user: req.user,
+    });
+
+    res.json(result);
+  } catch (err) {
+    next(err);
+  }
+}
+
 function updateBotStatus(req, res, next) {
   try {
     const { enabled } = req.body;
@@ -86,6 +109,7 @@ module.exports = {
   getCalendar,
   getDay,
   createDayTurno,
+  removeDayTurno,
   getBotStatus,
   updateBotStatus,
 };

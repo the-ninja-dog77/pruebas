@@ -33,6 +33,10 @@ const STT_PROVIDER_RAW = String(process.env.AUDIO_STT_PROVIDER || 'groq').toLowe
 const STT_PROVIDER = STT_PROVIDER_RAW === 'groq' ? 'groq' : 'groq';
 const STT_MODEL = process.env.AUDIO_STT_MODEL || 'whisper-large-v3-turbo';
 const STT_TIMEOUT_MS = Number(process.env.AUDIO_STT_TIMEOUT_MS || 15000);
+const MEDIA_TIMEOUT_MS = Number(process.env.AUDIO_MEDIA_TIMEOUT_MS || STT_TIMEOUT_MS);
+const STT_REQUEST_TIMEOUT_MS = Number(
+  process.env.AUDIO_STT_REQUEST_TIMEOUT_MS || STT_TIMEOUT_MS
+);
 const STT_MAX_RETRIES = Number(process.env.AUDIO_STT_RETRIES || 1);
 const MEDIA_METADATA_RETRIES = Number(process.env.AUDIO_MEDIA_METADATA_RETRIES || 1);
 const MEDIA_DOWNLOAD_RETRIES = Number(process.env.AUDIO_MEDIA_DOWNLOAD_RETRIES || 1);
@@ -62,6 +66,36 @@ function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function sleepWithJitter(baseMs, attempt) {
+  const base = Math.max(1, Number(baseMs || RETRY_BACKOFF_MS));
+  const jitter = Math.floor(Math.random() * Math.min(150, base));
+  return sleep(base * Math.max(1, attempt) + jitter);
+}
+
+function asNonNegativeInt(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < 0) return fallback;
+  return Math.floor(number);
+}
+
+function asPositiveInt(value, fallback) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number <= 0) return fallback;
+  return Math.floor(number);
+}
+
+function resolveRuntimeProfile(retryProfile = {}) {
+  return {
+    metadataRetries: asNonNegativeInt(retryProfile.metadataRetries, MEDIA_METADATA_RETRIES),
+    downloadRetries: asNonNegativeInt(retryProfile.downloadRetries, MEDIA_DOWNLOAD_RETRIES),
+    sttRetries: asNonNegativeInt(retryProfile.sttRetries, STT_MAX_RETRIES),
+    metadataTimeoutMs: asPositiveInt(retryProfile.metadataTimeoutMs, MEDIA_TIMEOUT_MS),
+    downloadTimeoutMs: asPositiveInt(retryProfile.downloadTimeoutMs, MEDIA_TIMEOUT_MS),
+    sttTimeoutMs: asPositiveInt(retryProfile.sttTimeoutMs, STT_REQUEST_TIMEOUT_MS),
+    backoffMs: asPositiveInt(retryProfile.backoffMs, RETRY_BACKOFF_MS),
+  };
+}
+
 function shouldRetryStatus(status) {
   return status === 408 || status === 409 || status === 429 || status >= 500;
 }
@@ -87,11 +121,17 @@ function buildMediaUrl({ mediaId, graphVersion, phoneNumberId }) {
   return `${base}?phone_number_id=${encodeURIComponent(String(phoneNumberId))}`;
 }
 
-async function fetchMediaMetadata({ mediaId, accessToken, graphVersion, phoneNumberId }) {
+async function fetchMediaMetadata({
+  mediaId,
+  accessToken,
+  graphVersion,
+  phoneNumberId,
+  runtime,
+}) {
   const url = buildMediaUrl({ mediaId, graphVersion, phoneNumberId });
   let retries = 0;
 
-  while (retries <= MEDIA_METADATA_RETRIES) {
+  while (retries <= runtime.metadataRetries) {
     try {
       const response = await withTimeout(
         signal =>
@@ -102,15 +142,15 @@ async function fetchMediaMetadata({ mediaId, accessToken, graphVersion, phoneNum
             },
             signal,
           }),
-        STT_TIMEOUT_MS
+        runtime.metadataTimeoutMs
       );
 
       if (!response.ok) {
         const body = await response.text();
         const reason = classifyMediaHttpError(response.status, 'metadata');
-        if (retries < MEDIA_METADATA_RETRIES && shouldRetryStatus(response.status)) {
+        if (retries < runtime.metadataRetries && shouldRetryStatus(response.status)) {
           retries += 1;
-          await sleep(RETRY_BACKOFF_MS * retries);
+          await sleepWithJitter(runtime.backoffMs, retries);
           continue;
         }
 
@@ -130,9 +170,9 @@ async function fetchMediaMetadata({ mediaId, accessToken, graphVersion, phoneNum
         retries,
       };
     } catch (err) {
-      if (retries < MEDIA_METADATA_RETRIES) {
+      if (retries < runtime.metadataRetries) {
         retries += 1;
-        await sleep(RETRY_BACKOFF_MS * retries);
+        await sleepWithJitter(runtime.backoffMs, retries);
         continue;
       }
       logger.error(`AUDIO metadata timeout/error: ${err.message}`);
@@ -147,13 +187,13 @@ async function fetchMediaMetadata({ mediaId, accessToken, graphVersion, phoneNum
   return {
     ok: false,
     reason: 'media_timeout',
-    retries: MEDIA_METADATA_RETRIES,
+    retries: runtime.metadataRetries,
   };
 }
 
-async function downloadMediaBuffer({ mediaUrl, accessToken }) {
+async function downloadMediaBuffer({ mediaUrl, accessToken, runtime }) {
   let retries = 0;
-  while (retries <= MEDIA_DOWNLOAD_RETRIES) {
+  while (retries <= runtime.downloadRetries) {
     try {
       const response = await withTimeout(
         signal =>
@@ -164,15 +204,15 @@ async function downloadMediaBuffer({ mediaUrl, accessToken }) {
             },
             signal,
           }),
-        STT_TIMEOUT_MS
+        runtime.downloadTimeoutMs
       );
 
       if (!response.ok) {
         const body = await response.text();
         const reason = classifyMediaHttpError(response.status, 'download');
-        if (retries < MEDIA_DOWNLOAD_RETRIES && shouldRetryStatus(response.status)) {
+        if (retries < runtime.downloadRetries && shouldRetryStatus(response.status)) {
           retries += 1;
-          await sleep(RETRY_BACKOFF_MS * retries);
+          await sleepWithJitter(runtime.backoffMs, retries);
           continue;
         }
 
@@ -194,9 +234,9 @@ async function downloadMediaBuffer({ mediaUrl, accessToken }) {
         retries,
       };
     } catch (err) {
-      if (retries < MEDIA_DOWNLOAD_RETRIES) {
+      if (retries < runtime.downloadRetries) {
         retries += 1;
-        await sleep(RETRY_BACKOFF_MS * retries);
+        await sleepWithJitter(runtime.backoffMs, retries);
         continue;
       }
       logger.error(`AUDIO media download timeout/error: ${err.message}`);
@@ -211,11 +251,11 @@ async function downloadMediaBuffer({ mediaUrl, accessToken }) {
   return {
     ok: false,
     reason: 'media_timeout',
-    retries: MEDIA_DOWNLOAD_RETRIES,
+    retries: runtime.downloadRetries,
   };
 }
 
-async function transcribeWithGroq({ buffer, mimeType, filename }) {
+async function transcribeWithGroq({ buffer, mimeType, filename, runtime }) {
   if (!GROQ_API_KEY) {
     return {
       ok: false,
@@ -225,7 +265,7 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
   }
 
   let retries = 0;
-  while (retries <= STT_MAX_RETRIES) {
+  while (retries <= runtime.sttRetries) {
     try {
       const blob = new Blob([buffer], { type: mimeType || 'audio/ogg' });
       const form = new FormData();
@@ -244,14 +284,14 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
             body: form,
             signal,
           }),
-        STT_TIMEOUT_MS
+        runtime.sttTimeoutMs
       );
 
       if (!response.ok) {
         const errText = await response.text();
-        if (retries < STT_MAX_RETRIES && shouldRetryStatus(response.status)) {
+        if (retries < runtime.sttRetries && shouldRetryStatus(response.status)) {
           retries += 1;
-          await sleep(RETRY_BACKOFF_MS * retries);
+          await sleepWithJitter(runtime.backoffMs, retries);
           continue;
         }
         logger.error(`AUDIO STT failed status=${response.status} body=${errText}`);
@@ -282,9 +322,9 @@ async function transcribeWithGroq({ buffer, mimeType, filename }) {
         raw: data,
       };
     } catch (err) {
-      if (retries < STT_MAX_RETRIES) {
+      if (retries < runtime.sttRetries) {
         retries += 1;
-        await sleep(RETRY_BACKOFF_MS * retries);
+        await sleepWithJitter(runtime.backoffMs, retries);
         continue;
       }
       logger.error(`AUDIO STT timeout/error: ${err.message}`);
@@ -311,13 +351,16 @@ async function transcribeFromWhatsAppMedia({
   phoneNumberId,
   mimeTypeHint,
   filenameHint,
+  retryProfile,
 }) {
   try {
+    const runtime = resolveRuntimeProfile(retryProfile);
     const metadataResult = await fetchMediaMetadata({
       mediaId,
       accessToken,
       graphVersion,
       phoneNumberId,
+      runtime,
     });
     if (!metadataResult.ok) {
       return {
@@ -341,6 +384,7 @@ async function transcribeFromWhatsAppMedia({
     const downloaded = await downloadMediaBuffer({
       mediaUrl,
       accessToken,
+      runtime,
     });
     if (!downloaded.ok) {
       return {
@@ -367,6 +411,7 @@ async function transcribeFromWhatsAppMedia({
       buffer: downloaded.buffer,
       mimeType,
       filename,
+      runtime,
     });
 
     return {

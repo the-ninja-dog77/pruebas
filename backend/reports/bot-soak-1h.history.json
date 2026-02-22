@@ -1,0 +1,172 @@
+{
+  "version": 1,
+  "runs": [
+    {
+      "generatedAt": "2026-02-21T23:40:57.723Z",
+      "score": 95.62,
+      "grade": "A",
+      "sent": 22536,
+      "ok": 21076,
+      "failures": 1460,
+      "dropped": 0,
+      "retries": 1460,
+      "errorRatePercent": 6.48,
+      "retryRatioPercent": 6.48,
+      "adjustedEventFailureRatePercent": 0,
+      "dropRatePercent": 0,
+      "fiveXxPercent": 6.48,
+      "p95Ms": 993,
+      "p99Ms": 3554,
+      "audioFailurePercent": 8.21,
+      "phaseCoveragePercent": 100,
+      "topStatuses": [
+        {
+          "key": "200",
+          "count": 21076
+        },
+        {
+          "key": "500",
+          "count": 1460
+        }
+      ],
+      "topReasons": [
+        {
+          "key": "duplicate_event",
+          "count": 2761
+        },
+        {
+          "key": "out_of_order_event",
+          "count": 137
+        }
+      ],
+      "topAudioReasons": [
+        {
+          "key": "audio_processed",
+          "count": 5093
+        },
+        {
+          "key": "destructive_low_confidence",
+          "count": 1650
+        },
+        {
+          "key": "audio_too_short",
+          "count": 1141
+        },
+        {
+          "key": "audio_noise_or_silence",
+          "count": 1100
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-02-22T00:21:47.229Z",
+      "score": 97.73,
+      "grade": "A",
+      "sent": 436,
+      "ok": 413,
+      "failures": 23,
+      "dropped": 0,
+      "retries": 23,
+      "errorRatePercent": 5.28,
+      "retryRatioPercent": 5.28,
+      "adjustedEventFailureRatePercent": 0,
+      "dropRatePercent": 0,
+      "fiveXxPercent": 5.28,
+      "p95Ms": 805,
+      "p99Ms": 3473,
+      "audioFailurePercent": 8.02,
+      "phaseCoveragePercent": 25,
+      "topStatuses": [
+        {
+          "key": "200",
+          "count": 413
+        },
+        {
+          "key": "500",
+          "count": 23
+        }
+      ],
+      "topReasons": [
+        {
+          "key": "duplicate_event",
+          "count": 56
+        }
+      ],
+      "topAudioReasons": [
+        {
+          "key": "audio_processed",
+          "count": 126
+        },
+        {
+          "key": "destructive_low_confidence",
+          "count": 37
+        },
+        {
+          "key": "audio_too_short",
+          "count": 19
+        },
+        {
+          "key": "media_timeout",
+          "count": 12
+        }
+      ]
+    },
+    {
+      "generatedAt": "2026-02-22T00:30:30.156Z",
+      "score": 92.35,
+      "grade": "A",
+      "sent": 189,
+      "ok": 178,
+      "failures": 11,
+      "dropped": 0,
+      "retries": 11,
+      "errorRatePercent": 5.82,
+      "retryRatioPercent": 5.82,
+      "adjustedEventFailureRatePercent": 0,
+      "dropRatePercent": 0,
+      "fiveXxPercent": 5.82,
+      "p95Ms": 853,
+      "p99Ms": 3778,
+      "audioFailurePercent": 10.34,
+      "phaseCoveragePercent": 25,
+      "topStatuses": [
+        {
+          "key": "200",
+          "count": 178
+        },
+        {
+          "key": "500",
+          "count": 11
+        }
+      ],
+      "topReasons": [
+        {
+          "key": "duplicate_event",
+          "count": 29
+        },
+        {
+          "key": "out_of_order_event",
+          "count": 1
+        }
+      ],
+      "topAudioReasons": [
+        {
+          "key": "audio_processed",
+          "count": 43
+        },
+        {
+          "key": "audio_too_short",
+          "count": 14
+        },
+        {
+          "key": "destructive_low_confidence",
+          "count": 11
+        },
+        {
+          "key": "actionable_low_confidence",
+          "count": 7
+        }
+      ]
+    }
+  ]
+}

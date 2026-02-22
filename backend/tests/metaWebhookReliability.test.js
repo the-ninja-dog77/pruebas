@@ -106,7 +106,7 @@ describe('WhatsApp webhook reliability matrix', () => {
     expect(outboundMessages[outboundMessages.length - 1]).toContain('turno confirmado');
   });
 
-  test('thanks while waiting for hour resets flow cleanly', async () => {
+  test('thanks while waiting for hour keeps flow and gives contextual guidance', async () => {
     const from = '595985544502';
     const sequence = ['turno', 'corte', '2099-12-31'];
 
@@ -118,10 +118,11 @@ describe('WhatsApp webhook reliability matrix', () => {
     const thanks = await sendMessage('gracias entonces', from);
     expect(thanks.res.statusCode).toBe(200);
     expect(thanks.reply).toContain('De nada');
+    expect(thanks.reply).toContain('Seguimos');
 
     const restart = await sendMessage('turno', from);
     expect(restart.res.statusCode).toBe(200);
-    expect(restart.reply).toContain('Que servicio queres');
+    expect(restart.reply).toContain('Decime la hora');
   });
 
   test('natural reschedule command takes over even in another flow state', async () => {

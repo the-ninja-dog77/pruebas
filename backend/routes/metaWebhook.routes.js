@@ -57,6 +57,29 @@ const MANAGE_RESCHEDULE_INTENTS = [
   'mover turno',
   'pasar turno',
 ];
+const FLOW_HELP_INTENTS = [
+  'que me falta',
+  'que falta',
+  'en que vamos',
+  'en que quedamos',
+  'resumen',
+  'recordame',
+  'repeti',
+  'repetime',
+];
+const FLOW_UNCERTAINTY_INTENTS = [
+  'no se',
+  'nose',
+  'no entendi',
+  'no entiendo',
+  'me perdi',
+  'ayuda',
+  'help',
+  'explicame',
+];
+const TEMPORAL_DISAMBIGUATION_TTL_MS = Number(
+  process.env.WHATSAPP_TEMPORAL_DISAMBIGUATION_TTL_MS || 5 * 60 * 1000
+);
 const VALID_STAGES = new Set([
   'idle',
   'collecting',
@@ -345,6 +368,26 @@ function parseDate(msg) {
   return candidates[candidates.length - 1].value;
 }
 
+function countRegexMatches(msg, regex) {
+  let count = 0;
+  for (const _ of msg.matchAll(regex)) {
+    count += 1;
+  }
+  return count;
+}
+
+function countDateMentions(msg) {
+  let count = 0;
+  count += countRegexMatches(msg, /\b(\d{4})-(\d{2})-(\d{2})\b/g);
+  count += countRegexMatches(msg, /\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/g);
+  count += countRegexMatches(msg, /\b(hoy|manana|pasado manana)\b/g);
+  count += countRegexMatches(
+    msg,
+    /\b(domingo|lunes|martes|miercoles|jueves|viernes|sabado)\b/g
+  );
+  return count;
+}
+
 function parseTime(msg) {
   const HOUR_WORD_MAP = {
     cero: 0,
@@ -461,6 +504,30 @@ function parseTime(msg) {
   return candidates[candidates.length - 1].value;
 }
 
+function countTimeMentions(msg) {
+  let count = 0;
+  count += countRegexMatches(
+    msg,
+    /\b([01]?\d|2[0-3]):([0-5]\d)\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi
+  );
+  count += countRegexMatches(
+    msg,
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi
+  );
+  count += countRegexMatches(msg, /\b([0-2]?\d)(?::([0-5]\d))?\s*(?:h|hs|hora|horas)\b/gi);
+  return count;
+}
+
+function hasTemporalCorrectionSignal(msg, dateMentions, timeMentions) {
+  if (containsAny(msg, ['perdon', 'mejor', 'quise decir', 'corrijo', 'correccion'])) {
+    return true;
+  }
+  if (msg.includes(' no ') && (dateMentions > 1 || timeMentions > 1)) {
+    return true;
+  }
+  return false;
+}
+
 function detectService(msg) {
   if (msg.includes('corte') && msg.includes('barba')) return 'Corte + Barba';
   if (msg.includes('barba') || msg.includes('afeitado')) return 'Recorte/Tratamiento de Barba';
@@ -485,7 +552,9 @@ function parseClientName(rawText) {
   const cleaned = raw
     .replace(/^(me llamo|soy|mi nombre es|a nombre de)\s+/i, '')
     .replace(/^(a|para)\s+/i, '')
-    .replace(/\b(ya lo sabes|nms|nomas|bro+|rey)\b/gi, ' ')
+    .replace(/\b(ya lo sabes|nms|nomas|bro+|rey|ciejo|ciego|mano)\b/gi, ' ')
+    .replace(/[0-9]/g, ' ')
+    .replace(/[^\p{L}\s'.-]/gu, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -494,7 +563,35 @@ function parseClientName(rawText) {
   if (detectPaymentMethod(normalized)) return null;
   if (containsAny(normalized, GREETING_INTENTS)) return null;
   if (containsAny(normalized, ['confirmar', 'cancelar', 'turno'])) return null;
-  return cleaned;
+
+  const fillerTokens = new Set([
+    'ya',
+    'lo',
+    'sabes',
+    'quien',
+    'mas',
+    'tu',
+    'bro',
+    'rey',
+    'nms',
+    'nomas',
+    'mano',
+    'el',
+    'la',
+    'de',
+    'del',
+  ]);
+
+  const tokens = cleaned
+    .split(/\s+/)
+    .map(token => token.trim())
+    .filter(Boolean)
+    .filter(token => !fillerTokens.has(normalizeText(token)));
+
+  if (!tokens.length || tokens.length > 5) return null;
+  const composed = tokens.join(' ');
+  if (composed.length < 2 || composed.length > 60) return null;
+  return composed;
 }
 
 function extractNameForManage(rawText) {
@@ -540,6 +637,7 @@ function createEmptySession(seed = {}) {
     lastAvailability: null,
     memory: {
       lastReferencedDate: seed.lastReferencedDate || null,
+      pendingTemporalDisambiguation: null,
     },
     meta: {
       createdAt,
@@ -618,6 +716,11 @@ function ensureSessionIntegrity(session) {
     session.stage = 'awaiting_name';
   }
 
+  const pending = session.memory?.pendingTemporalDisambiguation;
+  if (pending?.at && nowMs() - pending.at > TEMPORAL_DISAMBIGUATION_TTL_MS) {
+    session.memory.pendingTemporalDisambiguation = null;
+  }
+
   touchSession(session);
 }
 
@@ -643,10 +746,19 @@ function parseDateWithContext(msg, session) {
   return null;
 }
 
-function applyDetections(session, msg) {
+function applyNonTemporalDetections(session, msg) {
   const servicio = detectService(msg);
   if (servicio) session.draft.servicio = servicio;
 
+  const metodoPago = detectPaymentMethod(msg);
+  if (metodoPago) session.draft.metodo_pago = metodoPago;
+
+  if (containsAny(msg, ['a nombre de', 'es para', 'para otra persona'])) {
+    session.draft.explicitOtherPerson = true;
+  }
+}
+
+function applyTemporalDetections(session, msg) {
   const fecha = parseDateWithContext(msg, session);
   if (fecha) {
     session.draft.fecha = fecha;
@@ -655,12 +767,21 @@ function applyDetections(session, msg) {
 
   const hora = parseTime(msg);
   if (hora) session.draft.hora = hora;
+}
 
-  const metodoPago = detectPaymentMethod(msg);
-  if (metodoPago) session.draft.metodo_pago = metodoPago;
+function applyDetections(session, msg) {
+  applyNonTemporalDetections(session, msg);
+  applyTemporalDetections(session, msg);
+}
 
-  if (containsAny(msg, ['a nombre de', 'es para', 'para otra persona'])) {
-    session.draft.explicitOtherPerson = true;
+function applyPendingTemporalDisambiguation(session, pending) {
+  if (!pending) return;
+  if (pending.fecha) {
+    session.draft.fecha = pending.fecha;
+    session.memory.lastReferencedDate = pending.fecha;
+  }
+  if (pending.hora) {
+    session.draft.hora = pending.hora;
   }
 }
 
@@ -685,6 +806,82 @@ function buildAvailabilityMessage(fecha) {
 
 function buildSummaryMessage(draft) {
   return `Te resumo: ${draft.nombre}, ${draft.servicio}, ${draft.fecha} a las ${draft.hora}, pago ${draft.metodo_pago}. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde "confirmar".`;
+}
+
+function buildTemporalDisambiguationPrompt(pending, remind = false) {
+  if (!pending) return 'Para evitar errores, decime de nuevo fecha y hora.';
+  const parts = [];
+  if (pending.fecha) parts.push(`fecha ${pending.fecha}`);
+  if (pending.hora) parts.push(`hora ${pending.hora}`);
+  if (!parts.length) return 'Para evitar errores, decime de nuevo fecha y hora.';
+
+  const intro = remind ? 'Seguimos pendientes de esta confirmacion.' : 'Para evitar errores,';
+  return `${intro} entendi ${parts.join(' y ')}. Responde "si" para continuar o enviame solo el dato correcto.`;
+}
+
+function maybeStartTemporalDisambiguation(session, msg) {
+  const dateMentions = countDateMentions(msg);
+  const timeMentions = countTimeMentions(msg);
+  const hasMultipleTemporalHints = dateMentions > 1 || timeMentions > 1;
+  if (!hasMultipleTemporalHints) return null;
+  if (!hasTemporalCorrectionSignal(msg, dateMentions, timeMentions)) return null;
+
+  const fecha = parseDateWithContext(msg, session);
+  const hora = parseTime(msg);
+  if (!fecha && !hora) return null;
+
+  session.memory.pendingTemporalDisambiguation = {
+    fecha: fecha || null,
+    hora: hora || null,
+    at: nowMs(),
+  };
+
+  return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation);
+}
+
+function getProgressPrompt(session) {
+  if (!session) {
+    return 'Si queres reservar, escribi "turno".';
+  }
+
+  if (session.memory?.pendingTemporalDisambiguation) {
+    return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation, true);
+  }
+
+  switch (session.stage) {
+    case 'awaiting_service':
+      return 'Nos falta el servicio. Opciones: corte, recorte/tratamiento de barba, perfilado de cejas.';
+    case 'awaiting_date':
+      return 'Nos falta la fecha (ej: 2026-02-23 o 23/02/2026).';
+    case 'awaiting_time':
+      return `Nos falta la hora. ${buildAvailabilityMessage(
+        session.draft.fecha || formatDateLocal(new Date())
+      )} Decime una hora (ej: 15:00).`;
+    case 'awaiting_name':
+      return 'Nos falta el nombre para agendar (ej: Juan Perez).';
+    case 'awaiting_payment':
+      return 'Nos falta el metodo de pago (efectivo, transferencia/QR, tarjeta).';
+    case 'awaiting_confirm':
+      return `${buildSummaryMessage(session.draft)} Si queres seguir, responde "confirmar".`;
+    case 'manage_cancel_collect':
+      return 'Para cancelar, decime nombre y fecha del turno (ej: Fernando Vallejos, 2026-02-24).';
+    case 'manage_reschedule_collect_current':
+      return 'Para reprogramar, decime nombre y fecha del turno actual (ej: Fernando Vallejos, 2026-02-24).';
+    case 'manage_reschedule_collect_new':
+      return 'Decime la nueva fecha y hora del turno (ej: 2026-02-25 16:00).';
+    default:
+      break;
+  }
+
+  if (session.draft.servicio || session.draft.fecha || session.draft.hora) {
+    if (!session.draft.servicio) return 'Falta el servicio para continuar.';
+    if (!session.draft.fecha) return 'Falta la fecha para continuar.';
+    if (!session.draft.hora) return 'Falta la hora para continuar.';
+    if (!session.draft.nombre) return 'Falta el nombre para continuar.';
+    if (!session.draft.metodo_pago) return 'Falta el metodo de pago para continuar.';
+  }
+
+  return 'Si queres reservar, escribi "turno".';
 }
 
 function fillManageTargetDetections(manage, texto, msg) {
@@ -724,6 +921,8 @@ async function buildReply(from, texto, _context = {}) {
   let session = getSession(from);
   ensureSessionIntegrity(session);
   const intentText = normalizeIntentText(msg);
+  const confirms = isConfirmIntent(intentText);
+  const rejectsConfirmation = isNegativeConfirmIntent(intentText);
 
   if (!msg) {
     return 'Escribime que servicio, fecha y hora queres reservar.';
@@ -737,6 +936,12 @@ async function buildReply(from, texto, _context = {}) {
     msg.includes('reprogramar') ||
     (msg.includes('cambiar') && msg.includes('turno'));
   const wantsStart = containsAny(msg, START_INTENTS);
+  const asksFlowHelp = containsAny(msg, FLOW_HELP_INTENTS);
+  const expressesUncertainty = containsAny(msg, FLOW_UNCERTAINTY_INTENTS);
+
+  if (wantsManageCancelCommand && wantsManageRescheduleCommand) {
+    return 'Te ayudo con eso. Primero decime si queres cancelar o reprogramar. Ejemplos: "cancelar turno" o "reprogramar turno".';
+  }
 
   if (wantsManageCancelCommand) {
     session.stage = 'manage_cancel_collect';
@@ -769,8 +974,26 @@ async function buildReply(from, texto, _context = {}) {
   }
 
   if (!wantsManageCancelCommand && !wantsManageRescheduleCommand && containsAny(msg, THANKS_INTENTS)) {
+    const hasActiveFlow =
+      session.stage !== 'idle' ||
+      Boolean(
+        session.draft.servicio ||
+          session.draft.fecha ||
+          session.draft.hora ||
+          session.draft.nombre ||
+          session.draft.metodo_pago
+      );
+
+    if (hasActiveFlow) {
+      return `De nada. Seguimos con la reserva. ${getProgressPrompt(session)}`;
+    }
+
     resetSession(from);
     return 'De nada. Cuando quieras, estoy para ayudarte.';
+  }
+
+  if (asksFlowHelp || expressesUncertainty) {
+    return getProgressPrompt(session);
   }
 
   if (containsAny(msg, NEW_BOOKING_INTENTS)) {
@@ -819,6 +1042,36 @@ async function buildReply(from, texto, _context = {}) {
 
   if (containsAny(msg, ['ubicacion', 'donde', 'direccion', 'mapa'])) {
     return 'Estamos en ZZETA Barber Club. Mapa: https://www.google.com/maps/search/ZZETA%20BARBER%20CLUB/';
+  }
+
+  if (session.memory?.pendingTemporalDisambiguation) {
+    if (confirms) {
+      applyPendingTemporalDisambiguation(session, session.memory.pendingTemporalDisambiguation);
+      session.memory.pendingTemporalDisambiguation = null;
+    } else if (rejectsConfirmation) {
+      session.memory.pendingTemporalDisambiguation = null;
+      return 'Perfecto. Decime de nuevo fecha y hora para evitar errores (ej: 2026-02-25 a las 16:00).';
+    } else {
+      const fechaCorregida = parseDateWithContext(msg, session);
+      const horaCorregida = parseTime(msg);
+      if (fechaCorregida || horaCorregida) {
+        const pending = session.memory.pendingTemporalDisambiguation;
+        session.memory.pendingTemporalDisambiguation = {
+          fecha: fechaCorregida || pending.fecha || null,
+          hora: horaCorregida || pending.hora || null,
+          at: nowMs(),
+        };
+      }
+      return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation, true);
+    }
+  }
+
+  if (!wantsManageCancelCommand && !wantsManageRescheduleCommand) {
+    const temporalDisambiguationPrompt = maybeStartTemporalDisambiguation(session, msg);
+    if (temporalDisambiguationPrompt) {
+      applyNonTemporalDetections(session, msg);
+      return temporalDisambiguationPrompt;
+    }
   }
 
   applyDetections(session, msg);
@@ -953,8 +1206,6 @@ async function buildReply(from, texto, _context = {}) {
     'tienes turno',
     'tienes un turno',
   ]);
-  const confirms = isConfirmIntent(intentText);
-  const rejectsConfirmation = isNegativeConfirmIntent(intentText);
 
   if (asksAvailability || asksTurnoAtSlot) {
     session.stage = 'collecting';

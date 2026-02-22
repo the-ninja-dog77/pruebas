@@ -120,6 +120,39 @@ function createDayTurno({ barberId, fecha, hora, servicio, precio }) {
   });
 }
 
+function removeDayTurno({ barberId, fecha, id, user }) {
+  const isValidDate = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''));
+  if (!isValidDate) {
+    const err = new Error('Fecha invalida. Usa formato YYYY-MM-DD.');
+    err.status = 400;
+    throw err;
+  }
+
+  const dayAgenda = barberPanelRepo.getTurnosByDay({ barberId, fecha });
+  const target = dayAgenda.find(t => Number(t.id) === Number(id));
+  if (!target) {
+    const err = new Error('Turno no encontrado para ese dia.');
+    err.status = 404;
+    throw err;
+  }
+
+  turnosService.eliminarTurno({
+    id: target.id,
+    user,
+  });
+
+  return {
+    message: 'Turno eliminado',
+    turno: {
+      id: target.id,
+      fecha: target.fecha,
+      hora: target.hora,
+      cliente: target.cliente,
+      servicio: target.servicio,
+    },
+  };
+}
+
 function getBotStatus() {
   return { enabled: settingsRepo.getBoolean('bot_enabled', true) };
 }
@@ -134,6 +167,7 @@ module.exports = {
   getCalendar,
   getDay,
   createDayTurno,
+  removeDayTurno,
   getBotStatus,
   updateBotStatus,
 };

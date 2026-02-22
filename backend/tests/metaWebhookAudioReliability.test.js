@@ -421,7 +421,7 @@ describe('WhatsApp audio reliability pipeline', () => {
     expect(checkStillBooked.reply).toContain('no esta disponible');
   });
 
-  test('audio human correction in same utterance keeps latest intent', async () => {
+  test('audio human correction in same utterance requires explicit temporal confirmation', async () => {
     const from = '595985570013';
     const sequence = [
       buildAudioPayload({
@@ -447,8 +447,18 @@ describe('WhatsApp audio reliability pipeline', () => {
       expect(res.statusCode).toBe(200);
     }
 
-    const lastReply = outboundMessages[outboundMessages.length - 1];
-    expect(lastReply).toContain('A nombre de quien');
+    const disambiguationReply = outboundMessages[outboundMessages.length - 1];
+    expect(disambiguationReply).toContain('Para evitar errores');
+
+    const confirm = await sendPayload(
+      buildAudioPayload({
+        from,
+        id: 'hc-4',
+        debugTranscript: 'si',
+      })
+    );
+    expect(confirm.res.statusCode).toBe(200);
+    expect(confirm.reply).toContain('A nombre de quien');
   });
 
   test('audio duplicate id, stale and out-of-order are controlled', async () => {

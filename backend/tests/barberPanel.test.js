@@ -80,4 +80,38 @@ describe('Barber panel', () => {
     );
     expect(createdInAgenda).toBe(true);
   });
+
+  test('elimina un turno desde /api/barber-panel/day/:fecha/turnos/:id y libera el horario', async () => {
+    const fecha = getNextOpenDate();
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
+    expect(day.body.disponibles.length).toBeGreaterThan(0);
+
+    const hora = day.body.disponibles[0];
+    const create = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 40000,
+      });
+    expect(create.statusCode).toBe(201);
+
+    const remove = await request(app)
+      .delete(`/api/barber-panel/day/${fecha}/turnos/${create.body.id}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(remove.statusCode).toBe(200);
+    expect(remove.body.message).toBe('Turno eliminado');
+
+    const dayAfter = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(dayAfter.statusCode).toBe(200);
+    expect(dayAfter.body.agenda.some(t => t.id === create.body.id)).toBe(false);
+    expect(dayAfter.body.disponibles.includes(hora)).toBe(true);
+  });
 });
