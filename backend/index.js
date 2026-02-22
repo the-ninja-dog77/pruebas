@@ -57,11 +57,21 @@ app.use(
   })
 );
 
+const RATE_LIMIT_WINDOW_MS = Number(process.env.RATE_LIMIT_WINDOW_MS || 15 * 60 * 1000);
+const RATE_LIMIT_MAX = Number(process.env.RATE_LIMIT_MAX || 300);
+
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: RATE_LIMIT_WINDOW_MS,
+  max: RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
+  // Evita bloquear flujos normales del panel y webhooks bajo uso real.
+  skip: req =>
+    req.path.startsWith('/meta-webhook') ||
+    req.path.startsWith('/api/barber-panel') ||
+    req.path.startsWith('/app') ||
+    req.path.startsWith('/health') ||
+    req.path.startsWith('/metrics'),
 });
 app.use(limiter);
 
