@@ -338,6 +338,8 @@ async function processAudioMessage({
   graphVersion,
   phoneNumberId,
   buildReply,
+  provider,
+  mediaRequestHeaders,
 }) {
   const startedAt = nowMs();
   const audioObj = incoming?.audio || {};
@@ -347,6 +349,7 @@ async function processAudioMessage({
   );
   const mimeType = normalizeMimeType(audioObj.mime_type);
   const mediaId = String(audioObj.id || '').trim();
+  const mediaUrl = String(audioObj.media_url || audioObj.url || '').trim();
   const durationSec = Number(
     audioObj.duration_sec || audioObj.duration || audioObj.debug_duration_sec
   );
@@ -430,7 +433,7 @@ async function processAudioMessage({
   }
 
   if (!transcript) {
-    if (!mediaId) {
+    if (!mediaId && !mediaUrl) {
       const reason = 'missing_media_id';
       audioMetrics.record({
         discarded: true,
@@ -456,17 +459,31 @@ async function processAudioMessage({
           }
         : undefined;
 
-      transcript = await enqueueTask(() =>
-        audioStt.transcribeFromWhatsAppMedia({
-          mediaId,
-          accessToken,
-          graphVersion,
-          phoneNumberId,
-          mimeTypeHint: mimeType,
-          filenameHint: `${mediaId}.ogg`,
-          retryProfile,
-        })
-      );
+      if (mediaId) {
+        transcript = await enqueueTask(() =>
+          audioStt.transcribeFromWhatsAppMedia({
+            mediaId,
+            accessToken,
+            graphVersion,
+            phoneNumberId,
+            mimeTypeHint: mimeType,
+            filenameHint: `${mediaId}.ogg`,
+            retryProfile,
+          })
+        );
+      } else {
+        const urlFilename = provider === 'gupshup' ? `gupshup-${Date.now()}.ogg` : 'audio.ogg';
+        transcript = await enqueueTask(() =>
+          audioStt.transcribeFromMediaUrl({
+            mediaUrl,
+            accessToken,
+            requestHeaders: mediaRequestHeaders,
+            mimeTypeHint: mimeType,
+            filenameHint: urlFilename,
+            retryProfile,
+          })
+        );
+      }
     } catch (_err) {
       transcript = {
         ok: false,

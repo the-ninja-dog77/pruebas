@@ -19,7 +19,7 @@ const clientesRoutes = require('./routes/clientes.routes');
 const healthRoutes = require('./routes/health.routes');
 const metricsRoutes = require('./routes/metrics.routes');
 const statsRoutes = require('./routes/stats.routes');
-const metaWebhookRoutes = require('./routes/metaWebhook.routes');
+const whatsappWebhookRoutes = require('./routes/metaWebhook.routes');
 const barberPanelRoutes = require('./routes/barberPanel.routes');
 const turnosService = require('./services/turnos.service');
 
@@ -68,6 +68,8 @@ const limiter = rateLimit({
   // Evita bloquear flujos normales del panel y webhooks bajo uso real.
   skip: req =>
     req.path.startsWith('/meta-webhook') ||
+    req.path.startsWith('/whatsapp-webhook') ||
+    req.path.startsWith('/gupshup-webhook') ||
     req.path.startsWith('/api/barber-panel') ||
     req.path.startsWith('/app') ||
     req.path.startsWith('/health') ||
@@ -86,7 +88,9 @@ app.use('/clientes', clientesRoutes);
 app.use('/health', healthRoutes);
 app.use('/metrics', metricsRoutes);
 app.use('/stats', statsRoutes);
-app.use('/meta-webhook', metaWebhookRoutes);
+app.use('/meta-webhook', whatsappWebhookRoutes); // legado
+app.use('/whatsapp-webhook', whatsappWebhookRoutes); // recomendado
+app.use('/gupshup-webhook', whatsappWebhookRoutes); // alias util para onboarding
 app.use('/api/barber-panel', barberPanelRoutes);
 app.use('/app', express.static(path.join(__dirname, 'public', 'app')));
 

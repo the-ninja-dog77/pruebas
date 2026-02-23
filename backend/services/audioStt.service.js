@@ -191,17 +191,22 @@ async function fetchMediaMetadata({
   };
 }
 
-async function downloadMediaBuffer({ mediaUrl, accessToken, runtime }) {
+async function downloadMediaBuffer({ mediaUrl, accessToken, runtime, requestHeaders }) {
   let retries = 0;
   while (retries <= runtime.downloadRetries) {
     try {
+      const headers = {};
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+      if (requestHeaders && typeof requestHeaders === 'object') {
+        Object.assign(headers, requestHeaders);
+      }
       const response = await withTimeout(
         signal =>
           fetch(mediaUrl, {
             method: 'GET',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-            },
+            headers,
             signal,
           }),
         runtime.downloadTimeoutMs
@@ -433,6 +438,75 @@ async function transcribeFromWhatsAppMedia({
   }
 }
 
+async function transcribeFromMediaUrl({
+  mediaUrl,
+  accessToken,
+  requestHeaders,
+  mimeTypeHint,
+  filenameHint,
+  retryProfile,
+}) {
+  try {
+    const runtime = resolveRuntimeProfile(retryProfile);
+    if (!mediaUrl) {
+      return {
+        ok: false,
+        reason: 'missing_media_url',
+        failureType: 'audio',
+      };
+    }
+
+    const downloaded = await downloadMediaBuffer({
+      mediaUrl,
+      accessToken,
+      requestHeaders,
+      runtime,
+    });
+    if (!downloaded.ok) {
+      return {
+        ok: false,
+        reason: downloaded.reason || 'audio_pipeline_error',
+        failureType: downloaded.reason === 'media_timeout' ? 'timing' : 'audio',
+        retries: Number(downloaded.retries || 0),
+      };
+    }
+
+    const mimeType = mimeTypeHint || downloaded.contentType || 'audio/ogg';
+    const filename = filenameHint || 'audio.ogg';
+    const sizeBytes = downloaded.buffer.length;
+
+    if (STT_PROVIDER !== 'groq') {
+      return {
+        ok: false,
+        reason: 'stt_provider_not_supported',
+        failureType: 'stt',
+      };
+    }
+
+    const transcript = await transcribeWithGroq({
+      buffer: downloaded.buffer,
+      mimeType,
+      filename,
+      runtime,
+    });
+
+    return {
+      ...transcript,
+      sizeBytes,
+      mimeType,
+      retries: Number(transcript.retries || 0) + Number(downloaded.retries || 0),
+    };
+  } catch (err) {
+    logger.error(`AUDIO media-url pipeline failed: ${err.stack || err.message}`);
+    return {
+      ok: false,
+      reason: 'audio_pipeline_error',
+      failureType: 'audio',
+    };
+  }
+}
+
 module.exports = {
   transcribeFromWhatsAppMedia,
+  transcribeFromMediaUrl,
 };

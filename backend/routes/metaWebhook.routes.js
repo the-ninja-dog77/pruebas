@@ -11,6 +11,17 @@ const audioMetrics = require('../services/audioObservability.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
+const WHATSAPP_PROVIDER =
+  String(process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase() === 'gupshup'
+    ? 'gupshup'
+    : 'meta';
+const GUPSHUP_BASE_URL = String(process.env.GUPSHUP_BASE_URL || 'https://api.gupshup.io').replace(
+  /\/+$/,
+  ''
+);
+const GUPSHUP_API_KEY = String(process.env.GUPSHUP_API_KEY || '').trim();
+const GUPSHUP_SOURCE = String(process.env.GUPSHUP_SOURCE || '').trim();
+const GUPSHUP_APP_NAME = String(process.env.GUPSHUP_APP_NAME || '').trim();
 const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
 const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
 const SESSION_TTL_MS = Number(process.env.WHATSAPP_SESSION_TTL_MS || 30 * 60 * 1000);
@@ -25,9 +36,11 @@ const SIGNATURE_MAX_SKEW_SEC = Number(
 );
 
 logger.info(
-  `WHATSAPP config loaded graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
+  `WHATSAPP config loaded provider=${WHATSAPP_PROVIDER} graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
     process.env.WHATSAPP_PHONE_NUMBER_ID
-  )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} aiEnabled=${aiAssistant.isEnabled()}`
+  )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} gupshupSourceSet=${Boolean(
+    GUPSHUP_SOURCE
+  )} gupshupKeySet=${Boolean(GUPSHUP_API_KEY)} aiEnabled=${aiAssistant.isEnabled()}`
 );
 
 const sessions = new Map();
@@ -126,7 +139,98 @@ function cleanupMapByTtl(map, ttlMs) {
 function parseInboundTimestampSeconds(rawValue) {
   const value = Number(rawValue);
   if (!Number.isFinite(value) || value <= 0) return null;
+  if (value > 1e12) return Math.floor(value / 1000);
   return Math.floor(value);
+}
+
+function parseIncomingMeta(body) {
+  const value = body?.entry?.[0]?.changes?.[0]?.value;
+  return {
+    value,
+    incoming: value?.messages?.[0] || null,
+  };
+}
+
+const GUPSHUP_MESSAGE_TYPES = new Set([
+  'text',
+  'audio',
+  'image',
+  'video',
+  'file',
+  'document',
+  'location',
+  'button',
+  'interactive',
+  'list_reply',
+  'button_reply',
+]);
+
+function parseIncomingGupshup(body) {
+  const root = body || {};
+  const payload = root?.payload || {};
+  const payloadType = String(payload?.type || root?.type || '')
+    .trim()
+    .toLowerCase();
+
+  if (!GUPSHUP_MESSAGE_TYPES.has(payloadType)) {
+    return {
+      value: null,
+      incoming: null,
+    };
+  }
+
+  const source = String(payload?.source || payload?.sender?.phone || root?.source || '').trim();
+  const messageId = String(payload?.id || root?.messageId || root?.id || '').trim();
+  const tsRaw = payload?.timestamp || root?.timestamp;
+  const tsSeconds = parseInboundTimestampSeconds(tsRaw);
+
+  const textBody = String(
+    payload?.payload?.text ||
+      payload?.text ||
+      payload?.payload?.title ||
+      payload?.payload?.body ||
+      ''
+  ).trim();
+
+  const audioUrl = String(payload?.payload?.url || payload?.url || '').trim();
+  const audioId = String(payload?.payload?.id || payload?.id || '').trim();
+  const audioMime = String(
+    payload?.payload?.contentType || payload?.contentType || payload?.payload?.mime_type || ''
+  ).trim();
+  const audioDuration = Number(
+    payload?.payload?.duration || payload?.duration || payload?.payload?.duration_sec
+  );
+
+  const incomingType = payloadType || (audioUrl ? 'audio' : 'text');
+  const incoming = {
+    id: messageId || undefined,
+    from: source || undefined,
+    type: incomingType,
+    timestamp: tsSeconds || undefined,
+  };
+
+  if (incomingType === 'audio') {
+    incoming.audio = {
+      id: audioId || undefined,
+      mime_type: audioMime || undefined,
+      media_url: audioUrl || undefined,
+      duration_sec: Number.isFinite(audioDuration) ? audioDuration : undefined,
+    };
+  } else {
+    incoming.text = { body: textBody };
+  }
+
+  return {
+    value: payload,
+    incoming,
+  };
+}
+
+function parseIncomingByProvider(body) {
+  if (WHATSAPP_PROVIDER === 'gupshup') {
+    return parseIncomingGupshup(body);
+  }
+  return parseIncomingMeta(body);
 }
 
 function isStaleInboundEvent(tsSeconds) {
@@ -230,6 +334,119 @@ function validateMetaSignature(req) {
   }
 
   return { ok: true, reason: 'ok' };
+}
+
+function validateInboundSignature(req) {
+  if (WHATSAPP_PROVIDER === 'gupshup') {
+    return { ok: true, reason: 'provider_no_signature_validation' };
+  }
+  return validateMetaSignature(req);
+}
+
+function getOutboundConfigError() {
+  if (WHATSAPP_PROVIDER === 'gupshup') {
+    if (!GUPSHUP_API_KEY || !GUPSHUP_SOURCE) {
+      return 'GUPSHUP_API_KEY o GUPSHUP_SOURCE no configurados; no se puede responder.';
+    }
+    return null;
+  }
+
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_TOKEN;
+  if (!phoneNumberId || !accessToken) {
+    return 'WHATSAPP_PHONE_NUMBER_ID o WHATSAPP_TOKEN no configurados; no se puede responder.';
+  }
+  return null;
+}
+
+async function sendMetaTextMessage(to, text) {
+  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
+  const accessToken = process.env.WHATSAPP_TOKEN;
+  const body = {
+    messaging_product: 'whatsapp',
+    to,
+    type: 'text',
+    text: { body: text },
+  };
+
+  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      bodyText: await response.text(),
+    };
+  }
+
+  return {
+    ok: true,
+    status: response.status,
+    payload: await response.json(),
+  };
+}
+
+async function sendGupshupTextMessage(to, text) {
+  const body = new URLSearchParams();
+  body.set('channel', 'whatsapp');
+  body.set('source', GUPSHUP_SOURCE);
+  body.set('destination', to);
+  body.set(
+    'message',
+    JSON.stringify({
+      type: 'text',
+      text,
+    })
+  );
+  if (GUPSHUP_APP_NAME) {
+    body.set('src.name', GUPSHUP_APP_NAME);
+  }
+
+  const url = `${GUPSHUP_BASE_URL}/wa/api/v1/msg`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      apikey: GUPSHUP_API_KEY,
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: body.toString(),
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false,
+      status: response.status,
+      bodyText: await response.text(),
+    };
+  }
+
+  let payload = null;
+  try {
+    payload = await response.json();
+  } catch (_err) {
+    payload = { status: 'accepted' };
+  }
+
+  return {
+    ok: true,
+    status: response.status,
+    payload,
+  };
+}
+
+async function sendTextMessage(to, text) {
+  if (WHATSAPP_PROVIDER === 'gupshup') {
+    return sendGupshupTextMessage(to, text);
+  }
+  return sendMetaTextMessage(to, text);
 }
 
 function markMessageProcessing(messageId) {
@@ -1426,16 +1643,21 @@ router.get('/', (req, res) => {
   const token = req.query['hub.verify_token'];
   const challenge = req.query['hub.challenge'];
 
-  if (mode && token === VERIFY_TOKEN) {
-    return res.status(200).send(challenge);
+  if (mode) {
+    if (token === VERIFY_TOKEN) {
+      return res.status(200).send(challenge);
+    }
+    return res.sendStatus(403);
   }
-  return res.sendStatus(403);
+
+  // Compatibilidad con validadores de webhook (ej: Gupshup) que hacen un GET simple.
+  return res.status(200).json({ ok: true, provider: WHATSAPP_PROVIDER });
 });
 
 router.post('/', async (req, res) => {
   try {
     const debugMode = req.headers['x-webhook-debug'] === '1';
-    const signature = validateMetaSignature(req);
+    const signature = validateInboundSignature(req);
     if (!signature.ok) {
       logger.warn(`WHATSAPP signature rejected reason=${signature.reason}`);
       if (debugMode) {
@@ -1454,8 +1676,8 @@ router.post('/', async (req, res) => {
       return res.sendStatus(200);
     }
 
-    const value = req.body?.entry?.[0]?.changes?.[0]?.value;
-    const incoming = value?.messages?.[0];
+    const parsedIncoming = parseIncomingByProvider(req.body);
+    const incoming = parsedIncoming.incoming;
 
     if (!incoming) {
       if (debugMode) {
@@ -1533,19 +1755,19 @@ router.post('/', async (req, res) => {
     markMessageProcessing(dedupeId);
     rememberInboundTimestamp(from, inboundTimestamp);
 
-    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-    const accessToken = process.env.WHATSAPP_TOKEN;
-
-    if (!phoneNumberId || !accessToken) {
-      const msg =
-        'WHATSAPP_PHONE_NUMBER_ID o WHATSAPP_TOKEN no configurados; no se puede responder.';
+    const outboundConfigError = getOutboundConfigError();
+    if (outboundConfigError) {
+      const msg = outboundConfigError;
       logger.error(msg);
       if (debugMode) {
         return res.status(500).json({
           ok: false,
           error: msg,
-          phoneNumberIdSet: Boolean(phoneNumberId),
-          tokenSet: Boolean(accessToken),
+          provider: WHATSAPP_PROVIDER,
+          phoneNumberIdSet: Boolean(process.env.WHATSAPP_PHONE_NUMBER_ID),
+          tokenSet: Boolean(process.env.WHATSAPP_TOKEN),
+          gupshupSourceSet: Boolean(GUPSHUP_SOURCE),
+          gupshupKeySet: Boolean(GUPSHUP_API_KEY),
           graphVersion: GRAPH_VERSION,
         });
       }
@@ -1559,10 +1781,11 @@ router.post('/', async (req, res) => {
       audioResult = await audioPipeline.processAudioMessage({
         incoming,
         from,
-        accessToken,
+        accessToken: process.env.WHATSAPP_TOKEN,
         graphVersion: GRAPH_VERSION,
-        phoneNumberId,
+        phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
         buildReply,
+        provider: WHATSAPP_PROVIDER,
       });
       replyText = String(audioResult?.reply || '').trim();
     } else {
@@ -1573,50 +1796,35 @@ router.post('/', async (req, res) => {
       replyText = 'No pude procesar tu mensaje. Proba de nuevo en unos minutos.';
     }
 
-    const body = {
-      messaging_product: 'whatsapp',
-      to: from,
-      type: 'text',
-      text: { body: replyText },
-    };
-
-    const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errText = await response.text();
-      logger.error(`WHATSAPP send failed status=${response.status} body=${errText}`);
+    const outbound = await sendTextMessage(from, replyText);
+    if (!outbound.ok) {
+      logger.error(`WHATSAPP send failed provider=${WHATSAPP_PROVIDER} status=${outbound.status} body=${outbound.bodyText}`);
       markMessageProcessedError(dedupeId);
       if (debugMode) {
-        return res.status(response.status).json({
+        return res.status(outbound.status).json({
           ok: false,
-          graphStatus: response.status,
-          graphBody: errText,
+          provider: WHATSAPP_PROVIDER,
+          graphStatus: outbound.status,
+          graphBody: outbound.bodyText,
         });
       }
       return res.sendStatus(200);
     }
 
-    const data = await response.json();
+    const data = outbound.payload || {};
     logger.info(`WHATSAPP outbound ok messageId=${data.messages?.[0]?.id || 'n/a'}`);
     markMessageProcessed(dedupeId);
     if (debugMode) {
       return res.status(200).json({
         ok: true,
+        provider: WHATSAPP_PROVIDER,
         outbound: data,
         audio: audioResult,
       });
     }
     return res.sendStatus(200);
   } catch (err) {
-    const incoming = req.body?.entry?.[0]?.changes?.[0]?.value?.messages?.[0];
+    const incoming = parseIncomingByProvider(req.body).incoming;
     if (incoming?.id) {
       markMessageProcessedError(String(incoming.id));
     }
