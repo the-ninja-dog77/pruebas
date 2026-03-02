@@ -6,9 +6,9 @@ function getDaySummary({ barberId, fecha, hora }) {
       `
       SELECT
         COUNT(*) AS totalTurnos,
-        SUM(CASE WHEN hora < ? THEN 1 ELSE 0 END) AS atendidosHoy,
+        SUM(CASE WHEN completado = 1 THEN 1 ELSE 0 END) AS atendidosHoy,
         SUM(CASE WHEN hora >= ? THEN 1 ELSE 0 END) AS pendientesHoy,
-        COALESCE(SUM(total), 0) AS ingresosHoy
+        COALESCE(SUM(CASE WHEN completado = 1 THEN total ELSE 0 END), 0) AS ingresosHoy
       FROM turnos
       WHERE barber_id = ? AND fecha = ?
       `
@@ -50,7 +50,9 @@ function getTurnosByDay({ barberId, fecha }) {
   return db
     .prepare(
       `
-      SELECT id, cliente, servicio, fecha, hora, origen, precio, total, metodo_pago
+      SELECT
+        id, cliente, servicio, fecha, hora, origen, precio, total, metodo_pago,
+        completado, completado_at
       FROM turnos
       WHERE barber_id = ? AND fecha = ?
       ORDER BY hora ASC
@@ -59,9 +61,27 @@ function getTurnosByDay({ barberId, fecha }) {
     .all(barberId, fecha);
 }
 
+function getTurnosByRange({ barberId, fromDate, toDate }) {
+  return db
+    .prepare(
+      `
+      SELECT
+        id, cliente, servicio, fecha, hora, origen, precio, total, metodo_pago,
+        completado, completado_at
+      FROM turnos
+      WHERE barber_id = ?
+        AND fecha >= ?
+        AND fecha <= ?
+      ORDER BY fecha ASC, hora ASC
+      `
+    )
+    .all(barberId, fromDate, toDate);
+}
+
 module.exports = {
   getDaySummary,
   getNextTurno,
   getMonthCounts,
   getTurnosByDay,
+  getTurnosByRange,
 };

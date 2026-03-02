@@ -28,6 +28,19 @@ function getNextOpenDate() {
   throw new Error('No se encontro una fecha abierta para el test');
 }
 
+function getRecentOpenDateInCurrentWeek() {
+  const now = new Date();
+  for (let i = 0; i <= 6; i += 1) {
+    const current = new Date(now);
+    current.setDate(now.getDate() - i);
+    const fecha = isoDate(current);
+    if (businessHours.getSlotsForDate(fecha).length > 0) {
+      return fecha;
+    }
+  }
+  return getNextOpenDate();
+}
+
 describe('Barber panel', () => {
   let token;
 
@@ -113,5 +126,41 @@ describe('Barber panel', () => {
     expect(dayAfter.statusCode).toBe(200);
     expect(dayAfter.body.agenda.some(t => t.id === create.body.id)).toBe(false);
     expect(dayAfter.body.disponibles.includes(hora)).toBe(true);
+  });
+
+  test('confirma turno completado y lo refleja en balance semanal', async () => {
+    const fecha = getRecentOpenDateInCurrentWeek();
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(day.statusCode).toBe(200);
+    expect(day.body.disponibles.length).toBeGreaterThan(0);
+
+    const hora = day.body.disponibles[0];
+    const create = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 40000,
+      });
+    expect(create.statusCode).toBe(201);
+
+    const complete = await request(app)
+      .post(`/api/barber-panel/turnos/${create.body.id}/complete`)
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(complete.statusCode).toBe(200);
+    expect(Number(complete.body.completado)).toBe(1);
+
+    const balance = await request(app)
+      .get('/api/barber-panel/balance?range=week')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(balance.statusCode).toBe(200);
+    expect(Number(balance.body.confirmedTurnos)).toBeGreaterThan(0);
+    expect(Number(balance.body.amount)).toBeGreaterThanOrEqual(40000);
   });
 });

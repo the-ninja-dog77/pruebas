@@ -161,6 +161,56 @@
             <button id="saveBotBtn" class="btn-primary">Guardar estado</button>
             <p id="botStateLabel" class="state-label"></p>
           </div>
+          <div class="card bot-card">
+            <p>Activa notificaciones para enterarte cuando entra un turno nuevo.</p>
+            <button id="enableNotificationsBtn" class="ghost-btn" type="button">
+              Activar notificaciones
+            </button>
+            <p id="notificationStatusLabel" class="state-label"></p>
+          </div>
+        </article>
+
+        <article class="slide">
+          <div class="section-head">
+            <h3>Balance</h3>
+            <div class="month-controls">
+              <button id="balanceWeekBtn" class="icon-btn" type="button">Semana</button>
+              <button id="balanceMonthBtn" class="icon-btn" type="button">Mes</button>
+            </div>
+          </div>
+          <div class="card balance-card">
+            <div class="money-ball-wrap">
+              <div id="moneyBall" class="money-ball">
+                <div id="moneyBallFill" class="money-ball-fill"></div>
+                <strong id="balanceAmountValue">0</strong>
+                <small id="balanceProgressValue">0%</small>
+              </div>
+            </div>
+            <div class="balance-grid">
+              <div class="metric-card">
+                <span>Servicios confirmados</span>
+                <strong id="balanceConfirmedValue">0</strong>
+              </div>
+              <div class="metric-card">
+                <span>Meta</span>
+                <strong id="balanceGoalValue">0</strong>
+              </div>
+            </div>
+            <form id="balanceGoalForm" class="create-turno-form">
+              <label>
+                Ajustar meta de ingresos
+                <input
+                  id="balanceGoalInput"
+                  type="number"
+                  min="1"
+                  step="10000"
+                  placeholder="Ej: 3000000"
+                />
+              </label>
+              <button class="btn-primary" type="submit">Guardar meta</button>
+              <small id="balanceFeedback" class="create-feedback"></small>
+            </form>
+          </div>
         </article>
       </section>
 
@@ -168,7 +218,19 @@
         <button class="nav-btn active" data-slide="0">Resumen</button>
         <button class="nav-btn" data-slide="1">Calendario</button>
         <button class="nav-btn" data-slide="2">Bot</button>
+        <button class="nav-btn" data-slide="3">Balance</button>
       </nav>
+      <section id="toastStack" class="toast-stack" aria-live="polite" aria-atomic="true"></section>
+      <section id="completionModal" class="completion-modal hidden" aria-hidden="true">
+        <div class="completion-modal-card">
+          <h4>Confirmacion de servicio</h4>
+          <p id="completionModalText"></p>
+          <div class="create-turno-actions">
+            <button id="completionYesBtn" class="btn-primary" type="button">Si, termine</button>
+            <button id="completionNoBtn" class="ghost-btn" type="button">No todavia</button>
+          </div>
+        </div>
+      </section>
     </main>
 
     <script src="./app.js"></script>

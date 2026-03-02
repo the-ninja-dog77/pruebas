@@ -76,14 +76,6 @@ function getPendientesRecordatorio() {
     .all();
 }
 
-function marcarRecordatorioEnviado(id) {
-  return db
-    .prepare(
-      'UPDATE turnos SET recordatorioEnviado = 1, esperandoRespuesta = 1 WHERE id = ?'
-    )
-    .run(id);
-}
-
 function getRecordatorioActivoPorCliente(clienteId) {
   return db
     .prepare(
@@ -96,6 +88,23 @@ function clearEsperandoRespuesta(id) {
   return db
     .prepare('UPDATE turnos SET esperandoRespuesta = 0 WHERE id = ?')
     .run(id);
+}
+
+function marcarRecordatorioEnviado(id, options = {}) {
+  const esperandoRespuesta = options.esperandoRespuesta !== false ? 1 : 0;
+  return db
+    .prepare(
+      'UPDATE turnos SET recordatorioEnviado = 1, esperandoRespuesta = ? WHERE id = ?'
+    )
+    .run(esperandoRespuesta, id);
+}
+
+function marcarCompletado(id) {
+  return db
+    .prepare(
+      'UPDATE turnos SET completado = 1, completado_at = ? WHERE id = ?'
+    )
+    .run(new Date().toISOString(), id);
 }
 
 module.exports = {
@@ -112,4 +121,5 @@ module.exports = {
   marcarRecordatorioEnviado,
   getRecordatorioActivoPorCliente,
   clearEsperandoRespuesta,
+  marcarCompletado,
 };

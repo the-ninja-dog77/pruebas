@@ -1,4 +1,6 @@
 const request = require('supertest');
+const db = require('../database');
+const turnosRepo = require('../repositories/turnos.repository');
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'zzeta_super_secreto';
@@ -28,6 +30,7 @@ describe('WhatsApp webhook conversation flow', () => {
 
   beforeEach(() => {
     outboundMessages.length = 0;
+    db.prepare('DELETE FROM turnos').run();
   });
 
   afterAll(() => {
@@ -385,6 +388,76 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(day.statusCode).toBe(200);
     const exists = day.body.agenda.some(t => t.hora === '13:00' && t.cliente === 'Mario Lopez');
     expect(exists).toBe(false);
+  });
+
+  test('handles reminder confirmation with colloquial response', async () => {
+    const from = '595985544431';
+    const fecha = '2099-12-29';
+    const sequenceCreate = [
+      'turno',
+      'corte',
+      fecha,
+      '10:00',
+      'Pedro Ruiz',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of sequenceCreate) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const created = turnosRepo
+      .getByFecha(fecha, 1)
+      .find(t => t.cliente_id === from && t.hora === '10:00');
+    expect(Boolean(created)).toBe(true);
+    turnosRepo.marcarRecordatorioEnviado(created.id, { esperandoRespuesta: true });
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('dale rey voy a asistir', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('te esperamos');
+  });
+
+  test('handles reminder cancellation quickly', async () => {
+    const from = '595985544432';
+    const fecha = '2099-12-28';
+    const sequenceCreate = [
+      'turno',
+      'corte',
+      fecha,
+      '11:00',
+      'Lucas Perez',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of sequenceCreate) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const created = turnosRepo
+      .getByFecha(fecha, 1)
+      .find(t => t.cliente_id === from && t.hora === '11:00');
+    expect(Boolean(created)).toBe(true);
+    turnosRepo.marcarRecordatorioEnviado(created.id, { esperandoRespuesta: true });
+
+    const cancel = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('no voy a poder ir, cancelar', from));
+    expect(cancel.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('cancele tu turno');
   });
 
   test('reschedules booking by name and date via WhatsApp', async () => {

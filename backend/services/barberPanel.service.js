@@ -15,10 +15,72 @@ function nowLocalParts() {
   return { fecha, hora };
 }
 
+const COMPLETION_PROMPT_MINUTES = Number(process.env.BARBER_COMPLETION_PROMPT_MINUTES || 10);
+const DEFAULT_BALANCE_GOAL = Number(process.env.DEFAULT_BALANCE_GOAL || 2000000);
+
+function toLocalDateTime(fecha, hora) {
+  return new Date(`${fecha}T${hora}:00`);
+}
+
+function getBalanceGoalKey(barberId) {
+  return `balance_goal_barber_${barberId}`;
+}
+
+function getDateRange(range) {
+  const now = new Date();
+  const end = nowLocalParts().fecha;
+  if (range === 'month') {
+    const from = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
+    return { from, to: end, range: 'month' };
+  }
+
+  const day = now.getDay(); // 0=domingo
+  const diffToMonday = (day + 6) % 7;
+  const start = new Date(now);
+  start.setDate(now.getDate() - diffToMonday);
+  const from = `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(start.getDate())}`;
+  return { from, to: end, range: 'week' };
+}
+
+function parseGoalValue(value, fallback = DEFAULT_BALANCE_GOAL) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n <= 0) return Number(fallback);
+  return Math.round(n);
+}
+
+function buildCompletionPrompt({ agendaHoy, nextTurno, now }) {
+  if (!nextTurno) return null;
+  const nextStart = toLocalDateTime(nextTurno.fecha, nextTurno.hora);
+  const diffToNext = Math.floor((nextStart - now) / 60000);
+  if (diffToNext < 0 || diffToNext > COMPLETION_PROMPT_MINUTES) return null;
+
+  const nextIndex = agendaHoy.findIndex(t => Number(t.id) === Number(nextTurno.id));
+  if (nextIndex <= 0) return null;
+  const previousTurno = agendaHoy[nextIndex - 1];
+  if (!previousTurno) return null;
+  if (Number(previousTurno.completado || 0) === 1) return null;
+
+  return {
+    turnoId: previousTurno.id,
+    cliente: previousTurno.cliente,
+    servicio: previousTurno.servicio,
+    fecha: previousTurno.fecha,
+    hora: previousTurno.hora,
+    total: Number(previousTurno.total || 0),
+    minutesToNext: diffToNext,
+  };
+}
+
 function getSummary(barberId) {
   const { fecha, hora } = nowLocalParts();
   const summary = barberPanelRepo.getDaySummary({ barberId, fecha, hora }) || {};
   const nextTurno = barberPanelRepo.getNextTurno({ barberId, fecha, hora }) || null;
+  const agendaHoy = barberPanelRepo.getTurnosByDay({ barberId, fecha });
+  const completionPrompt = buildCompletionPrompt({
+    agendaHoy,
+    nextTurno,
+    now: toLocalDateTime(fecha, hora),
+  });
 
   return {
     fecha,
@@ -27,6 +89,7 @@ function getSummary(barberId) {
     pendientesHoy: Number(summary.pendientesHoy || 0),
     ingresosHoy: Number(summary.ingresosHoy || 0),
     proximoTurno: nextTurno,
+    completionPrompt,
   };
 }
 
@@ -153,6 +216,45 @@ function removeDayTurno({ barberId, fecha, id, user }) {
   };
 }
 
+function getBalance({ barberId, range }) {
+  const dateRange = getDateRange(range);
+  const rows = barberPanelRepo.getTurnosByRange({
+    barberId,
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
+  });
+  const completados = rows.filter(r => Number(r.completado || 0) === 1);
+  const amount = completados.reduce((acc, r) => acc + Number(r.total || 0), 0);
+  const goal = parseGoalValue(settingsRepo.getValue(getBalanceGoalKey(barberId)));
+  const progress = goal > 0 ? Math.min(100, (amount / goal) * 100) : 0;
+
+  return {
+    range: dateRange.range,
+    from: dateRange.from,
+    to: dateRange.to,
+    confirmedTurnos: completados.length,
+    amount,
+    goal,
+    progressPercent: Number(progress.toFixed(2)),
+  };
+}
+
+function updateBalanceGoal({ barberId, amount }) {
+  const parsed = parseGoalValue(amount);
+  settingsRepo.setValue(getBalanceGoalKey(barberId), String(parsed));
+  return {
+    barberId,
+    goal: parsed,
+  };
+}
+
+function confirmTurnoCompleted({ barberId, turnoId }) {
+  return turnosService.confirmarTurnoCompletado({
+    id: Number(turnoId),
+    barber_id: Number(barberId),
+  });
+}
+
 function getBotStatus() {
   return { enabled: settingsRepo.getBoolean('bot_enabled', true) };
 }
@@ -168,6 +270,9 @@ module.exports = {
   getDay,
   createDayTurno,
   removeDayTurno,
+  getBalance,
+  updateBalanceGoal,
+  confirmTurnoCompleted,
   getBotStatus,
   updateBotStatus,
 };

@@ -104,12 +104,62 @@ function updateBotStatus(req, res, next) {
   }
 }
 
+function getBalance(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const range = String(req.query.range || 'week').toLowerCase();
+    if (!['week', 'month'].includes(range)) {
+      return res.status(400).json({ message: 'range debe ser week o month' });
+    }
+
+    res.json(barberPanelService.getBalance({ barberId, range }));
+  } catch (err) {
+    next(err);
+  }
+}
+
+function updateBalanceGoal(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const amount = Number(req.body?.amount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return res.status(400).json({ message: 'amount debe ser un numero positivo' });
+    }
+
+    res.json(barberPanelService.updateBalanceGoal({ barberId, amount }));
+  } catch (err) {
+    next(err);
+  }
+}
+
+function confirmTurnoCompleted(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const turnoId = Number(req.params.id);
+    if (!Number.isInteger(turnoId) || turnoId <= 0) {
+      return res.status(400).json({ message: 'ID de turno invalido' });
+    }
+
+    res.json(
+      barberPanelService.confirmTurnoCompleted({
+        barberId,
+        turnoId,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   getSummary,
   getCalendar,
   getDay,
   createDayTurno,
   removeDayTurno,
+  getBalance,
+  updateBalanceGoal,
+  confirmTurnoCompleted,
   getBotStatus,
   updateBotStatus,
 };

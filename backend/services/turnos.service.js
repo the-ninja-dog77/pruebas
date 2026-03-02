@@ -2,6 +2,11 @@ const turnosRepo = require('../repositories/turnos.repository');
 const clientesRepo = require('../repositories/clientes.repository');
 const businessHours = require('./businessHours.service');
 const businessTime = require('./businessTime.service');
+const whatsappSender = require('./whatsappSender.service');
+
+const TURNO_CLIENT_REMINDER_MINUTES = Number(
+  process.env.TURNO_CLIENT_REMINDER_MINUTES || 15
+);
 
 function obtenerTodos(user) {
   if (user.role === 'admin') {
@@ -382,21 +387,82 @@ function responderRecordatorio({ id, accion, cliente_id }) {
   throw error;
 }
 
+function confirmarTurnoCompletado({ id, barber_id }) {
+  const turno = turnosRepo.getById(id);
+  if (!turno || Number(turno.barber_id) !== Number(barber_id)) {
+    const error = new Error('Turno no encontrado');
+    error.status = 404;
+    throw error;
+  }
+
+  if (Number(turno.completado || 0) === 1) {
+    return turno;
+  }
+
+  turnosRepo.marcarCompletado(id);
+  return turnosRepo.getById(id);
+}
+
+function shouldSendReminder(turno, ahora) {
+  if (!turno || Number(turno.recordatorioEnviado || 0) === 1) return false;
+  if (!turno.fecha || !turno.hora) return false;
+  const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}:00`);
+  if (!Number.isFinite(fechaHoraTurno.getTime())) return false;
+
+  const diffMin = Math.floor((fechaHoraTurno - ahora) / 60000);
+  return diffMin <= TURNO_CLIENT_REMINDER_MINUTES && diffMin >= 0;
+}
+
+function getDiffMinutesToTurno(turno, ahora) {
+  if (!turno?.fecha || !turno?.hora) return null;
+  const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}:00`);
+  if (!Number.isFinite(fechaHoraTurno.getTime())) return null;
+  return Math.floor((fechaHoraTurno - ahora) / 60000);
+}
+
+function isWhatsappClientId(clienteId) {
+  const value = String(clienteId || '');
+  if (!value) return false;
+  return /^[0-9]{8,15}$/.test(value);
+}
+
+function buildClientReminderText(turno) {
+  return `Recordatorio ZZETA: tu turno de ${turno.servicio} es hoy ${turno.fecha} a las ${turno.hora}. Responde 1 (si voy) para mantenerlo o 2 (no voy/cancelar) para liberarlo y evitar demoras.`;
+}
+
 function iniciarRecordatorios(logger) {
   setInterval(() => {
     const ahora = new Date();
     const pendientes = turnosRepo.getPendientesRecordatorio();
 
-    pendientes.forEach(turno => {
-      const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}:00`);
-      const diffMin = Math.floor((fechaHoraTurno - ahora) / 60000);
-
-      if (diffMin === 15) {
-        turnosRepo.marcarRecordatorioEnviado(turno.id);
-        logger.info(
-          `RECORDATORIO AUTOMATICO turno=${turno.id} hora=${turno.hora} servicio=${turno.servicio}`
-        );
+    pendientes.forEach(async turno => {
+      const diffMin = getDiffMinutesToTurno(turno, ahora);
+      if (diffMin === null) return;
+      if (diffMin < 0) {
+        turnosRepo.marcarRecordatorioEnviado(turno.id, { esperandoRespuesta: false });
+        return;
       }
+      if (!shouldSendReminder(turno, ahora)) return;
+
+      const recipient = String(turno.cliente_id || '').trim();
+      const canReply = isWhatsappClientId(recipient);
+      if (!canReply) {
+        turnosRepo.marcarRecordatorioEnviado(turno.id, { esperandoRespuesta: false });
+        return;
+      }
+
+      const outbound = await whatsappSender.sendSafe(
+        recipient,
+        buildClientReminderText(turno),
+        { kind: 'client_reminder', turnoId: turno.id }
+      );
+
+      if (!outbound.ok) return;
+
+      turnosRepo.marcarRecordatorioEnviado(turno.id, { esperandoRespuesta: true });
+      logger.info(
+        `RECORDATORIO AUTOMATICO turno=${turno.id} cliente=${recipient} hora=${turno.hora} servicio=${turno.servicio} diffMin=${diffMin}`
+      );
     });
   }, 60 * 1000);
 }
@@ -416,5 +482,6 @@ module.exports = {
   eliminarTurno,
   getRecordatorioActivo,
   responderRecordatorio,
+  confirmarTurnoCompletado,
   iniciarRecordatorios,
 };

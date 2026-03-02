@@ -13,6 +13,9 @@ router.get('/calendar', barberPanelController.getCalendar);
 router.get('/day/:fecha', barberPanelController.getDay);
 router.post('/day/:fecha/turnos', barberPanelController.createDayTurno);
 router.delete('/day/:fecha/turnos/:id', barberPanelController.removeDayTurno);
+router.post('/turnos/:id/complete', barberPanelController.confirmTurnoCompleted);
+router.get('/balance', barberPanelController.getBalance);
+router.patch('/balance-goal', barberPanelController.updateBalanceGoal);
 router.get('/bot-status', barberPanelController.getBotStatus);
 router.patch('/bot-status', barberPanelController.updateBotStatus);
 

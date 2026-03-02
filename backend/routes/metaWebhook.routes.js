@@ -8,6 +8,8 @@ const settingsRepo = require('../repositories/settings.repository');
 const aiAssistant = require('../services/aiAssistant.service');
 const audioPipeline = require('../services/audioPipeline.service');
 const audioMetrics = require('../services/audioObservability.service');
+const reminderIntentService = require('../services/reminderIntent.service');
+const whatsappSender = require('../services/whatsappSender.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
@@ -15,15 +17,12 @@ const WHATSAPP_PROVIDER =
   String(process.env.WHATSAPP_PROVIDER || 'meta').toLowerCase() === 'gupshup'
     ? 'gupshup'
     : 'meta';
-const GUPSHUP_BASE_URL = String(process.env.GUPSHUP_BASE_URL || 'https://api.gupshup.io').replace(
-  /\/+$/,
-  ''
-);
 const GUPSHUP_API_KEY = String(process.env.GUPSHUP_API_KEY || '').trim();
 const GUPSHUP_SOURCE = String(process.env.GUPSHUP_SOURCE || '').trim();
-const GUPSHUP_APP_NAME = String(process.env.GUPSHUP_APP_NAME || '').trim();
 const BOT_BARBER_ID = Number(process.env.BOT_BARBER_ID || 1);
 const BOT_MIN_LEAD_MINUTES = Number(process.env.BOT_MIN_LEAD_MINUTES || 0);
+const COMPACT_BOOKING_MODE =
+  String(process.env.WHATSAPP_COMPACT_MODE || 'false').toLowerCase() === 'true';
 const SESSION_TTL_MS = Number(process.env.WHATSAPP_SESSION_TTL_MS || 30 * 60 * 1000);
 const MESSAGE_DEDUPE_TTL_MS = Number(process.env.WHATSAPP_DEDUPE_TTL_MS || 10 * 60 * 1000);
 const MAX_EVENT_AGE_SEC = Number(process.env.WHATSAPP_MAX_EVENT_AGE_SEC || 60 * 60 * 24);
@@ -36,11 +35,16 @@ const SIGNATURE_MAX_SKEW_SEC = Number(
 );
 
 logger.info(
-  `WHATSAPP config loaded provider=${WHATSAPP_PROVIDER} graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} phoneNumberIdSet=${Boolean(
+  `WHATSAPP config loaded provider=${WHATSAPP_PROVIDER} graphVersion=${GRAPH_VERSION} botBarberId=${BOT_BARBER_ID} botMinLead=${BOT_MIN_LEAD_MINUTES} compactMode=${COMPACT_BOOKING_MODE} phoneNumberIdSet=${Boolean(
     process.env.WHATSAPP_PHONE_NUMBER_ID
   )} tokenSet=${Boolean(process.env.WHATSAPP_TOKEN)} gupshupSourceSet=${Boolean(
     GUPSHUP_SOURCE
   )} gupshupKeySet=${Boolean(GUPSHUP_API_KEY)} aiEnabled=${aiAssistant.isEnabled()}`
+);
+
+const reminderLexiconStats = reminderIntentService.getReminderLexiconStats();
+logger.info(
+  `WHATSAPP reminder lexicon loaded confirm=${reminderLexiconStats.confirmVariants} cancel=${reminderLexiconStats.cancelVariants} total=${reminderLexiconStats.totalVariants}`
 );
 
 const sessions = new Map();
@@ -115,6 +119,10 @@ function normalizeText(texto) {
     .trim();
 }
 
+function normalizePhone(value) {
+  return String(value || '').replace(/[^\d]/g, '');
+}
+
 function containsAny(texto, needles) {
   return needles.some(needle => texto.includes(needle));
 }
@@ -168,7 +176,8 @@ const GUPSHUP_MESSAGE_TYPES = new Set([
 function parseIncomingGupshup(body) {
   const root = body || {};
   const payload = root?.payload || {};
-  const payloadType = String(payload?.type || root?.type || '')
+  const payloadInner = payload?.payload || {};
+  const payloadType = String(payload?.type || payload?.payload?.type || root?.type || '')
     .trim()
     .toLowerCase();
 
@@ -179,26 +188,47 @@ function parseIncomingGupshup(body) {
     };
   }
 
-  const source = String(payload?.source || payload?.sender?.phone || root?.source || '').trim();
-  const messageId = String(payload?.id || root?.messageId || root?.id || '').trim();
-  const tsRaw = payload?.timestamp || root?.timestamp;
+  const source = String(
+    payload?.source ||
+      payload?.sender?.phone ||
+      payload?.sender?.id ||
+      payload?.phone ||
+      root?.source ||
+      ''
+  ).trim();
+  const messageId = String(
+    payload?.id ||
+      payload?.messageId ||
+      payload?.gsId ||
+      payload?.messageToken ||
+      root?.messageId ||
+      root?.id ||
+      ''
+  ).trim();
+  const tsRaw = payload?.timestamp || payload?.eventTs || root?.timestamp;
   const tsSeconds = parseInboundTimestampSeconds(tsRaw);
 
   const textBody = String(
-    payload?.payload?.text ||
+    payloadInner?.text ||
+      payloadInner?.body ||
+      payloadInner?.content ||
+      payloadInner?.title ||
       payload?.text ||
-      payload?.payload?.title ||
-      payload?.payload?.body ||
+      payload?.message ||
       ''
   ).trim();
 
-  const audioUrl = String(payload?.payload?.url || payload?.url || '').trim();
-  const audioId = String(payload?.payload?.id || payload?.id || '').trim();
+  const audioUrl = String(payloadInner?.url || payload?.url || '').trim();
+  const audioId = String(payloadInner?.id || payload?.id || '').trim();
   const audioMime = String(
-    payload?.payload?.contentType || payload?.contentType || payload?.payload?.mime_type || ''
+    payloadInner?.contentType ||
+      payload?.contentType ||
+      payloadInner?.mime_type ||
+      payloadInner?.mimeType ||
+      ''
   ).trim();
   const audioDuration = Number(
-    payload?.payload?.duration || payload?.duration || payload?.payload?.duration_sec
+    payloadInner?.duration || payload?.duration || payloadInner?.duration_sec
   );
 
   const incomingType = payloadType || (audioUrl ? 'audio' : 'text');
@@ -344,109 +374,7 @@ function validateInboundSignature(req) {
 }
 
 function getOutboundConfigError() {
-  if (WHATSAPP_PROVIDER === 'gupshup') {
-    if (!GUPSHUP_API_KEY || !GUPSHUP_SOURCE) {
-      return 'GUPSHUP_API_KEY o GUPSHUP_SOURCE no configurados; no se puede responder.';
-    }
-    return null;
-  }
-
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_TOKEN;
-  if (!phoneNumberId || !accessToken) {
-    return 'WHATSAPP_PHONE_NUMBER_ID o WHATSAPP_TOKEN no configurados; no se puede responder.';
-  }
-  return null;
-}
-
-async function sendMetaTextMessage(to, text) {
-  const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID;
-  const accessToken = process.env.WHATSAPP_TOKEN;
-  const body = {
-    messaging_product: 'whatsapp',
-    to,
-    type: 'text',
-    text: { body: text },
-  };
-
-  const url = `https://graph.facebook.com/${GRAPH_VERSION}/${phoneNumberId}/messages`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      status: response.status,
-      bodyText: await response.text(),
-    };
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    payload: await response.json(),
-  };
-}
-
-async function sendGupshupTextMessage(to, text) {
-  const body = new URLSearchParams();
-  body.set('channel', 'whatsapp');
-  body.set('source', GUPSHUP_SOURCE);
-  body.set('destination', to);
-  body.set(
-    'message',
-    JSON.stringify({
-      type: 'text',
-      text,
-    })
-  );
-  if (GUPSHUP_APP_NAME) {
-    body.set('src.name', GUPSHUP_APP_NAME);
-  }
-
-  const url = `${GUPSHUP_BASE_URL}/wa/api/v1/msg`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      apikey: GUPSHUP_API_KEY,
-      'Content-Type': 'application/x-www-form-urlencoded',
-    },
-    body: body.toString(),
-  });
-
-  if (!response.ok) {
-    return {
-      ok: false,
-      status: response.status,
-      bodyText: await response.text(),
-    };
-  }
-
-  let payload = null;
-  try {
-    payload = await response.json();
-  } catch (_err) {
-    payload = { status: 'accepted' };
-  }
-
-  return {
-    ok: true,
-    status: response.status,
-    payload,
-  };
-}
-
-async function sendTextMessage(to, text) {
-  if (WHATSAPP_PROVIDER === 'gupshup') {
-    return sendGupshupTextMessage(to, text);
-  }
-  return sendMetaTextMessage(to, text);
+  return whatsappSender.getOutboundConfigError();
 }
 
 function markMessageProcessing(messageId) {
@@ -479,15 +407,33 @@ function normalizeIntentText(texto) {
 }
 
 function isConfirmIntent(intentText) {
-  const positives = ['confirmar', 'confirmo', 'ok', 'dale', 'de una', 'listo', 'perfecto'];
+  const positives = [
+    'confirmar',
+    'confirmo',
+    'confirmado',
+    'ok',
+    'dale',
+    'de una',
+    'listo',
+    'perfecto',
+    'joya',
+    'si voy',
+    'asisto',
+    'voy a ir',
+  ];
   if (positives.some(p => intentText.includes(p))) return true;
 
-  return intentText === 'si' || intentText === 's';
+  return intentText === 'si' || intentText === 's' || intentText === '1';
 }
 
 function isNegativeConfirmIntent(intentText) {
   return (
     intentText === 'no' ||
+    intentText === '2' ||
+    intentText.includes('cancelar') ||
+    intentText.includes('anular') ||
+    intentText.includes('no voy') ||
+    intentText.includes('no puedo') ||
     intentText.includes('no quiero') ||
     intentText.includes('no deseo') ||
     intentText.includes('todavia no')
@@ -1022,7 +968,52 @@ function buildAvailabilityMessage(fecha) {
 }
 
 function buildSummaryMessage(draft) {
+  if (COMPACT_BOOKING_MODE) {
+    return `Resumen: ${draft.nombre}, ${draft.servicio}, ${draft.fecha} ${draft.hora}, pago ${draft.metodo_pago}. Responde "confirmar" para cerrar.`;
+  }
   return `Te resumo: ${draft.nombre}, ${draft.servicio}, ${draft.fecha} a las ${draft.hora}, pago ${draft.metodo_pago}. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde "confirmar".`;
+}
+
+function getMissingBookingFields(draft) {
+  const missing = [];
+  if (!draft?.servicio) missing.push('servicio');
+  if (!draft?.fecha) missing.push('fecha');
+  if (!draft?.hora) missing.push('hora');
+  if (!draft?.nombre) missing.push('nombre');
+  if (!draft?.metodo_pago) missing.push('metodo_pago');
+  return missing;
+}
+
+function buildCompactBookingPrompt(session) {
+  const missing = getMissingBookingFields(session?.draft || {});
+  if (!missing.length) {
+    return buildSummaryMessage(session.draft);
+  }
+
+  const labels = {
+    servicio: 'servicio',
+    fecha: 'fecha',
+    hora: 'hora',
+    nombre: 'nombre',
+    metodo_pago: 'metodo de pago',
+  };
+
+  const orderedMissing = missing.map(key => labels[key]);
+  const intro =
+    orderedMissing.length === 5
+      ? 'Para agendar rapido en menos mensajes, pasame en un solo mensaje:'
+      : 'Para completar la reserva, me falta:';
+
+  let response = `${intro} ${orderedMissing.join(', ')}.`;
+
+  if (session?.draft?.fecha && !session?.draft?.hora) {
+    response += ` ${buildAvailabilityMessage(session.draft.fecha)}`;
+  }
+
+  response +=
+    ' Ejemplo: "corte, 2026-03-10, 16:00, Juan Perez, efectivo". El pago se realiza despues del corte.';
+
+  return response;
 }
 
 function buildTemporalDisambiguationPrompt(pending, remind = false) {
@@ -1063,6 +1054,14 @@ function getProgressPrompt(session) {
 
   if (session.memory?.pendingTemporalDisambiguation) {
     return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation, true);
+  }
+
+  if (
+    COMPACT_BOOKING_MODE &&
+    !String(session.stage || '').startsWith('manage_') &&
+    session.stage !== 'awaiting_confirm'
+  ) {
+    return buildCompactBookingPrompt(session);
   }
 
   switch (session.stage) {
@@ -1133,6 +1132,47 @@ async function maybeAiFallback(texto, session) {
   return aiAssistant.generateReply(texto, session);
 }
 
+function isReminderCancelMessage(msg) {
+  return reminderIntentService.resolveReminderIntent(msg).intent === 'cancel';
+}
+
+function isReminderConfirmMessage(msg, intentText) {
+  const resolved = reminderIntentService.resolveReminderIntent(msg).intent;
+  if (resolved === 'cancel') return false;
+  if (resolved === 'confirm') return true;
+  return isConfirmIntent(intentText);
+}
+
+function tryHandleActiveReminderResponse(from, msg, intentText) {
+  const activeReminder = turnosService.getRecordatorioActivo(from);
+  if (!activeReminder) return null;
+  const reminderIntent = reminderIntentService.resolveReminderIntent(msg);
+  const resolvedIntent =
+    reminderIntent.intent === 'unknown' && isConfirmIntent(intentText)
+      ? 'confirm'
+      : reminderIntent.intent;
+
+  if (resolvedIntent === 'cancel') {
+    turnosService.responderRecordatorio({
+      id: activeReminder.id,
+      accion: 'cancelar',
+      cliente_id: from,
+    });
+    return `Entendido, cancele tu turno de ${activeReminder.fecha} a las ${activeReminder.hora}.`;
+  }
+
+  if (resolvedIntent === 'confirm' || isReminderConfirmMessage(msg, intentText)) {
+    turnosService.responderRecordatorio({
+      id: activeReminder.id,
+      accion: 'confirmar',
+      cliente_id: from,
+    });
+    return `Perfecto, te esperamos a las ${activeReminder.hora}.`;
+  }
+
+  return `Tu turno es ${activeReminder.fecha} a las ${activeReminder.hora}. Responde 1 (si voy) o 2 (no voy/cancelar).`;
+}
+
 async function buildReply(from, texto, _context = {}) {
   const msg = normalizeText(texto);
   let session = getSession(from);
@@ -1142,7 +1182,14 @@ async function buildReply(from, texto, _context = {}) {
   const rejectsConfirmation = isNegativeConfirmIntent(intentText);
 
   if (!msg) {
-    return 'Escribime que servicio, fecha y hora queres reservar.';
+    return COMPACT_BOOKING_MODE
+      ? buildCompactBookingPrompt(session)
+      : 'Escribime que servicio, fecha y hora queres reservar.';
+  }
+
+  const reminderReply = tryHandleActiveReminderResponse(from, msg, intentText);
+  if (reminderReply) {
+    return reminderReply;
   }
 
   const wantsManageCancelCommand =
@@ -1218,6 +1265,9 @@ async function buildReply(from, texto, _context = {}) {
     session = getSession(from);
     session.stage = 'collecting';
     touchSession(session);
+    if (COMPACT_BOOKING_MODE) {
+      return `Perfecto. Empecemos de nuevo. ${buildCompactBookingPrompt(session)}`;
+    }
     return 'Perfecto. Empecemos de nuevo. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)';
   }
 
@@ -1292,6 +1342,27 @@ async function buildReply(from, texto, _context = {}) {
   }
 
   applyDetections(session, msg);
+  if (!session.draft.nombre) {
+    const hasNameCue = containsAny(msg, [
+      'a nombre de',
+      'mi nombre es',
+      'me llamo',
+      'soy ',
+      'es para',
+    ]);
+    const looksLikeStructuredCompactInput =
+      texto.includes(',') &&
+      Boolean(detectService(msg)) &&
+      Boolean(parseDate(msg)) &&
+      Boolean(parseTime(msg)) &&
+      Boolean(detectPaymentMethod(msg));
+    if (hasNameCue || looksLikeStructuredCompactInput) {
+      const inferredName = parseClientName(texto);
+      if (inferredName) {
+        session.draft.nombre = inferredName;
+      }
+    }
+  }
   ensureSessionIntegrity(session);
 
   if (session.stage === 'awaiting_name') {
@@ -1526,6 +1597,9 @@ async function buildReply(from, texto, _context = {}) {
     if (
       containsAny(msg, GREETING_INTENTS)
     ) {
+      if (COMPACT_BOOKING_MODE) {
+        return 'Hola! Para reservar rapido, manda: servicio, fecha, hora, nombre, pago. Ej: corte, 2026-03-10, 16:00, Juan Perez, efectivo.';
+      }
       return 'Hola! Soy ZZETA Bot. Si queres reservar, escribi "turno".';
     }
 
@@ -1536,6 +1610,9 @@ async function buildReply(from, texto, _context = {}) {
     const aiReply = await maybeAiFallback(texto, session);
     if (aiReply) return aiReply;
 
+    if (COMPACT_BOOKING_MODE) {
+      return 'Puedo reservar en 1 mensaje: servicio, fecha, hora, nombre y pago.';
+    }
     return 'Puedo ayudarte a reservar. Escribi "turno" para empezar.';
   }
 
@@ -1545,11 +1622,17 @@ async function buildReply(from, texto, _context = {}) {
 
   if (!session.draft.servicio) {
     session.stage = 'awaiting_service';
+    if (COMPACT_BOOKING_MODE) {
+      return buildCompactBookingPrompt(session);
+    }
     return 'Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)';
   }
 
   if (!session.draft.fecha) {
     session.stage = 'awaiting_date';
+    if (COMPACT_BOOKING_MODE) {
+      return buildCompactBookingPrompt(session);
+    }
     return 'Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)';
   }
 
@@ -1569,6 +1652,9 @@ async function buildReply(from, texto, _context = {}) {
 
   if (!session.draft.hora) {
     session.stage = 'awaiting_time';
+    if (COMPACT_BOOKING_MODE) {
+      return buildCompactBookingPrompt(session);
+    }
     return `${buildAvailabilityMessage(session.draft.fecha)} Decime la hora en formato HH:MM (ej: 15:00).`;
   }
 
@@ -1584,11 +1670,17 @@ async function buildReply(from, texto, _context = {}) {
 
   if (!session.draft.nombre) {
     session.stage = 'awaiting_name';
+    if (COMPACT_BOOKING_MODE) {
+      return buildCompactBookingPrompt(session);
+    }
     return 'Perfecto. A nombre de quien agendo el turno?';
   }
 
   if (!session.draft.metodo_pago) {
     session.stage = 'awaiting_payment';
+    if (COMPACT_BOOKING_MODE) {
+      return buildCompactBookingPrompt(session);
+    }
     return 'Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte.';
   }
 
@@ -1703,6 +1795,19 @@ router.post('/', async (req, res) => {
       return res.sendStatus(200);
     }
 
+    // Evita loops cuando el proveedor reinyecta eventos originados por nuestro mismo numero.
+    if (
+      WHATSAPP_PROVIDER === 'gupshup' &&
+      normalizePhone(GUPSHUP_SOURCE) &&
+      normalizePhone(from) === normalizePhone(GUPSHUP_SOURCE)
+    ) {
+      logger.info(`WHATSAPP provider echo ignored from=${from}`);
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'provider_echo' });
+      }
+      return res.sendStatus(200);
+    }
+
     const inboundTimestamp = parseInboundTimestampSeconds(incoming.timestamp);
     if (isStaleInboundEvent(inboundTimestamp)) {
       logger.info(`WHATSAPP stale inbound ignored from=${from} ts=${incoming.timestamp}`);
@@ -1759,6 +1864,7 @@ router.post('/', async (req, res) => {
     if (outboundConfigError) {
       const msg = outboundConfigError;
       logger.error(msg);
+      const outboundSnapshot = whatsappSender.getOutboundConfigSnapshot();
       if (debugMode) {
         return res.status(500).json({
           ok: false,
@@ -1769,6 +1875,7 @@ router.post('/', async (req, res) => {
           gupshupSourceSet: Boolean(GUPSHUP_SOURCE),
           gupshupKeySet: Boolean(GUPSHUP_API_KEY),
           graphVersion: GRAPH_VERSION,
+          outboundSnapshot,
         });
       }
       markMessageProcessedError(dedupeId);
@@ -1796,7 +1903,12 @@ router.post('/', async (req, res) => {
       replyText = 'No pude procesar tu mensaje. Proba de nuevo en unos minutos.';
     }
 
-    const outbound = await sendTextMessage(from, replyText);
+    const outbound = await whatsappSender.sendSafe(from, replyText, {
+      path: '/meta-webhook',
+      source: isAudioInbound ? 'audio' : 'text',
+      dedupeId,
+      from,
+    });
     if (!outbound.ok) {
       logger.error(`WHATSAPP send failed provider=${WHATSAPP_PROVIDER} status=${outbound.status} body=${outbound.bodyText}`);
       markMessageProcessedError(dedupeId);
@@ -1812,7 +1924,9 @@ router.post('/', async (req, res) => {
     }
 
     const data = outbound.payload || {};
-    logger.info(`WHATSAPP outbound ok messageId=${data.messages?.[0]?.id || 'n/a'}`);
+    const outboundId =
+      data.messages?.[0]?.id || data.messageId || data.id || data.data?.messageId || 'n/a';
+    logger.info(`WHATSAPP outbound ok provider=${WHATSAPP_PROVIDER} messageId=${outboundId}`);
     markMessageProcessed(dedupeId);
     if (debugMode) {
       return res.status(200).json({
