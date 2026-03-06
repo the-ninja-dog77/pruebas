@@ -1,216 +1,444 @@
-# CONTEXTO OPERATIVO ZZETA (estado consolidado)
+# CONTEXTO COMPLETO ZZETA
 
 Ultima actualizacion: 2026-03-06
+Owner funcional: ZZETA Barber Bot + Panel
 
-## 1) Objetivo del proyecto
-- Sistema real para barberia con:
-- Bot de WhatsApp para reservas/cancelaciones/reprogramaciones.
-- Panel web movil para barbero (resumen, calendario, balance, control del bot).
-- Backend unico como fuente de verdad (sin datos paralelos en frontend).
-- Operacion 24/7 en Railway con persistencia.
+---
 
-## 2) Arquitectura actual (fuente de verdad unica)
-- Backend Node.js + Express:
-- Capas: `routes/`, `controllers/`, `services/`, `repositories/`.
-- DB: SQLite (`better-sqlite3`) con migraciones + seeders.
-- Seguridad: JWT, roles, helmet, rate-limit, logs, manejo de errores.
-- Operacion: `/health`, `/metrics`, backups automáticos.
+## 1) Vision del producto
 
-- Canales de WhatsApp:
-- Provider Meta Cloud API (legacy y soporte actual).
-- Provider Gupshup (soporte agregado, webhook dedicado).
-- Webhook unificado en `backend/routes/metaWebhook.routes.js`.
+Sistema integral para barberia con 3 piezas principales:
 
-- Web app barbero:
-- `backend/public/app/barber/` (UI web movil, estilo negro/amarillo).
-- Login y token JWT.
-- 3 vistas por slide:
-  1. Resumen operativo.
-  2. Calendario + agenda del dia + alta manual.
-  3. Estado del bot + balance.
+1. Bot de WhatsApp para atencion y agenda.
+2. Backend unico (fuente de verdad) para reglas de negocio y base de datos.
+3. App web movil para barbero (operacion diaria, calendario, control y balance).
 
-## 3) Hitos logrados (resumen)
-- Flujo conversacional de reservas estable:
-- Servicio, fecha, hora, nombre, metodo de pago, confirmacion.
-- Validacion horaria contra agenda real.
-- Bloqueo de solapes.
-- 1 turno activo por numero (con excepcion explicita “a nombre de otra persona”).
+Objetivo operativo:
+- Reservar, cancelar, reprogramar y confirmar atenciones sin friccion.
+- Evitar doble agenda y errores de estado.
+- Operar 24/7 en Railway sin depender de la PC local.
 
-- Operaciones de turno:
-- Crear turno por bot.
-- Crear turno manual desde panel.
-- Cancelar por bot.
-- Reprogramar por bot.
-- Borrar turno manual desde panel.
-- Confirmar turno completado desde panel (impacta balance).
+---
 
-- Audio:
-- Pipeline STT robustecido (MIME, retries, timeouts, clasificacion de errores).
-- Manejo de ruido/silencio/baja confianza.
-- Suites de test de audio + chaos/load.
+## 2) Estado actual real
 
-- Fiabilidad:
-- Matrices de fiabilidad webhook/audio.
-- Soak test de 1 hora con fases (normal, raras, desubicados, acero).
-- Reportes automáticos JSON/MD en `backend/reports/`.
+### 2.1 Produccion
+- Despliegue en Railway: activo.
+- DB SQLite persistente con volumen: activo.
+- Webhook WhatsApp (Meta y/o Gupshup): soportado por el mismo backend.
+- Panel web barbero: activo.
 
-- Infra:
-- Despliegue Railway funcional.
-- Volumen persistente para DB/backups.
-- Endpoints operativos para debugging y monitoreo.
+### 2.2 Ultimo commit funcional subido
+- Commit: `bc330d4`
+- Mensaje: `fix: sync bot/panel state with normalized client ids and no-cache panel api`
+- Incluye:
+  - normalizacion de IDs de cliente telefonicos para consistencia bot/panel,
+  - anti-cache en endpoints/panel para evitar desfasajes visuales,
+  - mejora de webhook inbound para normalizar remitente.
 
-## 4) Decisiones de producto ya incorporadas
-- UX de bot orientada a cierre rapido, sin alargar conversacion innecesaria.
-- Parseo de hora natural (ej. “las 4”, “16”, “3:00”, etc.).
-- Recordatorios de turno previos.
-- Captura de nombre + metodo de pago antes de confirmar.
-- Precios base por servicio:
+### 2.3 Push a GitHub
+- Remote: `origin https://github.com/the-ninja-dog77/pruebas.git`
+- Branch: `main`
+- Push realizado correctamente hasta `bc330d4`.
+
+---
+
+## 3) Arquitectura tecnica
+
+### 3.1 Stack
+- Node.js + Express.
+- SQLite (`better-sqlite3`).
+- JWT para autenticacion.
+- Helmet + rate-limit + middlewares de logging/error.
+
+### 3.2 Estructura por capas
+- `backend/routes/*`
+- `backend/controllers/*`
+- `backend/services/*`
+- `backend/repositories/*`
+- `backend/migrations/*`
+- `backend/seeders/*`
+- `backend/public/app/*`
+
+### 3.3 Fuente de verdad
+- Toda la verdad vive en DB + backend.
+- El panel NO maneja agenda local paralela.
+- El bot NO debe guardar estados persistentes fuera del backend/DB.
+
+---
+
+## 4) Funcionalidades del bot (texto)
+
+### 4.1 Flujo principal de reserva
+- Detecta intencion de reservar por lenguaje natural.
+- Pide o infiere:
+  - servicio,
+  - fecha,
+  - hora,
+  - nombre,
+  - metodo de pago.
+- Confirma resumen antes de crear turno.
+- Crea turno en DB solo al confirmar.
+
+### 4.2 Servicios soportados
+- corte
+- recorte/tratamiento de barba
+- perfilado de cejas
+- corte + barba (inferido cuando aplica)
+
+Precios minimos base:
 - corte: 40000
 - barba: 10000
 - cejas: 10000
 - corte + barba: 50000
 
-## 5) Integraciones y rutas clave
-- Webhook Meta/WhatsApp:
-- `POST /meta-webhook`
-- `POST /whatsapp-webhook` (alias)
+### 4.3 Horarios y reglas
+- Respeta horarios laborales configurados por `businessHours.service`.
+- No agenda fuera de horario.
+- No agenda turnos en pasado.
+- Evita solapes por bloque de tiempo.
 
-- Webhook Gupshup:
-- `POST /gupshup-webhook` (alias al mismo handler)
-- `GET /gupshup-webhook` (health de provider)
+### 4.4 Lenguaje natural de fecha/hora
+- Entiende formatos tipo:
+  - "lunes que viene"
+  - "martes"
+  - "23/02/2026"
+  - "2026-02-23"
+  - "a las 4"
+  - "las 16"
+  - "15:00"
+- Convierte hora ambigua a formato operativo esperado.
 
-- Panel barbero:
-- `GET /api/barber-panel/summary`
-- `GET /api/barber-panel/calendar`
-- `GET /api/barber-panel/day/:fecha`
-- `POST /api/barber-panel/day/:fecha/turnos`
-- `DELETE /api/barber-panel/day/:fecha/turnos/:id`
-- `POST /api/barber-panel/turnos/:id/complete`
-- `GET /api/barber-panel/balance`
-- `PATCH /api/barber-panel/balance-goal`
-- `GET/PATCH /api/barber-panel/bot-status`
+### 4.5 Cancelacion y reprogramacion
+- Cancelar por comando explicito.
+- Reprogramar por comando explicito.
+- Validaciones de propiedad del turno por cliente.
+- Actualiza estado en DB.
 
-## 6) Variables de entorno importantes (sin secretos)
-- Core:
+### 4.6 Una reserva activa por numero
+- Regla: un numero mantiene una reserva activa.
+- Excepcion: si se aclara que es para otra persona (flujo "a nombre de ...").
+
+### 4.7 Recordatorios
+- Envio previo configurable por minutos.
+- Puede esperar respuesta del cliente (confirmar/cancelar).
+- Respuestas de recordatorio impactan DB.
+
+### 4.8 Respuestas fuera de contexto
+- Manejo de saludos.
+- Manejo de agradecimientos.
+- Mensajes de ayuda para recuperar flujo.
+- Evita desbordes simples de contexto.
+
+---
+
+## 5) Funcionalidades de audio
+
+### 5.1 Pipeline
+- Inbound audio -> descarga media -> validacion mime/duracion -> STT -> intent -> respuesta.
+
+### 5.2 Robustez implementada
+- Manejo de mime variable.
+- Timeouts.
+- Retries con backoff para operaciones recuperables.
+- Clasificacion de errores por tipo.
+- Fallback de aclaracion cuando la confianza es baja.
+
+### 5.3 Observabilidad audio
+- Contadores y razones de fallo en metricas/reportes:
+  - `audio_noise_or_silence`
+  - `audio_too_short`
+  - `actionable_low_confidence`
+  - `destructive_low_confidence`
+  - `media_timeout`
+  - `media_not_found`
+  - `stt_auth_error`
+  - `stt_provider_error`
+
+---
+
+## 6) Funcionalidades del panel web barbero
+
+Ubicacion:
+- `backend/public/app/barber/index.html`
+- `backend/public/app/barber/app.js`
+- `backend/public/app/barber/styles.css`
+
+### 6.1 Login
+- Usuario y password por JWT.
+- Sesion protegida para rutas de panel.
+
+### 6.2 Slide 1: resumen operativo
+- Turnos de hoy.
+- Atendidos hoy.
+- Pendientes hoy.
+- Ingresos hoy.
+- Proximo turno.
+- Refresco periodico.
+
+### 6.3 Slide 2: calendario y agenda
+- Navegacion por mes.
+- Dias con conteo de turnos.
+- Vista del dia seleccionado:
+  - turnos reservados,
+  - horarios disponibles.
+- Crear turno manual por horario con:
+  - servicio
+  - precio
+- Borrar turno manual con boton.
+- Al borrar:
+  - elimina en DB,
+  - libera horario,
+  - queda disponible para bot.
+
+### 6.4 Slide 3: control bot + balance
+- Toggle bot ON/OFF.
+- Balance semanal/mensual.
+- Meta de ingresos editable.
+- Confirmar turno completado (impacta balance).
+- Modal de confirmacion proactiva antes de proximo turno.
+
+### 6.5 Mejoras recientes UI/consistencia
+- Anti-cache fuerte en fetch de panel.
+- Evita respuesta 304 obsoleta para datos de agenda.
+- Revalidacion si aparece 304.
+
+---
+
+## 7) Providers WhatsApp soportados
+
+### 7.1 Meta Cloud API
+- Endpoints:
+  - `POST /meta-webhook`
+  - `POST /whatsapp-webhook` (alias)
+- Requiere token y phone_number_id.
+
+### 7.2 Gupshup
+- Endpoint:
+  - `POST /gupshup-webhook` (alias al mismo handler)
+  - `GET /gupshup-webhook` (health simple)
+- Requiere:
+  - API key Gupshup
+  - source number
+- Nota de sandbox:
+  - Proxy sandbox puede enviar respuestas extra ("Challenge/Pass"), no son del motor ZZETA.
+
+---
+
+## 8) Railway y persistencia
+
+### 8.1 Requisito critico
+- Montar volumen persistente y usar:
+  - `DB_PATH=/data/zzeta.db`
+
+Si no se usa volumen/ruta persistente:
+- redeploy puede reiniciar DB,
+- se pierden turnos y estados.
+
+### 8.2 Health y diagnostico
+- `GET /health`
+- `GET /metrics`
+
+### 8.3 Backups
+- El backend crea backups periodicos.
+- Backup y DB deben estar en ruta persistente para supervivencia entre redeploys.
+
+---
+
+## 9) Variables de entorno recomendadas (plantilla)
+
+### 9.1 Core
 - `NODE_ENV=production`
-- `DB_PATH=/data/zzeta.db` (con volumen en Railway)
-- `JWT_SECRET=...`
-- `META_VERIFY_TOKEN=...`
+- `PORT=8080` (Railway asigna pero conviene consistencia)
+- `DB_PATH=/data/zzeta.db`
+- `JWT_SECRET=<secreto-largo>`
+- `META_VERIFY_TOKEN=<verify-token>`
 
-- Provider WhatsApp:
-- `WHATSAPP_PROVIDER=meta|gupshup`
+### 9.2 Proveedor WhatsApp
+- `WHATSAPP_PROVIDER=meta` o `gupshup`
 - `WHATSAPP_GRAPH_VERSION=v24.0`
-- `WHATSAPP_TOKEN=...`
-- `WHATSAPP_PHONE_NUMBER_ID=...`
+- `WHATSAPP_TOKEN=<token>`
+- `WHATSAPP_PHONE_NUMBER_ID=<id>`
 
-- Gupshup:
-- `GUPSHUP_API_KEY=...`
-- `GUPSHUP_SOURCE=<numero_sandbox_o_live>`
+### 9.3 Gupshup (si aplica)
+- `GUPSHUP_API_KEY=<key>`
+- `GUPSHUP_SOURCE=<numero>`
 - `GUPSHUP_BASE_URL=https://api.gupshup.io`
 
-- Bot:
+### 9.4 Bot y tiempos
 - `BOT_BARBER_ID=1`
-- `BOT_MIN_LEAD_MINUTES=0` (o el margen deseado)
-- `WHATSAPP_COMPACT_MODE=true|false`
+- `BOT_MIN_LEAD_MINUTES=0`
+- `TURNO_CLIENT_REMINDER_MINUTES=15`
+- `WHATSAPP_COMPACT_MODE=true`
 - `WHATSAPP_OUTBOUND_TIMEOUT_MS=12000`
 - `WHATSAPP_OUTBOUND_RETRIES=1`
 - `WHATSAPP_OUTBOUND_BACKOFF_MS=350`
 
-- Audio/STT:
-- `GROQ_API_KEY=...`
-- `GROQ_MODEL=whisper-large-v3-turbo` (u otro configurado)
+### 9.5 Audio/STT
+- `GROQ_API_KEY=<key>`
 - `GROQ_BASE_URL=https://api.groq.com/openai/v1`
+- `GROQ_MODEL=whisper-large-v3-turbo`
 
-## 7) Cambios tecnicos cerrados en esta sesion (2026-03-06)
-Objetivo: cerrar inconsistencias bot/app web y dejar documentacion consolidada.
+---
 
-### 7.1 Consistencia de `cliente_id` entre canales
-Problema observado:
-- Un mismo cliente podia existir como `595...` o `+595...`, generando:
-- cancelaciones que “parecian” ok en bot pero no impactaban el mismo turno,
-- recordatorios/respuestas contra registros distintos.
+## 10) Pruebas y calidad
 
-Solucion aplicada:
-- `backend/services/turnos.service.js`:
-- Se agregó normalizacion de cliente (`normalizeClientId`) y variantes (`buildClientIdVariants`).
-- Busquedas de proximos/futuros turnos ahora usan variantes:
-  - `getProximoTurnoPorClienteId`
-  - `getTurnosFuturosPorClienteId`
-- Recordatorios ahora usan variantes:
-  - `getRecordatorioActivo`
-  - `responderRecordatorio`
-- Validacion de propiedad al eliminar turno por cliente usa variantes:
-  - `eliminarTurno`
-- Creacion de turnos normaliza solo IDs telefonicos, sin romper IDs de panel:
-  - `crearTurno`
-- Deteccion de cliente WhatsApp robustecida:
-  - `isWhatsappClientId`
-
-### 7.2 Normalizacion de `from` en webhook inbound
-- `backend/routes/metaWebhook.routes.js`:
-- El remitente entrante se normaliza a formato numerico cuando aplica.
-- Reduce variaciones de formato entre provider/evento.
-
-### 7.3 Anti-cache en panel para evitar desfasajes visuales
-- `backend/public/app/barber/app.js`:
-- `apiFetch` fuerza `cache: no-store`, headers no-cache y cache-bust en GET.
-- Reintento de revalidacion en respuestas `304`.
-
-- `backend/routes/barberPanel.routes.js`:
-- Headers anti-cache server-side para APIs del panel.
-
-### 7.4 Verificacion tecnica de esta sesion
-- Sintaxis validada:
-- `node --check backend/services/turnos.service.js`
-- `node --check backend/routes/metaWebhook.routes.js`
-- `node --check backend/public/app/barber/app.js`
-
-- Tests ejecutados y OK:
+### 10.1 Unit/integration tests relevantes
 - `tests/turnos.test.js`
 - `tests/metaWebhookConversation.test.js`
 - `tests/barberPanel.test.js`
+- `tests/metaWebhookReliability.test.js`
+- `tests/metaWebhookAudioReliability.test.js`
+- `tests/audioStt.service.test.js`
 
-## 8) Nota operativa sobre Gupshup Sandbox
-- En modo sandbox con Proxy Bot, pueden aparecer mensajes extra del propio sandbox
-  (ej: “Sorry no such keyword found ... Challenge/Pass”).
-- Es comportamiento externo de sandbox/proxy, no del motor del bot de ZZETA.
-- Para pruebas limpias de negocio, priorizar canal live o entorno sin proxy anagram.
-
-## 9) Ideas del usuario ya absorbidas al roadmap
-- Mantener bot corto y rentable (menos mensajes por reserva).
-- Recordatorios pre-turno y manejo inteligente de confirmaciones/cancelaciones.
-- Balance visual en panel con meta financiera y progreso.
-- Ventana/modal de confirmacion de servicio finalizado (impacta balance).
-- Blindaje de conversaciones ambiguas y humanas “reales”.
-- Stress tests prolongados para resistencia sin supervision.
-- Mantener compatibilidad total con Railway + provider + app web.
-
-## 10) Estado actual recomendado para operar
-- Backend: desplegado en Railway con volumen persistente.
-- DB: apuntando a `/data/zzeta.db`.
-- Provider: usar un solo canal productivo activo para evitar mezcla de eventos.
-- Panel: funciona como lectura/escritura del mismo backend (sin almacenamiento propio).
-- Bot: listo para operar, con mejoras recientes de consistencia cliente/app.
-
-## 11) Comandos utiles (operacion y verificacion)
-- Salud:
-- `curl https://<dominio>/health`
-- `curl https://<dominio>/metrics`
-
-- Test local rapido:
-- `cd backend`
-- `npm test -- --runInBand tests/turnos.test.js tests/metaWebhookConversation.test.js tests/barberPanel.test.js`
-
-- Soak:
-- `cd backend`
+### 10.2 Carga y fiabilidad
+Scripts:
 - `npm run load:soak:1h`
+- `npm run load:webhook`
+- `npm run load:audio`
+- `npm run test:reliability`
+- `npm run test:audio`
 
-## 12) Pendiente recomendado inmediato
-- Ejecutar un ciclo de validacion real en provider activo:
-  1) crear turno manual en panel,
-  2) consultar disponibilidad desde bot,
-  3) cancelar desde bot,
-  4) verificar liberacion inmediata en panel y re-oferta del horario.
+Reportes:
+- `backend/reports/bot-soak-1h.latest.md`
+- `backend/reports/bot-soak-1h.latest.json`
+- `backend/reports/bot-soak-1h.next-actions.json`
+- `backend/reports/audio-load-chaos.latest.*`
+- `backend/reports/webhook-load-chaos.latest.*`
 
-- Si esa secuencia pasa en 3 intentos consecutivos, se considera cerrada la incidencia de inconsistencia bot/panel.
+---
+
+## 11) Incidencias historicas importantes y solucion
+
+### 11.1 Inconsistencia bot/panel en cancelaciones
+Sintoma:
+- bot decia "cancelado" pero en panel seguia apareciendo.
+
+Causa raiz:
+- formatos de `cliente_id` distintos (`+595...` vs `595...`) y lecturas con cache.
+
+Fix aplicado:
+- normalizacion y variantes de `cliente_id`,
+- anti-cache en panel y rutas.
+
+Resultado esperado:
+- cancelar desde bot impacta de inmediato en panel y disponibilidad.
+
+### 11.2 Error de DB por directorio inexistente
+Sintoma:
+- `Cannot open database because the directory does not exist`.
+
+Causa:
+- `DB_PATH` apuntando a ruta no montada.
+
+Fix:
+- montar volumen Railway y usar ruta valida (ej. `/data/zzeta.db`).
+
+---
+
+## 12) Flujo operativo recomendado (diario)
+
+1. Revisar `health`.
+2. Revisar panel resumen y agenda del dia.
+3. Confirmar bot encendido.
+4. Validar 1 mensaje real de ingreso.
+5. Durante dia:
+   - confirmar completados desde panel,
+   - ajustar agenda manual si hay no-shows.
+6. Cierre:
+   - revisar balance semanal/mensual,
+   - revisar logs de errores.
+
+---
+
+## 13) Checklist rapido post-deploy
+
+1. `GET /health` -> `status=ok`.
+2. Login panel ok.
+3. Crear turno manual.
+4. Ver turno en agenda del dia.
+5. Consultar ese horario por bot.
+6. Cancelar por bot.
+7. Ver desaparicion en panel.
+8. Reconsultar horario y comprobar que vuelve disponible.
+9. Confirmar que reminder responde confirmar/cancelar.
+10. Verificar que no hay errores 500 en logs.
+
+---
+
+## 14) Costos y optimizacion conversacional
+
+Meta de producto:
+- reducir mensajes por reserva sin perder conversion.
+
+Acciones ya alineadas:
+- modo compacto (`WHATSAPP_COMPACT_MODE=true`),
+- mensajes de recoleccion mas directos,
+- evitar confirmaciones redundantes.
+
+Riesgo conocido:
+- en sandbox Gupshup proxy se agregan mensajes extra externos que inflan costo aparente.
+
+---
+
+## 15) Roadmap de ideas del usuario (resumen completo)
+
+Ideas ya implementadas total/parcial:
+- UI movil negro/amarillo con estilo neon.
+- Calendario con disponibilidad real.
+- Alta/baja manual desde panel.
+- Control ON/OFF del bot.
+- Balance con metas y confirmacion de atencion.
+- Flujo de reservas con nombre y metodo de pago.
+- Restriccion de una reserva activa por numero.
+- Recordatorios pre-turno con respuestas.
+
+Ideas pendientes/fase siguiente:
+- app cliente separada (frontend dedicado),
+- notificaciones tipo "finalizo servicio?" con interaccion mas rica,
+- endurecimiento avanzado de lenguaje ambiguo en audio extremo,
+- tablero multi-barbero y reglas de reparto.
+
+---
+
+## 16) Comandos utiles (copiar y pegar)
+
+### 16.1 Tests clave
+```powershell
+cd backend
+npm test -- --runInBand tests/turnos.test.js tests/metaWebhookConversation.test.js tests/barberPanel.test.js
+```
+
+### 16.2 Soak test 1h
+```powershell
+cd backend
+npm run load:soak:1h
+```
+
+### 16.3 Ver salud y metricas (produccion)
+```powershell
+curl.exe -sS https://<tu-dominio-railway>/health
+curl.exe -sS https://<tu-dominio-railway>/metrics
+```
+
+---
+
+## 17) Notas criticas de operacion
+
+- No guardar secretos en Git ni en este archivo.
+- Si se expone un token, rotarlo inmediatamente.
+- En Railway, un redeploy no debe borrar datos si:
+  - volumen esta bien montado,
+  - `DB_PATH` apunta al volumen.
+- No mezclar dos providers activos con el mismo numero sin estrategia clara.
+
+---
+
+## 18) Estado final de este documento
+
+Este archivo sirve como contexto de continuidad para arrancar un chat nuevo sin perder informacion tecnica ni funcional.
+
+Prompt recomendado para continuar desde cero:
+
+`Lee el archivo contexto completo y continuemos desde ese estado.`
 
