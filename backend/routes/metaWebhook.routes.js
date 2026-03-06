@@ -10,6 +10,7 @@ const audioPipeline = require('../services/audioPipeline.service');
 const audioMetrics = require('../services/audioObservability.service');
 const reminderIntentService = require('../services/reminderIntent.service');
 const whatsappSender = require('../services/whatsappSender.service');
+const businessTime = require('../services/businessTime.service');
 
 const VERIFY_TOKEN = process.env.META_VERIFY_TOKEN || 'zzeta_verify_token';
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
@@ -468,10 +469,30 @@ function formatDateLocal(date) {
   return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
 }
 
-function addDays(days) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  return date;
+function parseIsoDate(fecha) {
+  const match = String(fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+}
+
+function isoFromParts(parts) {
+  return `${parts.year}-${pad2(parts.month)}-${pad2(parts.day)}`;
+}
+
+function addDaysFromIso(fecha, days) {
+  const parts = parseIsoDate(fecha);
+  if (!parts) return fecha;
+  const utcDate = new Date(Date.UTC(parts.year, parts.month - 1, parts.day));
+  utcDate.setUTCDate(utcDate.getUTCDate() + Number(days || 0));
+  return isoFromParts({
+    year: utcDate.getUTCFullYear(),
+    month: utcDate.getUTCMonth() + 1,
+    day: utcDate.getUTCDate(),
+  });
 }
 
 function isValidDate(year, month, day) {
@@ -484,6 +505,9 @@ function isValidDate(year, month, day) {
 }
 
 function parseDate(msg) {
+  const nowParts = businessTime.getNowParts();
+  const todayIso = nowParts.fecha;
+  const todayParts = parseIsoDate(todayIso);
   const candidates = [];
   const pushCandidate = (index, value) => {
     if (index < 0 || !value) return;
@@ -505,7 +529,7 @@ function parseDate(msg) {
     const day = Number(match[1]);
     const month = Number(match[2]);
     const rawYear = match[3];
-    let year = rawYear ? Number(rawYear) : new Date().getFullYear();
+    let year = rawYear ? Number(rawYear) : Number(todayParts?.year || new Date().getFullYear());
     if (rawYear && rawYear.length === 2) {
       year += 2000;
     }
@@ -516,9 +540,9 @@ function parseDate(msg) {
   }
 
   const relCandidates = [
-    { token: 'pasado manana', value: formatDateLocal(addDays(2)) },
-    { token: 'manana', value: formatDateLocal(addDays(1)) },
-    { token: 'hoy', value: formatDateLocal(new Date()) },
+    { token: 'pasado manana', value: addDaysFromIso(todayIso, 2) },
+    { token: 'manana', value: addDaysFromIso(todayIso, 1) },
+    { token: 'hoy', value: todayIso },
   ];
   for (const rel of relCandidates) {
     const index = msg.lastIndexOf(rel.token);
@@ -536,14 +560,14 @@ function parseDate(msg) {
     viernes: 5,
     sabado: 6,
   };
-  const today = new Date();
-  const todayDay = today.getDay();
+  const todayUtcDate = new Date(Date.UTC(todayParts.year, todayParts.month - 1, todayParts.day));
+  const todayDay = todayUtcDate.getUTCDay();
   for (const [name, targetDay] of Object.entries(weekdayMap)) {
     const index = msg.lastIndexOf(name);
     if (index < 0) continue;
 
     const diff = (targetDay - todayDay + 7) % 7 || 7;
-    pushCandidate(index, formatDateLocal(addDays(diff)));
+    pushCandidate(index, addDaysFromIso(todayIso, diff));
   }
 
   if (!candidates.length) return null;

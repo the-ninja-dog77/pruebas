@@ -7,6 +7,9 @@ const whatsappSender = require('./whatsappSender.service');
 const TURNO_CLIENT_REMINDER_MINUTES = Number(
   process.env.TURNO_CLIENT_REMINDER_MINUTES || 15
 );
+const TURNO_REMINDER_CHECK_INTERVAL_MS = Number(
+  process.env.TURNO_REMINDER_CHECK_INTERVAL_MS || 30 * 1000
+);
 
 function obtenerTodos(user) {
   if (user.role === 'admin') {
@@ -465,6 +468,9 @@ function buildClientReminderText(turno) {
 }
 
 function iniciarRecordatorios(logger) {
+  logger.info(
+    `RECORDATORIOS config checkIntervalMs=${TURNO_REMINDER_CHECK_INTERVAL_MS} reminderMinutes=${TURNO_CLIENT_REMINDER_MINUTES}`
+  );
   setInterval(() => {
     const nowParts = businessTime.getNowParts();
     const pendientes = turnosRepo.getPendientesRecordatorio();
@@ -498,7 +504,7 @@ function iniciarRecordatorios(logger) {
         `RECORDATORIO AUTOMATICO turno=${turno.id} cliente=${recipient} hora=${turno.hora} servicio=${turno.servicio} diffMin=${diffMin}`
       );
     });
-  }, 60 * 1000);
+  }, Math.max(5000, TURNO_REMINDER_CHECK_INTERVAL_MS));
 }
 
 module.exports = {

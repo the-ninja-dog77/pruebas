@@ -629,6 +629,38 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(stillExists).toBe(false);
   });
 
+  test('parses "hoy" using business timezone context and advances to name when slot is valid', async () => {
+    const from = '595985544453';
+    const nowParts = require('../services/businessTime.service').getNowParts();
+    const targetDate = nowParts.fecha;
+    const hour = Number(String(nowParts.hora || '00:00').split(':')[0]);
+    const nextHour = Math.min(19, Math.max(9, hour + 1));
+    const slot = `${String(nextHour).padStart(2, '0')}:00`;
+
+    const sequence = [
+      'turno',
+      'corte',
+      'hoy',
+      `a las ${nextHour}`,
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const last = outboundMessages[outboundMessages.length - 1];
+    if (last.includes('no esta disponible')) {
+      expect(last).toContain(targetDate);
+    } else {
+      expect(last).toContain('A nombre de quien');
+    }
+    expect(slot).toMatch(/^\d{2}:00$/);
+  });
+
   test('extracts customer name from long natural sentence with "soy ..." cue', async () => {
     const from = '595985544452';
     const fecha = '2099-12-26';

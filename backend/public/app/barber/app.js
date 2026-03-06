@@ -84,6 +84,7 @@ let slideAnimationFrame = null;
 let slideSnapDebounce = null;
 let slideIsProgrammatic = false;
 const animatedNumberState = new WeakMap();
+const LIVE_REFRESH_MS = 8000;
 
 function pad2(v) {
   return String(v).padStart(2, '0');
@@ -880,7 +881,7 @@ function startLiveRefresh() {
   stopLiveRefresh();
   liveRefreshInterval = setInterval(() => {
     refreshLiveData();
-  }, 15000);
+  }, LIVE_REFRESH_MS);
 }
 
 function setBotState(enabled) {
