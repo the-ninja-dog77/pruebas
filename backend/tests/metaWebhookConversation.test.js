@@ -1238,4 +1238,57 @@ describe('WhatsApp webhook conversation flow', () => {
       'Seguimos pendientes de esta confirmacion'
     );
   });
+
+  test('one-shot natural message collects booking data without rigid comma format', async () => {
+    const from = '595985544451';
+    const ip = '10.0.0.251';
+    const fecha = '2099-12-31';
+    const hora = '15:00';
+
+    const oneShot = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(
+        messagePayload(
+          `quiero un corte para el ${fecha} a las 3, soy fernando vallejos y pago en efectivo`,
+          from
+        )
+      );
+    expect(oneShot.statusCode).toBe(200);
+    const reply = outboundMessages[outboundMessages.length - 1];
+    expect(reply).toContain(fecha);
+    expect(reply).toContain(hora);
+    expect(reply.toLowerCase()).toContain('confirm');
+  });
+
+  test('accepts "correcto" as confirmation on awaiting_confirm stage', async () => {
+    const from = '595985544452';
+    const ip = '10.0.0.252';
+    const seq = [
+      'turno',
+      'corte',
+      '2099-12-31',
+      '16:00',
+      'Fernando Vallejos',
+      'efectivo',
+    ];
+
+    for (const msg of seq) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('correcto', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('turno confirmado');
+  });
 });

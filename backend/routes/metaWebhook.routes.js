@@ -502,7 +502,14 @@ function isConfirmIntent(intentText) {
     'confirmar',
     'confirmo',
     'confirmado',
+    'correcto',
+    'correcta',
+    'exacto',
+    'exacta',
+    'asi es',
+    'afirmativo',
     'ok',
+    'okey',
     'dale',
     'de una',
     'listo',
@@ -811,7 +818,13 @@ function hasTemporalCorrectionSignal(msg, dateMentions, timeMentions) {
   if (containsAny(msg, ['perdon', 'mejor', 'quise decir', 'corrijo', 'correccion'])) {
     return true;
   }
-  if (msg.includes(' no ') && (dateMentions > 1 || timeMentions > 1)) {
+  if (/\bno\s*,?\s*mejor\b/.test(msg)) {
+    return true;
+  }
+  if (
+    (dateMentions > 1 || timeMentions > 1) &&
+    /\b(no|mejor|cambio|cambiar|corrijo|quise decir)\b/.test(msg)
+  ) {
     return true;
   }
   return false;
@@ -861,6 +874,13 @@ function sanitizeNameCandidate(rawCandidate) {
     'perfilado',
     'confirmar',
     'cancelar',
+    'si',
+    'no',
+    'ese',
+    'esa',
+    'este',
+    'esta',
+    'dia',
     'fecha',
     'hora',
     'metodo',
@@ -900,7 +920,8 @@ function sanitizeNameCandidate(rawCandidate) {
     .replace(/\s+/g, ' ')
     .trim()
     .split(/\s+/)
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(token => /\p{L}/u.test(token));
 
   if (!tokens.length) return null;
 
@@ -915,6 +936,7 @@ function sanitizeNameCandidate(rawCandidate) {
 
   const composed = collected.join(' ').trim();
   if (!composed || composed.length < 2 || composed.length > 60) return null;
+  if (!/\p{L}/u.test(composed)) return null;
   return composed;
 }
 
@@ -932,7 +954,8 @@ function detectAvailabilityIntent(msg) {
   };
 }
 
-function parseClientName(rawText) {
+function parseClientName(rawText, options = {}) {
+  const allowSingleToken = Boolean(options?.allowSingleToken);
   const raw = String(rawText || '').trim();
   if (!raw) return null;
 
@@ -960,10 +983,125 @@ function parseClientName(rawText) {
   if (detectPaymentMethod(normalized)) return null;
   if (containsAny(normalized, GREETING_INTENTS)) return null;
   if (containsAny(normalized, ['confirmar', 'cancelar', 'turno'])) return null;
+  const normalizedTokens = normalized.split(/\s+/).filter(Boolean);
+  const nonNameTokens = new Set([
+    'si',
+    'no',
+    'ok',
+    'okey',
+    'dale',
+    'listo',
+    'perfecto',
+    'joya',
+    'correcto',
+    'exacto',
+    'confirmo',
+  ]);
+  if (
+    normalizedTokens.length &&
+    normalizedTokens.every(token => nonNameTokens.has(token))
+  ) {
+    return null;
+  }
 
   const composed = sanitizeNameCandidate(cleaned);
   if (!composed) return null;
+  const tokens = composed.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2 && !allowSingleToken) return null;
+  if (tokens.length === 1 && composed.length < 3) return null;
   return composed;
+}
+
+function toNameCase(raw) {
+  return String(raw || '')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(part => `${part.charAt(0).toUpperCase()}${part.slice(1).toLowerCase()}`)
+    .join(' ')
+    .trim();
+}
+
+function inferNameFromDenseBookingMessage(rawText, msg) {
+  const hasEnoughBookingSignals =
+    Boolean(detectService(msg)) &&
+    Boolean(parseDate(msg)) &&
+    Boolean(parseTime(msg)) &&
+    Boolean(detectPaymentMethod(msg));
+  if (!hasEnoughBookingSignals) return null;
+
+  const explicit = parseClientName(rawText);
+  if (explicit) return explicit;
+
+  const stripped = String(rawText || '')
+    .replace(/\b\d{4}-\d{2}-\d{2}\b/g, ' ')
+    .replace(/\b\d{1,2}[\/-]\d{1,2}(?:[\/-]\d{2,4})?\b/g, ' ')
+    .replace(/\b([01]?\d|2[0-3])(?::[0-5]\d)?\b/g, ' ')
+    .replace(/[^\p{L}\s'.-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const stopTokens = new Set([
+    'quiero',
+    'turno',
+    'corte',
+    'barba',
+    'ceja',
+    'cejas',
+    'perfilado',
+    'pelo',
+    'hoy',
+    'manana',
+    'pasado',
+    'domingo',
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+    'efectivo',
+    'transferencia',
+    'transfer',
+    'qr',
+    'tarjeta',
+    'pagar',
+    'pago',
+    'en',
+    'con',
+    'para',
+    'a',
+    'al',
+    'las',
+    'la',
+    'el',
+    'de',
+    'del',
+    'y',
+    'soy',
+    'mi',
+    'nombre',
+    'es',
+    'me',
+    'llamo',
+    'porfa',
+    'bro',
+    'broo',
+    'brooo',
+    'rey',
+    'nms',
+    'nomas',
+  ]);
+
+  const nameTokens = stripped
+    .split(/\s+/)
+    .filter(Boolean)
+    .map(token => token.trim())
+    .filter(token => !stopTokens.has(normalizeText(token)));
+
+  if (nameTokens.length < 2 || nameTokens.length > 4) return null;
+  if (nameTokens.join(' ').length < 2) return null;
+
+  return toNameCase(nameTokens.join(' '));
 }
 
 function extractNameForManage(rawText) {
@@ -1554,34 +1692,24 @@ async function buildReply(from, texto, _context = {}) {
 
   applyDetections(session, msg);
   if (!session.draft.nombre) {
-    const hasNameCue = containsAny(msg, [
-      'a nombre de',
-      'mi nombre es',
-      'me llamo',
-      'soy ',
-      'es para',
-    ]);
-    const looksLikeStructuredCompactInput =
-      texto.includes(',') &&
-      Boolean(detectService(msg)) &&
-      Boolean(parseDate(msg)) &&
-      Boolean(parseTime(msg)) &&
-      Boolean(detectPaymentMethod(msg));
-    if (hasNameCue || looksLikeStructuredCompactInput) {
-      const inferredName = parseClientName(texto);
-      if (inferredName) {
-        session.draft.nombre = inferredName;
-      }
+    const inferredName = parseClientName(texto) || inferNameFromDenseBookingMessage(texto, msg);
+    if (inferredName) {
+      session.draft.nombre = inferredName;
     }
   }
   ensureSessionIntegrity(session);
 
   if (session.stage === 'awaiting_name') {
-    const name = parseClientName(texto);
+    const name = parseClientName(texto, { allowSingleToken: true });
     if (name) {
       session.draft.nombre = name;
     } else if (!session.draft.nombre) {
-      return 'Necesito un nombre valido para agendar. Ejemplo: Juan Perez.';
+      const suppliedTemporalData = Boolean(parseDateWithContext(msg, session) || parseTime(msg));
+      if (!suppliedTemporalData) {
+        return 'Necesito un nombre valido para agendar. Ejemplo: Juan Perez.';
+      }
+      // If user sends temporal data while awaiting_name, keep flow moving instead of hard-stopping.
+      session.stage = 'collecting';
     }
   }
 
