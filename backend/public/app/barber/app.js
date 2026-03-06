@@ -382,12 +382,18 @@ function hideCompletionModal() {
 function showCompletionModal(prompt) {
   if (!completionModal || !prompt) return;
   pendingCompletionPrompt = prompt;
-  completionModalText.textContent = `Faltan ${prompt.minutesToNext} min para el siguiente turno. Terminaste ${prompt.servicio} de ${prompt.cliente} (${prompt.hora})?`;
+  if (prompt.mode === 'after_turno') {
+    const minutes = Number(prompt.minutesAfterStart || 0);
+    completionModalText.textContent = `Pasaron ${minutes} min desde el turno de ${prompt.servicio} de ${prompt.cliente} (${prompt.hora}). Terminaste correctamente?`;
+  } else {
+    completionModalText.textContent = `Faltan ${prompt.minutesToNext} min para el siguiente turno. Terminaste ${prompt.servicio} de ${prompt.cliente} (${prompt.hora})?`;
+  }
   completionModal.classList.remove('hidden');
   completionModal.setAttribute('aria-hidden', 'false');
 }
 
-function maybeShowCompletionPrompt(summary) {
+function maybeShowCompletionPrompt(summary, options = {}) {
+  const { ignoreLocalSuppress = false } = options;
   cleanupDismissedCompletion();
   const prompt = summary?.completionPrompt || null;
   if (!prompt || !prompt.turnoId) {
@@ -395,7 +401,7 @@ function maybeShowCompletionPrompt(summary) {
     return;
   }
 
-  if (shouldSuppressRealtimeNotification()) return;
+  if (!ignoreLocalSuppress && shouldSuppressRealtimeNotification()) return;
   const dismissedUntil = dismissedCompletionByTurnoId.get(prompt.turnoId) || 0;
   if (dismissedUntil > Date.now()) return;
 
@@ -404,11 +410,27 @@ function maybeShowCompletionPrompt(summary) {
 
 async function handleCompletionYes() {
   if (!pendingCompletionPrompt?.turnoId) return;
-  markLocalMutation();
-  await apiFetch(API.completeTurno(pendingCompletionPrompt.turnoId), { method: 'POST' });
-  pushToast('Servicio confirmado y balance actualizado.', 'ok');
+  const turnoId = pendingCompletionPrompt.turnoId;
+  try {
+    markLocalMutation();
+    await apiFetch(API.completeTurno(turnoId), { method: 'POST' });
+    pushToast('Servicio confirmado y balance actualizado.', 'ok');
+  } catch (err) {
+    const message = String(err?.message || '');
+    if (!/turno no encontrado/i.test(message)) {
+      pushToast(message || 'No se pudo confirmar el servicio.', 'error');
+      return;
+    }
+    pushToast('Ese turno ya no estaba pendiente. Actualizando panel.', 'info');
+  }
+
   hideCompletionModal();
-  await Promise.all([loadSummary(), loadCalendar(), loadBalance(currentBalanceRange)]);
+  const [summary] = await Promise.all([
+    loadSummary({ silentNotification: true }),
+    loadCalendar(),
+    loadBalance(currentBalanceRange),
+  ]);
+  maybeShowCompletionPrompt(summary, { ignoreLocalSuppress: true });
 }
 
 function handleCompletionNo() {
@@ -924,12 +946,14 @@ async function bootstrapApp() {
   setLoggedInState(true);
   renderTodayLabel();
   renderNotificationStatus();
-  await Promise.all([
+  const [summary] = await Promise.all([
     loadSummary({ silentNotification: true }),
     loadCalendar(),
     loadBalance(currentBalanceRange),
     loadBotStatus(),
   ]);
+  // Al abrir panel, forzamos evaluacion inmediata de pendientes.
+  maybeShowCompletionPrompt(summary, { ignoreLocalSuppress: true });
   startLiveRefresh();
 }
 

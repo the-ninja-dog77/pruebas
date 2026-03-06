@@ -95,6 +95,19 @@ const FLOW_UNCERTAINTY_INTENTS = [
   'help',
   'explicame',
 ];
+const LIGHT_ACK_INTENTS = [
+  'dale',
+  'ok',
+  'oki',
+  'listo',
+  'joya',
+  'genial',
+  'perfecto',
+  'de una',
+  'buenisimo',
+  'buenisima',
+  'nos vemos',
+];
 const TEMPORAL_DISAMBIGUATION_TTL_MS = Number(
   process.env.WHATSAPP_TEMPORAL_DISAMBIGUATION_TTL_MS || 5 * 60 * 1000
 );
@@ -239,13 +252,39 @@ function parseIncomingGupshup(body) {
       ''
   ).trim();
 
-  const audioUrl = String(payloadInner?.url || payload?.url || '').trim();
-  const audioId = String(payloadInner?.id || payload?.id || '').trim();
+  const audioUrl = String(
+    payloadInner?.url ||
+      payloadInner?.audio?.url ||
+      payloadInner?.voice?.url ||
+      payload?.url ||
+      payload?.audio?.url ||
+      payload?.voice?.url ||
+      payload?.mediaUrl ||
+      payloadInner?.mediaUrl ||
+      ''
+  ).trim();
+  const audioId = String(
+    payloadInner?.id ||
+      payloadInner?.audio?.id ||
+      payloadInner?.voice?.id ||
+      payload?.id ||
+      payload?.audio?.id ||
+      payload?.voice?.id ||
+      ''
+  ).trim();
   const audioMime = String(
     payloadInner?.contentType ||
+      payloadInner?.audio?.contentType ||
+      payloadInner?.voice?.contentType ||
       payload?.contentType ||
+      payload?.audio?.contentType ||
+      payload?.voice?.contentType ||
       payloadInner?.mime_type ||
       payloadInner?.mimeType ||
+      payloadInner?.audio?.mime_type ||
+      payloadInner?.audio?.mimeType ||
+      payload?.audio?.mime_type ||
+      payload?.audio?.mimeType ||
       ''
   ).trim();
   const audioDuration = Number(
@@ -398,6 +437,15 @@ function getOutboundConfigError() {
   return whatsappSender.getOutboundConfigError();
 }
 
+function getAudioMediaRequestHeadersForProvider() {
+  if (WHATSAPP_PROVIDER !== 'gupshup') return undefined;
+  if (!GUPSHUP_API_KEY) return undefined;
+  return {
+    apikey: GUPSHUP_API_KEY,
+    'cache-control': 'no-cache',
+  };
+}
+
 function markMessageProcessing(messageId) {
   if (!messageId) return;
   cleanupMapByTtl(processedMessageIds, MESSAGE_DEDUPE_TTL_MS);
@@ -542,6 +590,11 @@ function parseDate(msg) {
   const relCandidates = [
     { token: 'pasado manana', value: addDaysFromIso(todayIso, 2) },
     { token: 'manana', value: addDaysFromIso(todayIso, 1) },
+    { token: 'hoy a la tarde', value: todayIso },
+    { token: 'hoy a la noche', value: todayIso },
+    { token: 'esta tarde', value: todayIso },
+    { token: 'esta noche', value: todayIso },
+    { token: 'esta maniana', value: todayIso },
     { token: 'hoy', value: todayIso },
   ];
   for (const rel of relCandidates) {
@@ -587,7 +640,10 @@ function countDateMentions(msg) {
   let count = 0;
   count += countRegexMatches(msg, /\b(\d{4})-(\d{2})-(\d{2})\b/g);
   count += countRegexMatches(msg, /\b(\d{1,2})[\/-](\d{1,2})(?:[\/-](\d{2,4}))?\b/g);
-  count += countRegexMatches(msg, /\b(hoy|manana|pasado manana)\b/g);
+  count += countRegexMatches(
+    msg,
+    /\b(hoy|manana|pasado manana|esta tarde|esta noche|hoy a la tarde|hoy a la noche)\b/g
+  );
   count += countRegexMatches(
     msg,
     /\b(domingo|lunes|martes|miercoles|jueves|viernes|sabado)\b/g
@@ -752,6 +808,97 @@ function detectPaymentMethod(msg) {
   return null;
 }
 
+function sanitizeNameCandidate(rawCandidate) {
+  const STOP_WORDS = new Set([
+    'quiero',
+    'pagar',
+    'efectivo',
+    'transferencia',
+    'transfer',
+    'qr',
+    'tarjeta',
+    'hoy',
+    'manana',
+    'pasado',
+    'domingo',
+    'lunes',
+    'martes',
+    'miercoles',
+    'jueves',
+    'viernes',
+    'sabado',
+    'turno',
+    'corte',
+    'barba',
+    'ceja',
+    'cejas',
+    'perfilado',
+    'confirmar',
+    'cancelar',
+    'fecha',
+    'hora',
+    'metodo',
+    'pago',
+    'de',
+    'del',
+    'en',
+    'con',
+    'para',
+    'a',
+    'al',
+    'las',
+    'la',
+    'el',
+    'los',
+    'y',
+  ]);
+  const FILLER_WORDS = new Set([
+    'ya',
+    'lo',
+    'sabes',
+    'quien',
+    'mas',
+    'tu',
+    'bro',
+    'rey',
+    'nms',
+    'nomas',
+    'mano',
+    'broo',
+    'brooo',
+  ]);
+
+  const tokens = String(rawCandidate || '')
+    .replace(/[0-9]/g, ' ')
+    .replace(/[^\p{L}\s'.-]/gu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+
+  if (!tokens.length) return null;
+
+  const collected = [];
+  for (const token of tokens) {
+    const normalized = normalizeText(token);
+    if (STOP_WORDS.has(normalized)) break;
+    if (FILLER_WORDS.has(normalized)) continue;
+    collected.push(token);
+    if (collected.length >= 4) break;
+  }
+
+  const composed = collected.join(' ').trim();
+  if (!composed || composed.length < 2 || composed.length > 60) return null;
+  return composed;
+}
+
+function isLightAckMessage(msg) {
+  const normalized = normalizeText(msg);
+  const tokens = normalized.split(/\s+/).filter(Boolean);
+  if (!tokens.length || tokens.length > 5) return false;
+  return containsAny(normalized, LIGHT_ACK_INTENTS);
+}
+
 function parseClientName(rawText) {
   const raw = String(rawText || '').trim();
   if (!raw) return null;
@@ -760,11 +907,8 @@ function parseClientName(rawText) {
     /(?:a nombre de|mi nombre es|me llamo|soy)\s+([a-záéíóúñü.'-]+(?:\s+[a-záéíóúñü.'-]+){0,3})(?=\s+(?:quiero|pagar|en|con|hoy|manana|mañana|para|a|al|del|de|fecha|hora|metodo|m[eé]todo|servicio)\b|$)/i;
   const cueMatch = raw.match(nameCueRegex);
   if (cueMatch?.[1]) {
-    const candidate = cueMatch[1]
-      .replace(/[^\p{L}\s'.-]/gu, ' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    if (candidate.length >= 2 && candidate.length <= 60) {
+    const candidate = sanitizeNameCandidate(cueMatch[1]);
+    if (candidate && candidate.length >= 2 && candidate.length <= 60) {
       return candidate;
     }
   }
@@ -784,33 +928,8 @@ function parseClientName(rawText) {
   if (containsAny(normalized, GREETING_INTENTS)) return null;
   if (containsAny(normalized, ['confirmar', 'cancelar', 'turno'])) return null;
 
-  const fillerTokens = new Set([
-    'ya',
-    'lo',
-    'sabes',
-    'quien',
-    'mas',
-    'tu',
-    'bro',
-    'rey',
-    'nms',
-    'nomas',
-    'mano',
-    'el',
-    'la',
-    'de',
-    'del',
-  ]);
-
-  const tokens = cleaned
-    .split(/\s+/)
-    .map(token => token.trim())
-    .filter(Boolean)
-    .filter(token => !fillerTokens.has(normalizeText(token)));
-
-  if (!tokens.length || tokens.length > 5) return null;
-  const composed = tokens.join(' ');
-  if (composed.length < 2 || composed.length > 60) return null;
+  const composed = sanitizeNameCandidate(cleaned);
+  if (!composed) return null;
   return composed;
 }
 
@@ -1535,6 +1654,10 @@ async function buildReply(from, texto, _context = {}) {
     'disponible',
     'disponibilidad',
     'turnos libres',
+    'libre',
+    'hay libre',
+    'tenes libre',
+    'tienes libre',
   ]);
   const asksTurnoAtSlot = containsAny(msg, [
     'hay turno',
@@ -1658,6 +1781,10 @@ async function buildReply(from, texto, _context = {}) {
 
     if (containsAny(msg, THANKS_INTENTS)) {
       return 'De nada. Cuando quieras, estoy para ayudarte.';
+    }
+
+    if (isLightAckMessage(msg)) {
+      return 'Perfecto. Cualquier cosa escribime "turno" y lo hacemos rapido.';
     }
 
     const aiReply = await maybeAiFallback(texto, session);
@@ -1947,6 +2074,7 @@ router.post('/', async (req, res) => {
         phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
         buildReply,
         provider: WHATSAPP_PROVIDER,
+        mediaRequestHeaders: getAudioMediaRequestHeadersForProvider(),
       });
       replyText = String(audioResult?.reply || '').trim();
     } else {

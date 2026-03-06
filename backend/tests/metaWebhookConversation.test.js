@@ -686,6 +686,62 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(lastReply.toLowerCase()).not.toContain('me falta: nombre');
   });
 
+  test('cleans noisy name when message includes "soy ... y quiero pagar"', async () => {
+    const from = '595985544454';
+    const fecha = '2099-12-26';
+    const ip = '10.0.0.254';
+    const sequence = [
+      'turno',
+      'corte',
+      fecha,
+      '13:00',
+      'soy fernando y quiero pagar en efectivo bro',
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const lastReply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    expect(lastReply).toContain('fernando');
+    expect(lastReply).not.toContain('quiero pagar');
+  });
+
+  test('answers availability for "esta tarde" query without forcing full booking fields', async () => {
+    const from = '595985544455';
+    const ip = '10.0.0.255';
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('hola tenes libre esta tarde a las 3?', from));
+
+    expect(res.statusCode).toBe(200);
+    const lastReply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    const looksLikeAvailability =
+      lastReply.includes('esta disponible') ||
+      lastReply.includes('no esta disponible') ||
+      lastReply.includes('horarios disponibles para');
+    expect(looksLikeAvailability).toBe(true);
+    expect(lastReply).not.toContain('me falta: servicio');
+  });
+
+  test('replies naturally to short ack in idle state', async () => {
+    const from = '595985544456';
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .send(messagePayload('dale dale', from));
+
+    expect(res.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('Cualquier cosa escribime "turno"');
+  });
+
   test('responds naturally to thanks in idle state', async () => {
     const res = await request(app)
       .post('/meta-webhook')

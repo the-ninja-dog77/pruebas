@@ -1,6 +1,7 @@
 const request = require('supertest');
 const businessHours = require('../services/businessHours.service');
 const barberPanelRepo = require('../repositories/barberPanel.repository');
+const businessTime = require('../services/businessTime.service');
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'zzeta_super_secreto';
@@ -29,6 +30,21 @@ function getNextOpenDate() {
   throw new Error('No se encontro una fecha abierta para el test');
 }
 
+function getOpenDateFrom(baseIso, skipOpenDays = 0) {
+  const base = new Date(`${baseIso}T00:00:00`);
+  let skipped = 0;
+  for (let i = 0; i < 45; i += 1) {
+    const current = new Date(base);
+    current.setDate(base.getDate() + i);
+    const fecha = isoDate(current);
+    if (businessHours.getSlotsForDate(fecha).length > 0) {
+      if (skipped >= skipOpenDays) return fecha;
+      skipped += 1;
+    }
+  }
+  throw new Error('No se encontro una fecha abierta desde base');
+}
+
 function getRecentOpenDateInCurrentWeek() {
   const now = new Date();
   for (let i = 0; i <= 6; i += 1) {
@@ -40,6 +56,13 @@ function getRecentOpenDateInCurrentWeek() {
     }
   }
   return getNextOpenDate();
+}
+
+function addMinutesToHora(hora, minutes) {
+  const [h, m] = String(hora || '00:00').split(':').map(Number);
+  const base = (h * 60) + m + Number(minutes || 0);
+  const normalized = ((base % 1440) + 1440) % 1440;
+  return `${pad2(Math.floor(normalized / 60))}:${pad2(normalized % 60)}`;
 }
 
 describe('Barber panel', () => {
@@ -170,5 +193,92 @@ describe('Barber panel', () => {
     expect(balance.statusCode).toBe(200);
     expect(Number(balance.body.confirmedTurnos)).toBeGreaterThan(0);
     expect(Number(balance.body.amount)).toBeGreaterThanOrEqual(40000);
+  });
+
+  test('muestra completionPrompt sin proximo turno cuando ya pasaron 30 minutos', async () => {
+    const fecha = getOpenDateFrom('2099-11-01', 2);
+    const slots = businessHours.getSlotsForDate(fecha);
+    expect(slots.length).toBeGreaterThan(0);
+    const hora = slots.includes('13:00') ? '13:00' : slots[0];
+
+    const create = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 40000,
+      });
+    expect(create.statusCode).toBe(201);
+
+    const originalGetNowParts = businessTime.getNowParts;
+    businessTime.getNowParts = () => ({
+      fecha,
+      hora: addMinutesToHora(hora, 35),
+      timezone: 'test-fixed',
+    });
+
+    try {
+      const summary = await request(app)
+        .get('/api/barber-panel/summary')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(summary.statusCode).toBe(200);
+      expect(summary.body.completionPrompt).toBeTruthy();
+      expect(summary.body.completionPrompt.mode).toBe('after_turno');
+      expect(Number(summary.body.completionPrompt.turnoId)).toBe(Number(create.body.id));
+      expect(Number(summary.body.completionPrompt.minutesAfterStart)).toBeGreaterThanOrEqual(30);
+    } finally {
+      businessTime.getNowParts = originalGetNowParts;
+    }
+  });
+
+  test('si hay multiples pendientes sin proximo turno, devuelve primero el mas antiguo', async () => {
+    const fecha = getOpenDateFrom('2099-10-01', 3);
+    const slots = businessHours.getSlotsForDate(fecha);
+    expect(slots.length).toBeGreaterThan(2);
+    const horaA = slots.includes('09:00') ? '09:00' : slots[0];
+    const horaB = slots.includes('10:00') ? '10:00' : slots[1];
+
+    const createA = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora: horaA,
+        servicio: 'Corte',
+        precio: 40000,
+      });
+    expect(createA.statusCode).toBe(201);
+
+    const createB = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora: horaB,
+        servicio: 'Barba',
+        precio: 10000,
+      });
+    expect(createB.statusCode).toBe(201);
+
+    const originalGetNowParts = businessTime.getNowParts;
+    businessTime.getNowParts = () => ({
+      fecha,
+      hora: addMinutesToHora(horaB, 40),
+      timezone: 'test-fixed',
+    });
+
+    try {
+      const summary = await request(app)
+        .get('/api/barber-panel/summary')
+        .set('Authorization', `Bearer ${token}`);
+
+      expect(summary.statusCode).toBe(200);
+      expect(summary.body.completionPrompt).toBeTruthy();
+      expect(summary.body.completionPrompt.mode).toBe('after_turno');
+      expect(Number(summary.body.completionPrompt.turnoId)).toBe(Number(createA.body.id));
+      expect(summary.body.completionPrompt.hora).toBe(horaA);
+    } finally {
+      businessTime.getNowParts = originalGetNowParts;
+    }
   });
 });

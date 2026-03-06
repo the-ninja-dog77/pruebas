@@ -14,6 +14,8 @@ function nowLocalParts() {
 }
 
 const COMPLETION_PROMPT_MINUTES = Number(process.env.BARBER_COMPLETION_PROMPT_MINUTES || 10);
+const COMPLETION_NO_NEXT_DELAY_MINUTES = Number(process.env.BARBER_COMPLETION_NO_NEXT_DELAY_MINUTES || 30);
+const COMPLETION_NO_NEXT_WINDOW_MINUTES = Number(process.env.BARBER_COMPLETION_NO_NEXT_WINDOW_MINUTES || 90);
 const DEFAULT_BALANCE_GOAL = Number(process.env.DEFAULT_BALANCE_GOAL || 2000000);
 
 function getBalanceGoalKey(barberId) {
@@ -47,25 +49,58 @@ function parseGoalValue(value, fallback = DEFAULT_BALANCE_GOAL) {
 }
 
 function buildCompletionPrompt({ agendaHoy, nextTurno, nowParts }) {
-  if (!nextTurno) return null;
-  const diffToNext = businessTime.diffMinutes(nextTurno.fecha, nextTurno.hora, nowParts);
-  if (diffToNext === null) return null;
-  if (diffToNext < 0 || diffToNext > COMPLETION_PROMPT_MINUTES) return null;
+  const agenda = Array.isArray(agendaHoy) ? agendaHoy : [];
+  if (!agenda.length) return null;
+  const pending = agenda.filter(t => Number(t.completado || 0) !== 1);
+  if (!pending.length) return null;
 
-  const nextIndex = agendaHoy.findIndex(t => Number(t.id) === Number(nextTurno.id));
-  if (nextIndex <= 0) return null;
-  const previousTurno = agendaHoy[nextIndex - 1];
-  if (!previousTurno) return null;
-  if (Number(previousTurno.completado || 0) === 1) return null;
+  if (nextTurno) {
+    const diffToNext = businessTime.diffMinutes(nextTurno.fecha, nextTurno.hora, nowParts);
+    if (diffToNext !== null && diffToNext >= 0 && diffToNext <= COMPLETION_PROMPT_MINUTES) {
+      const beforeNext = pending.filter(t => String(t.hora || '') < String(nextTurno.hora || ''));
+      if (beforeNext.length) {
+        const target = beforeNext[0];
+        return {
+          mode: 'before_next',
+          turnoId: target.id,
+          cliente: target.cliente,
+          servicio: target.servicio,
+          fecha: target.fecha,
+          hora: target.hora,
+          total: Number(target.total || 0),
+          minutesToNext: diffToNext,
+        };
+      }
+    }
+  }
+
+  // Fallback sin "proximo turno": pregunta igual cuando ya paso un rato
+  // desde el inicio del turno para no dejar la confirmacion colgada.
+  const candidates = pending.filter(t => {
+      const diff = businessTime.diffMinutes(t.fecha, t.hora, nowParts);
+      if (diff === null) return false;
+      const minutesAfterStart = -diff;
+      return (
+        minutesAfterStart >= COMPLETION_NO_NEXT_DELAY_MINUTES &&
+        minutesAfterStart <= COMPLETION_NO_NEXT_DELAY_MINUTES + COMPLETION_NO_NEXT_WINDOW_MINUTES
+      );
+    });
+
+  if (!candidates.length) return null;
+  const turno = candidates[0];
+  const diff = businessTime.diffMinutes(turno.fecha, turno.hora, nowParts);
+  if (diff === null) return null;
 
   return {
-    turnoId: previousTurno.id,
-    cliente: previousTurno.cliente,
-    servicio: previousTurno.servicio,
-    fecha: previousTurno.fecha,
-    hora: previousTurno.hora,
-    total: Number(previousTurno.total || 0),
-    minutesToNext: diffToNext,
+    mode: 'after_turno',
+    turnoId: turno.id,
+    cliente: turno.cliente,
+    servicio: turno.servicio,
+    fecha: turno.fecha,
+    hora: turno.hora,
+    total: Number(turno.total || 0),
+    minutesToNext: 0,
+    minutesAfterStart: -diff,
   };
 }
 

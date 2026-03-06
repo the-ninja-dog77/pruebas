@@ -291,6 +291,8 @@ function fallbackReplyByReason(reason) {
       return 'La configuracion de transcripcion no es valida. Escribime en texto por ahora.';
     case 'missing_media_url':
       return 'No pude obtener el archivo de audio desde WhatsApp. Reenvialo por favor.';
+    case 'missing_media_url_gupshup':
+      return 'No recibi el enlace de audio desde Gupshup Sandbox. Reenviá el audio o escribime en texto.';
     case 'audio_pipeline_error':
       return 'No pude descargar o procesar ese audio desde WhatsApp. Reenvialo por favor o escribime en texto.';
     case 'media_auth_error':
@@ -317,6 +319,7 @@ function classifyFailureType(reason) {
       'unsupported_audio_mime',
       'missing_media_id',
       'missing_media_url',
+      'missing_media_url_gupshup',
       'audio_pipeline_error',
       'media_auth_error',
       'media_not_found',
@@ -349,7 +352,13 @@ async function processAudioMessage({
   );
   const mimeType = normalizeMimeType(audioObj.mime_type);
   const mediaId = String(audioObj.id || '').trim();
-  const mediaUrl = String(audioObj.media_url || audioObj.url || '').trim();
+  const mediaUrl = String(
+    audioObj.media_url ||
+      audioObj.url ||
+      audioObj.mediaUrl ||
+      audioObj.link ||
+      ''
+  ).trim();
   const durationSec = Number(
     audioObj.duration_sec || audioObj.duration || audioObj.debug_duration_sec
   );
@@ -459,7 +468,30 @@ async function processAudioMessage({
           }
         : undefined;
 
-      if (mediaId) {
+      const useDirectMediaUrl = provider === 'gupshup';
+      if (useDirectMediaUrl) {
+        if (!mediaUrl) {
+          transcript = {
+            ok: false,
+            reason: 'missing_media_url_gupshup',
+            failureType: 'audio',
+            retries: 0,
+          };
+        } else {
+          const urlFilename = `gupshup-${Date.now()}.ogg`;
+          transcript = await enqueueTask(() =>
+            audioStt.transcribeFromMediaUrl({
+              mediaUrl,
+              // Gupshup media URL should be requested with apikey headers, not Meta bearer token.
+              accessToken: undefined,
+              requestHeaders: mediaRequestHeaders,
+              mimeTypeHint: mimeType,
+              filenameHint: urlFilename,
+              retryProfile,
+            })
+          );
+        }
+      } else if (mediaId) {
         transcript = await enqueueTask(() =>
           audioStt.transcribeFromWhatsAppMedia({
             mediaId,
