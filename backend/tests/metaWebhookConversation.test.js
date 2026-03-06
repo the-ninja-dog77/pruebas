@@ -1190,4 +1190,52 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(freshTemporal.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
   });
+
+  test('accepts natural confirmation style while temporal confirmation is pending', async () => {
+    const from = '595985544449';
+    const ip = '10.0.0.249';
+    const setup = ['turno', 'corte', '2099-12-27 a las 4 no mejor 2099-12-28 a las 5'];
+
+    for (const msg of setup) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const naturalConfirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('si broooo, ese dia', from));
+    expect(naturalConfirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('A nombre de quien');
+  });
+
+  test('does not keep looping temporal confirmation for availability questions', async () => {
+    const from = '595985544450';
+    const ip = '10.0.0.250';
+    const setup = ['turno', 'corte', '2099-12-27 a las 4 no mejor 2099-12-28 a las 5'];
+
+    for (const msg of setup) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const availability = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('si broooo que turnos tenes ese dia', from));
+    expect(availability.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).not.toContain(
+      'Seguimos pendientes de esta confirmacion'
+    );
+  });
 });

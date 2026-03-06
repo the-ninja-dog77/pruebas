@@ -95,6 +95,28 @@ const FLOW_UNCERTAINTY_INTENTS = [
   'help',
   'explicame',
 ];
+const AVAILABILITY_INTENTS = [
+  'horario',
+  'horarios',
+  'disponible',
+  'disponibilidad',
+  'turnos libres',
+  'libre',
+  'hay libre',
+  'tenes libre',
+  'tienes libre',
+];
+const SLOT_QUERY_INTENTS = [
+  'hay turno',
+  'hay un turno',
+  'algun turno',
+  'tienes algun turno',
+  'tenes algun turno',
+  'tenes turno',
+  'tenes un turno',
+  'tienes turno',
+  'tienes un turno',
+];
 const LIGHT_ACK_INTENTS = [
   'dale',
   'ok',
@@ -491,6 +513,10 @@ function isConfirmIntent(intentText) {
     'voy a ir',
   ];
   if (positives.some(p => intentText.includes(p))) return true;
+
+  // Accept natural confirmations like "si bro", "si dale", "sí, quiero".
+  if (/^(si|sí)\b/.test(intentText) && !/\bsi no\b/.test(intentText)) return true;
+  if (/\b(si|sí)\b/.test(intentText) && intentText.split(/\s+/).length <= 5) return true;
 
   return intentText === 'si' || intentText === 's' || intentText === '1';
 }
@@ -897,6 +923,13 @@ function isLightAckMessage(msg) {
   const tokens = normalized.split(/\s+/).filter(Boolean);
   if (!tokens.length || tokens.length > 5) return false;
   return containsAny(normalized, LIGHT_ACK_INTENTS);
+}
+
+function detectAvailabilityIntent(msg) {
+  return {
+    asksAvailability: containsAny(msg, AVAILABILITY_INTENTS),
+    asksTurnoAtSlot: containsAny(msg, SLOT_QUERY_INTENTS),
+  };
 }
 
 function parseClientName(rawText) {
@@ -1501,7 +1534,13 @@ async function buildReply(from, texto, _context = {}) {
           at: nowMs(),
         };
       }
-      return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation, true);
+      const { asksAvailability, asksTurnoAtSlot } = detectAvailabilityIntent(msg);
+      if (asksAvailability || asksTurnoAtSlot) {
+        applyPendingTemporalDisambiguation(session, session.memory.pendingTemporalDisambiguation);
+        session.memory.pendingTemporalDisambiguation = null;
+      } else {
+        return buildTemporalDisambiguationPrompt(session.memory.pendingTemporalDisambiguation, true);
+      }
     }
   }
 
@@ -1648,28 +1687,7 @@ async function buildReply(from, texto, _context = {}) {
     }
   }
 
-  const asksAvailability = containsAny(msg, [
-    'horario',
-    'horarios',
-    'disponible',
-    'disponibilidad',
-    'turnos libres',
-    'libre',
-    'hay libre',
-    'tenes libre',
-    'tienes libre',
-  ]);
-  const asksTurnoAtSlot = containsAny(msg, [
-    'hay turno',
-    'hay un turno',
-    'algun turno',
-    'tienes algun turno',
-    'tenes algun turno',
-    'tenes turno',
-    'tenes un turno',
-    'tienes turno',
-    'tienes un turno',
-  ]);
+  const { asksAvailability, asksTurnoAtSlot } = detectAvailabilityIntent(msg);
 
   if (asksAvailability || asksTurnoAtSlot) {
     session.stage = 'collecting';
