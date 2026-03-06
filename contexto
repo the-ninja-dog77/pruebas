@@ -1,0 +1,216 @@
+# CONTEXTO OPERATIVO ZZETA (estado consolidado)
+
+Ultima actualizacion: 2026-03-06
+
+## 1) Objetivo del proyecto
+- Sistema real para barberia con:
+- Bot de WhatsApp para reservas/cancelaciones/reprogramaciones.
+- Panel web movil para barbero (resumen, calendario, balance, control del bot).
+- Backend unico como fuente de verdad (sin datos paralelos en frontend).
+- Operacion 24/7 en Railway con persistencia.
+
+## 2) Arquitectura actual (fuente de verdad unica)
+- Backend Node.js + Express:
+- Capas: `routes/`, `controllers/`, `services/`, `repositories/`.
+- DB: SQLite (`better-sqlite3`) con migraciones + seeders.
+- Seguridad: JWT, roles, helmet, rate-limit, logs, manejo de errores.
+- Operacion: `/health`, `/metrics`, backups automáticos.
+
+- Canales de WhatsApp:
+- Provider Meta Cloud API (legacy y soporte actual).
+- Provider Gupshup (soporte agregado, webhook dedicado).
+- Webhook unificado en `backend/routes/metaWebhook.routes.js`.
+
+- Web app barbero:
+- `backend/public/app/barber/` (UI web movil, estilo negro/amarillo).
+- Login y token JWT.
+- 3 vistas por slide:
+  1. Resumen operativo.
+  2. Calendario + agenda del dia + alta manual.
+  3. Estado del bot + balance.
+
+## 3) Hitos logrados (resumen)
+- Flujo conversacional de reservas estable:
+- Servicio, fecha, hora, nombre, metodo de pago, confirmacion.
+- Validacion horaria contra agenda real.
+- Bloqueo de solapes.
+- 1 turno activo por numero (con excepcion explicita “a nombre de otra persona”).
+
+- Operaciones de turno:
+- Crear turno por bot.
+- Crear turno manual desde panel.
+- Cancelar por bot.
+- Reprogramar por bot.
+- Borrar turno manual desde panel.
+- Confirmar turno completado desde panel (impacta balance).
+
+- Audio:
+- Pipeline STT robustecido (MIME, retries, timeouts, clasificacion de errores).
+- Manejo de ruido/silencio/baja confianza.
+- Suites de test de audio + chaos/load.
+
+- Fiabilidad:
+- Matrices de fiabilidad webhook/audio.
+- Soak test de 1 hora con fases (normal, raras, desubicados, acero).
+- Reportes automáticos JSON/MD en `backend/reports/`.
+
+- Infra:
+- Despliegue Railway funcional.
+- Volumen persistente para DB/backups.
+- Endpoints operativos para debugging y monitoreo.
+
+## 4) Decisiones de producto ya incorporadas
+- UX de bot orientada a cierre rapido, sin alargar conversacion innecesaria.
+- Parseo de hora natural (ej. “las 4”, “16”, “3:00”, etc.).
+- Recordatorios de turno previos.
+- Captura de nombre + metodo de pago antes de confirmar.
+- Precios base por servicio:
+- corte: 40000
+- barba: 10000
+- cejas: 10000
+- corte + barba: 50000
+
+## 5) Integraciones y rutas clave
+- Webhook Meta/WhatsApp:
+- `POST /meta-webhook`
+- `POST /whatsapp-webhook` (alias)
+
+- Webhook Gupshup:
+- `POST /gupshup-webhook` (alias al mismo handler)
+- `GET /gupshup-webhook` (health de provider)
+
+- Panel barbero:
+- `GET /api/barber-panel/summary`
+- `GET /api/barber-panel/calendar`
+- `GET /api/barber-panel/day/:fecha`
+- `POST /api/barber-panel/day/:fecha/turnos`
+- `DELETE /api/barber-panel/day/:fecha/turnos/:id`
+- `POST /api/barber-panel/turnos/:id/complete`
+- `GET /api/barber-panel/balance`
+- `PATCH /api/barber-panel/balance-goal`
+- `GET/PATCH /api/barber-panel/bot-status`
+
+## 6) Variables de entorno importantes (sin secretos)
+- Core:
+- `NODE_ENV=production`
+- `DB_PATH=/data/zzeta.db` (con volumen en Railway)
+- `JWT_SECRET=...`
+- `META_VERIFY_TOKEN=...`
+
+- Provider WhatsApp:
+- `WHATSAPP_PROVIDER=meta|gupshup`
+- `WHATSAPP_GRAPH_VERSION=v24.0`
+- `WHATSAPP_TOKEN=...`
+- `WHATSAPP_PHONE_NUMBER_ID=...`
+
+- Gupshup:
+- `GUPSHUP_API_KEY=...`
+- `GUPSHUP_SOURCE=<numero_sandbox_o_live>`
+- `GUPSHUP_BASE_URL=https://api.gupshup.io`
+
+- Bot:
+- `BOT_BARBER_ID=1`
+- `BOT_MIN_LEAD_MINUTES=0` (o el margen deseado)
+- `WHATSAPP_COMPACT_MODE=true|false`
+- `WHATSAPP_OUTBOUND_TIMEOUT_MS=12000`
+- `WHATSAPP_OUTBOUND_RETRIES=1`
+- `WHATSAPP_OUTBOUND_BACKOFF_MS=350`
+
+- Audio/STT:
+- `GROQ_API_KEY=...`
+- `GROQ_MODEL=whisper-large-v3-turbo` (u otro configurado)
+- `GROQ_BASE_URL=https://api.groq.com/openai/v1`
+
+## 7) Cambios tecnicos cerrados en esta sesion (2026-03-06)
+Objetivo: cerrar inconsistencias bot/app web y dejar documentacion consolidada.
+
+### 7.1 Consistencia de `cliente_id` entre canales
+Problema observado:
+- Un mismo cliente podia existir como `595...` o `+595...`, generando:
+- cancelaciones que “parecian” ok en bot pero no impactaban el mismo turno,
+- recordatorios/respuestas contra registros distintos.
+
+Solucion aplicada:
+- `backend/services/turnos.service.js`:
+- Se agregó normalizacion de cliente (`normalizeClientId`) y variantes (`buildClientIdVariants`).
+- Busquedas de proximos/futuros turnos ahora usan variantes:
+  - `getProximoTurnoPorClienteId`
+  - `getTurnosFuturosPorClienteId`
+- Recordatorios ahora usan variantes:
+  - `getRecordatorioActivo`
+  - `responderRecordatorio`
+- Validacion de propiedad al eliminar turno por cliente usa variantes:
+  - `eliminarTurno`
+- Creacion de turnos normaliza solo IDs telefonicos, sin romper IDs de panel:
+  - `crearTurno`
+- Deteccion de cliente WhatsApp robustecida:
+  - `isWhatsappClientId`
+
+### 7.2 Normalizacion de `from` en webhook inbound
+- `backend/routes/metaWebhook.routes.js`:
+- El remitente entrante se normaliza a formato numerico cuando aplica.
+- Reduce variaciones de formato entre provider/evento.
+
+### 7.3 Anti-cache en panel para evitar desfasajes visuales
+- `backend/public/app/barber/app.js`:
+- `apiFetch` fuerza `cache: no-store`, headers no-cache y cache-bust en GET.
+- Reintento de revalidacion en respuestas `304`.
+
+- `backend/routes/barberPanel.routes.js`:
+- Headers anti-cache server-side para APIs del panel.
+
+### 7.4 Verificacion tecnica de esta sesion
+- Sintaxis validada:
+- `node --check backend/services/turnos.service.js`
+- `node --check backend/routes/metaWebhook.routes.js`
+- `node --check backend/public/app/barber/app.js`
+
+- Tests ejecutados y OK:
+- `tests/turnos.test.js`
+- `tests/metaWebhookConversation.test.js`
+- `tests/barberPanel.test.js`
+
+## 8) Nota operativa sobre Gupshup Sandbox
+- En modo sandbox con Proxy Bot, pueden aparecer mensajes extra del propio sandbox
+  (ej: “Sorry no such keyword found ... Challenge/Pass”).
+- Es comportamiento externo de sandbox/proxy, no del motor del bot de ZZETA.
+- Para pruebas limpias de negocio, priorizar canal live o entorno sin proxy anagram.
+
+## 9) Ideas del usuario ya absorbidas al roadmap
+- Mantener bot corto y rentable (menos mensajes por reserva).
+- Recordatorios pre-turno y manejo inteligente de confirmaciones/cancelaciones.
+- Balance visual en panel con meta financiera y progreso.
+- Ventana/modal de confirmacion de servicio finalizado (impacta balance).
+- Blindaje de conversaciones ambiguas y humanas “reales”.
+- Stress tests prolongados para resistencia sin supervision.
+- Mantener compatibilidad total con Railway + provider + app web.
+
+## 10) Estado actual recomendado para operar
+- Backend: desplegado en Railway con volumen persistente.
+- DB: apuntando a `/data/zzeta.db`.
+- Provider: usar un solo canal productivo activo para evitar mezcla de eventos.
+- Panel: funciona como lectura/escritura del mismo backend (sin almacenamiento propio).
+- Bot: listo para operar, con mejoras recientes de consistencia cliente/app.
+
+## 11) Comandos utiles (operacion y verificacion)
+- Salud:
+- `curl https://<dominio>/health`
+- `curl https://<dominio>/metrics`
+
+- Test local rapido:
+- `cd backend`
+- `npm test -- --runInBand tests/turnos.test.js tests/metaWebhookConversation.test.js tests/barberPanel.test.js`
+
+- Soak:
+- `cd backend`
+- `npm run load:soak:1h`
+
+## 12) Pendiente recomendado inmediato
+- Ejecutar un ciclo de validacion real en provider activo:
+  1) crear turno manual en panel,
+  2) consultar disponibilidad desde bot,
+  3) cancelar desde bot,
+  4) verificar liberacion inmediata en panel y re-oferta del horario.
+
+- Si esa secuencia pasa en 3 intentos consecutivos, se considera cerrada la incidencia de inconsistencia bot/panel.
+

@@ -39,6 +39,23 @@ function horaToMinutos(hora) {
   return businessHours.horaToMinutos(hora);
 }
 
+function normalizeClientId(clienteId) {
+  return String(clienteId || '').replace(/[^\d]/g, '').trim();
+}
+
+function buildClientIdVariants(clienteId) {
+  const raw = String(clienteId || '').trim();
+  const normalized = normalizeClientId(raw);
+  const variants = [raw];
+
+  if (normalized) {
+    variants.push(normalized);
+    variants.push(`+${normalized}`);
+  }
+
+  return Array.from(new Set(variants.filter(Boolean)));
+}
+
 const SERVICE_PRICES = {
   'corte': 40000,
   'recorte/tratamiento de barba': 10000,
@@ -211,7 +228,8 @@ function reprogramarTurnoBot({ id, barber_id, nuevaFecha, nuevaHora }) {
 }
 
 function getProximoTurnoPorClienteId(clienteId) {
-  const turnos = clientesRepo.getTurnos(clienteId) || [];
+  const variants = buildClientIdVariants(clienteId);
+  const turnos = clientesRepo.getTurnosByClienteIds(variants) || [];
   if (!turnos.length) return null;
 
   const now = businessTime.getNowParts();
@@ -229,7 +247,8 @@ function getProximoTurnoPorClienteId(clienteId) {
 }
 
 function getTurnosFuturosPorClienteId(clienteId) {
-  const turnos = clientesRepo.getTurnos(clienteId) || [];
+  const variants = buildClientIdVariants(clienteId);
+  const turnos = clientesRepo.getTurnosByClienteIds(variants) || [];
   if (!turnos.length) return [];
 
   const now = businessTime.getNowParts();
@@ -299,10 +318,15 @@ function crearTurno(data) {
   const precioMinimo = inferPrecioServicio(data.servicio);
   const precioFinal = Number.isFinite(precio) ? Math.max(precio, precioMinimo) : precioMinimo;
   const total = precioFinal;
+  const rawClienteId = String(data.cliente_id || '').trim();
+  const normalizedClienteId = normalizeClientId(rawClienteId);
+  const clienteIdFinal = /^\+?\d{8,15}$/.test(rawClienteId)
+    ? normalizedClienteId
+    : rawClienteId;
 
   const nuevoTurno = turnosRepo.create({
     barber_id: data.barber_id,
-    cliente_id: data.cliente_id,
+    cliente_id: clienteIdFinal,
     cliente: data.cliente,
     servicio: data.servicio,
     fecha: data.fecha,
@@ -313,7 +337,9 @@ function crearTurno(data) {
     metodo_pago: data.metodo_pago || null,
   });
 
-  clientesRepo.updateEstado(data.cliente_id, 'confirmado');
+  if (clienteIdFinal) {
+    clientesRepo.updateEstado(clienteIdFinal, 'confirmado');
+  }
   return nuevoTurno;
 }
 
@@ -336,7 +362,10 @@ function eliminarTurno({ id, cliente_id, user }) {
     throw error;
   }
 
-  if (!user && turno.cliente_id !== cliente_id) {
+  const canModify = user
+    ? true
+    : buildClientIdVariants(cliente_id).includes(String(turno.cliente_id || '').trim());
+  if (!canModify) {
     const error = new Error('No podés modificar un turno que no es tuyo');
     error.status = 403;
     throw error;
@@ -353,7 +382,8 @@ function eliminarTurno({ id, cliente_id, user }) {
 }
 
 function getRecordatorioActivo(clienteId) {
-  return turnosRepo.getRecordatorioActivoPorCliente(clienteId) || null;
+  const variants = buildClientIdVariants(clienteId);
+  return turnosRepo.getRecordatorioActivoPorClientes(variants) || null;
 }
 
 function responderRecordatorio({ id, accion, cliente_id }) {
@@ -364,21 +394,29 @@ function responderRecordatorio({ id, accion, cliente_id }) {
     throw error;
   }
 
-  if (turno.cliente_id !== cliente_id) {
+  const variants = buildClientIdVariants(cliente_id);
+  const belongsToClient = variants.includes(String(turno.cliente_id || '').trim());
+  if (!belongsToClient) {
     const error = new Error('No podés responder un turno que no es tuyo');
     error.status = 403;
     throw error;
   }
 
+  const ownerClienteId = String(turno.cliente_id || '').trim();
+
   if (accion === 'confirmar') {
     turnosRepo.clearEsperandoRespuesta(id);
-    clientesRepo.updateEstado(cliente_id, 'confirmado');
+    if (ownerClienteId) {
+      clientesRepo.updateEstado(ownerClienteId, 'confirmado');
+    }
     return { message: 'Turno confirmado' };
   }
 
   if (accion === 'cancelar') {
     turnosRepo.remove(id);
-    clientesRepo.updateEstado(cliente_id, 'cancelado');
+    if (ownerClienteId) {
+      clientesRepo.updateEstado(ownerClienteId, 'cancelado');
+    }
     return { message: 'Turno cancelado' };
   }
 
@@ -421,9 +459,9 @@ function getDiffMinutesToTurno(turno, ahora) {
 }
 
 function isWhatsappClientId(clienteId) {
-  const value = String(clienteId || '');
-  if (!value) return false;
-  return /^[0-9]{8,15}$/.test(value);
+  const normalized = normalizeClientId(clienteId);
+  if (!normalized) return false;
+  return /^[0-9]{8,15}$/.test(normalized);
 }
 
 function buildClientReminderText(turno) {

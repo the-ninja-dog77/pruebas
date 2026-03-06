@@ -423,8 +423,17 @@ function setLoggedInState(isLoggedIn) {
 }
 
 async function apiFetch(url, options = {}) {
+  const method = String(options.method || 'GET').toUpperCase();
+  let requestUrl = url;
+  if (method === 'GET') {
+    const sep = requestUrl.includes('?') ? '&' : '?';
+    requestUrl = `${requestUrl}${sep}_t=${Date.now()}`;
+  }
+
   const headers = {
     'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, max-age=0',
+    Pragma: 'no-cache',
     ...(options.headers || {}),
   };
 
@@ -432,7 +441,12 @@ async function apiFetch(url, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(url, { ...options, headers });
+  let response = await fetch(requestUrl, { ...options, headers, cache: 'no-store' });
+  if (response.status === 304) {
+    const sep = requestUrl.includes('?') ? '&' : '?';
+    const revalidateUrl = `${requestUrl}${sep}revalidate=${Date.now()}`;
+    response = await fetch(revalidateUrl, { ...options, headers, cache: 'no-store' });
+  }
 
   if (response.status === 401 || response.status === 403) {
     logout();

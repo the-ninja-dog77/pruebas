@@ -23,6 +23,16 @@ function getTurnos(clienteId) {
     .all(clienteId);
 }
 
+function getTurnosByClienteIds(clienteIds = []) {
+  const ids = Array.from(new Set((clienteIds || []).filter(Boolean)));
+  if (!ids.length) return [];
+
+  const placeholders = ids.map(() => '?').join(',');
+  return db
+    .prepare(`SELECT * FROM turnos WHERE cliente_id IN (${placeholders})`)
+    .all(...ids);
+}
+
 function getTurnosByClienteYBarbero(clienteId, barberId) {
   return db
     .prepare('SELECT * FROM turnos WHERE cliente_id = ? AND barber_id = ?')
@@ -39,6 +49,7 @@ module.exports = {
   getById,
   ensureExists,
   getTurnos,
+  getTurnosByClienteIds,
   getTurnosByClienteYBarbero,
   updateEstado,
 };

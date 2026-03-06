@@ -7,6 +7,12 @@ const router = express.Router();
 const ALLOWED_ROLES = ['admin', 'barbero', 'barber'];
 
 router.use(authMiddleware, roleMiddleware(ALLOWED_ROLES));
+router.use((_req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  next();
+});
 
 router.get('/summary', barberPanelController.getSummary);
 router.get('/calendar', barberPanelController.getCalendar);

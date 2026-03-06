@@ -84,6 +84,22 @@ function getRecordatorioActivoPorCliente(clienteId) {
     .get(clienteId);
 }
 
+function getRecordatorioActivoPorClientes(clienteIds = []) {
+  const ids = Array.from(new Set((clienteIds || []).filter(Boolean)));
+  if (!ids.length) return null;
+
+  const placeholders = ids.map(() => '?').join(',');
+  return db
+    .prepare(
+      `SELECT * FROM turnos
+       WHERE esperandoRespuesta = 1
+         AND cliente_id IN (${placeholders})
+       ORDER BY fecha ASC, hora ASC
+       LIMIT 1`
+    )
+    .get(...ids);
+}
+
 function clearEsperandoRespuesta(id) {
   return db
     .prepare('UPDATE turnos SET esperandoRespuesta = 0 WHERE id = ?')
@@ -120,6 +136,7 @@ module.exports = {
   getPendientesRecordatorio,
   marcarRecordatorioEnviado,
   getRecordatorioActivoPorCliente,
+  getRecordatorioActivoPorClientes,
   clearEsperandoRespuesta,
   marcarCompletado,
 };

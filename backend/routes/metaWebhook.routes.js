@@ -1779,7 +1779,8 @@ router.post('/', async (req, res) => {
     }
 
     const isAudioInbound = Boolean(incoming.audio) || incoming.type === 'audio';
-    const from = String(incoming.from || '').trim();
+    const fromRaw = String(incoming.from || '').trim();
+    const from = normalizePhone(fromRaw) || fromRaw;
     if (!from) {
       logger.warn('WHATSAPP inbound ignored: missing sender');
       if (isAudioInbound) {
