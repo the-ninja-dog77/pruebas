@@ -51,10 +51,42 @@ logger.info(
 const sessions = new Map();
 const processedMessageIds = new Map();
 const lastInboundTimestampBySender = new Map();
-const START_INTENTS = ['turno', 'reserv', 'agend', 'cita'];
-const GREETING_INTENTS = ['hola', 'buenas', 'buen dia', 'buenas tardes', 'buenas noches'];
-const THANKS_INTENTS = ['gracias', 'muchas gracias', 'te agradezco', 'thanks'];
-const NEW_BOOKING_INTENTS = ['otro turno', 'quiero otro turno', 'nuevo turno'];
+const START_INTENTS = [
+  'turno',
+  'reserv',
+  'agend',
+  'cita',
+  'book',
+  'booking',
+  'schedule',
+  'appointment',
+];
+const GREETING_INTENTS = [
+  'hola',
+  'buenas',
+  'buen dia',
+  'buenas tardes',
+  'buenas noches',
+  'hi',
+  'hello',
+  'hey',
+];
+const THANKS_INTENTS = [
+  'gracias',
+  'muchas gracias',
+  'te agradezco',
+  'thanks',
+  'thank you',
+  'thx',
+  'ty',
+];
+const NEW_BOOKING_INTENTS = [
+  'otro turno',
+  'quiero otro turno',
+  'nuevo turno',
+  'another appointment',
+  'new appointment',
+];
 const REASSURANCE_INTENTS = [
   'seguro',
   'segura',
@@ -68,12 +100,16 @@ const MANAGE_CANCEL_INTENTS = [
   'anular turno',
   'eliminar turno',
   'borrar turno',
+  'cancel appointment',
+  'cancel booking',
 ];
 const MANAGE_RESCHEDULE_INTENTS = [
   'reprogramar turno',
   'cambiar turno',
   'mover turno',
   'pasar turno',
+  'reschedule appointment',
+  'change booking',
 ];
 const FLOW_HELP_INTENTS = [
   'que me falta',
@@ -84,6 +120,9 @@ const FLOW_HELP_INTENTS = [
   'recordame',
   'repeti',
   'repetime',
+  'what am i missing',
+  'what is missing',
+  'where are we',
 ];
 const FLOW_UNCERTAINTY_INTENTS = [
   'no se',
@@ -94,6 +133,9 @@ const FLOW_UNCERTAINTY_INTENTS = [
   'ayuda',
   'help',
   'explicame',
+  'idk',
+  'i dont know',
+  'dont understand',
 ];
 const AVAILABILITY_INTENTS = [
   'horario',
@@ -105,6 +147,12 @@ const AVAILABILITY_INTENTS = [
   'hay libre',
   'tenes libre',
   'tienes libre',
+  'available',
+  'availability',
+  'slot',
+  'slots',
+  'free slot',
+  'free slots',
 ];
 const SLOT_QUERY_INTENTS = [
   'hay turno',
@@ -116,6 +164,9 @@ const SLOT_QUERY_INTENTS = [
   'tenes un turno',
   'tienes turno',
   'tienes un turno',
+  'is there a slot',
+  'do you have a slot',
+  'do you have',
 ];
 const LIGHT_ACK_INTENTS = [
   'dale',
@@ -147,12 +198,123 @@ const VALID_STAGES = new Set([
   'manage_reschedule_collect_new',
 ]);
 
+const INTENT_ALIAS_REPLACEMENTS = [
+  [/\bday after tomorrow\b/g, 'pasado manana'],
+  [/\bthis afternoon\b/g, 'esta tarde'],
+  [/\bthis evening\b/g, 'esta noche'],
+  [/\btonight\b/g, 'esta noche'],
+  [/\bnext monday\b/g, 'lunes'],
+  [/\bnext tuesday\b/g, 'martes'],
+  [/\bnext wednesday\b/g, 'miercoles'],
+  [/\bnext thursday\b/g, 'jueves'],
+  [/\bnext friday\b/g, 'viernes'],
+  [/\bnext saturday\b/g, 'sabado'],
+  [/\bnext sunday\b/g, 'domingo'],
+  [/\bthis saturday\b/g, 'sabado'],
+  [/\bthis sunday\b/g, 'domingo'],
+  [/\bmonday\b/g, 'lunes'],
+  [/\btuesday\b/g, 'martes'],
+  [/\bwednesday\b/g, 'miercoles'],
+  [/\bthursday\b/g, 'jueves'],
+  [/\bfriday\b/g, 'viernes'],
+  [/\bsaturday\b/g, 'sabado'],
+  [/\bsunday\b/g, 'domingo'],
+  [/\btomorrow\b/g, 'manana'],
+  [/\btoday\b/g, 'hoy'],
+  [/\bhair ?cut\b/g, 'corte'],
+  [/\btrim\b/g, 'corte'],
+  [/\bwanna\b/g, 'quiero'],
+  [/\bi need\b/g, 'quiero'],
+  [/\bcan i\b/g, 'puedo'],
+  [/\bgonna\b/g, 'voy a'],
+  [/\bpls\b/g, 'porfa'],
+  [/\bplz\b/g, 'porfa'],
+  [/\bmy name is\b/g, 'mi nombre es'],
+  [/\bi am\b/g, 'soy'],
+  [/\bi'm\b/g, 'soy'],
+  [/\bits for\b/g, 'a nombre de'],
+  [/\bit's for\b/g, 'a nombre de'],
+  [/\bbeard\b/g, 'barba'],
+  [/\bshave\b/g, 'barba'],
+  [/\beyebrows?\b/g, 'cejas'],
+  [/\bbrows?\b/g, 'cejas'],
+  [/\bcash\b/g, 'efectivo'],
+  [/\bcard\b/g, 'tarjeta'],
+  [/\bbank transfer\b/g, 'transferencia'],
+  [/\bwire transfer\b/g, 'transferencia'],
+  [/\btransfer\b/g, 'transferencia'],
+  [/\bpayment\b/g, 'pago'],
+  [/\bpaying\b/g, 'pagar'],
+  [/\bbook(ing)?\b/g, 'agendar'],
+  [/\bappointment\b/g, 'turno'],
+  [/\breschedule\b/g, 'reprogramar'],
+  [/\bcancel it\b/g, 'cancelar'],
+  [/\bconfirm\b/g, 'confirmar'],
+  [/\bslot(s)?\b/g, 'horarios'],
+  [/\bavailable\b/g, 'disponible'],
+  [/\byes\b/g, 'si'],
+  [/\byeah\b/g, 'si'],
+  [/\byep\b/g, 'si'],
+  [/\byup\b/g, 'si'],
+  [/\bokay\b/g, 'ok'],
+  [/\ball good\b/g, 'correcto'],
+  [/\bthat'?s right\b/g, 'correcto'],
+  [/\bcorrect\b/g, 'correcto'],
+  [/\bexactly\b/g, 'exacto'],
+  [/\bright\b/g, 'correcto'],
+  [/\bnope\b/g, 'no'],
+  [/\bnah\b/g, 'no'],
+  [/\bdude\b/g, 'bro'],
+  [/\bmate\b/g, 'bro'],
+  [/\bbuddy\b/g, 'bro'],
+  [/\bman\b/g, 'bro'],
+  [/\bqiero\b/g, 'quiero'],
+  [/\bkiero\b/g, 'quiero'],
+  [/\bkiere?o\b/g, 'quiero'],
+  [/\btenes\b/g, 'tenes'],
+  [/\btemes\b/g, 'tenes'],
+  [/\benrealidad\b/g, 'en realidad'],
+  [/\bat\b/g, 'a las'],
+  [/\bone\b/g, 'uno'],
+  [/\btwo\b/g, 'dos'],
+  [/\bthree\b/g, 'tres'],
+  [/\bfour\b/g, 'cuatro'],
+  [/\bfive\b/g, 'cinco'],
+  [/\bsix\b/g, 'seis'],
+  [/\bseven\b/g, 'siete'],
+  [/\beight\b/g, 'ocho'],
+  [/\bnine\b/g, 'nueve'],
+  [/\bten\b/g, 'diez'],
+  [/\beleven\b/g, 'once'],
+  [/\btwelve\b/g, 'doce'],
+  [/\bthirteen\b/g, 'trece'],
+  [/\bfourteen\b/g, 'catorce'],
+  [/\bfifteen\b/g, 'quince'],
+  [/\bsixteen\b/g, 'dieciseis'],
+  [/\bseventeen\b/g, 'diecisiete'],
+  [/\beighteen\b/g, 'dieciocho'],
+  [/\bnineteen\b/g, 'diecinueve'],
+  [/\btwenty\b/g, 'veinte'],
+  [/\btwenty one\b/g, 'veintiuno'],
+  [/\btwenty two\b/g, 'veintidos'],
+  [/\btwenty three\b/g, 'veintitres'],
+];
+
+function applyIntentAliases(normalizedText) {
+  let out = String(normalizedText || '');
+  for (const [pattern, replacement] of INTENT_ALIAS_REPLACEMENTS) {
+    out = out.replace(pattern, replacement);
+  }
+  return out.replace(/\s+/g, ' ').trim();
+}
+
 function normalizeText(texto) {
-  return String(texto || '')
+  const normalized = String(texto || '')
     .toLowerCase()
     .normalize('NFD')
     .replace(/[\u0300-\u036f]/g, '')
     .trim();
+  return applyIntentAliases(normalized);
 }
 
 function normalizePhone(value) {
@@ -750,9 +912,22 @@ function parseTime(msg) {
   }
 
   const contextualNumericRegex =
-    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi;
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la|tipo|como|sobre)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi;
   for (const match of msg.matchAll(contextualNumericRegex)) {
     pushCandidate(match.index, match[1], match[2], match[3]);
+  }
+
+  const partOfDayRegex =
+    /\b([0-2]?\d)(?::([0-5]\d))?\s*de\s*la\s*(manana|tarde|noche)\b/gi;
+  for (const match of msg.matchAll(partOfDayRegex)) {
+    let hour = Number(match[1]);
+    const minute = match[2] || '00';
+    const part = String(match[3] || '').toLowerCase();
+    if (!Number.isInteger(hour) || hour < 0 || hour > 23) continue;
+    if (part === 'tarde' && hour >= 1 && hour <= 8) hour += 12;
+    if (part === 'noche' && hour >= 1 && hour <= 7) hour += 12;
+    if (part === 'manana' && hour === 12) hour = 0;
+    pushCandidate(match.index, hour, minute, '');
   }
 
   const contextualWordRegex =
@@ -808,7 +983,11 @@ function countTimeMentions(msg) {
   );
   count += countRegexMatches(
     msg,
-    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi
+    /(?:a\s*las|de\s*las|las|para\s*las|a\s*la|la|tipo|como|sobre)\s*([0-2]?\d)(?::([0-5]\d))?\s*(a\.?\s*m\.?|p\.?\s*m\.?)?(?:\s*(?:h|hs|hora|horas))?\b/gi
+  );
+  count += countRegexMatches(
+    msg,
+    /\b([0-2]?\d)(?::([0-5]\d))?\s*de\s*la\s*(manana|tarde|noche)\b/gi
   );
   count += countRegexMatches(msg, /\b([0-2]?\d)(?::([0-5]\d))?\s*(?:h|hs|hora|horas)\b/gi);
   return count;
@@ -874,6 +1053,12 @@ function sanitizeNameCandidate(rawCandidate) {
     'perfilado',
     'confirmar',
     'cancelar',
+    'yes',
+    'no',
+    'ok',
+    'okay',
+    'correcto',
+    'exacto',
     'si',
     'no',
     'ese',
@@ -887,6 +1072,21 @@ function sanitizeNameCandidate(rawCandidate) {
     'pago',
     'de',
     'del',
+    'and',
+    'for',
+    'with',
+    'at',
+    'on',
+    'i',
+    'my',
+    'name',
+    'is',
+    'its',
+    'it',
+    'pay',
+    'please',
+    'pls',
+    'plz',
     'en',
     'con',
     'para',
@@ -897,6 +1097,12 @@ function sanitizeNameCandidate(rawCandidate) {
     'el',
     'los',
     'y',
+    'want',
+    'book',
+    'booking',
+    'appointment',
+    'today',
+    'tomorrow',
   ]);
   const FILLER_WORDS = new Set([
     'ya',
@@ -912,6 +1118,14 @@ function sanitizeNameCandidate(rawCandidate) {
     'mano',
     'broo',
     'brooo',
+    'broh',
+    'brother',
+    'sis',
+    'sister',
+    'dude',
+    'mate',
+    'buddy',
+    'man',
   ]);
 
   const tokens = String(rawCandidate || '')
@@ -958,21 +1172,47 @@ function parseClientName(rawText, options = {}) {
   const allowSingleToken = Boolean(options?.allowSingleToken);
   const raw = String(rawText || '').trim();
   if (!raw) return null;
+  const normalizedRaw = normalizeText(raw);
+
+  const multilingualCueRegex =
+    /(?:a nombre de|mi nombre es|me llamo|soy|my name is|i am|i'm|im|it's for|its for)\s+(.+)/i;
+  const multilingualCueMatches = [
+    raw.match(multilingualCueRegex),
+    normalizedRaw.match(multilingualCueRegex),
+  ];
+  for (const cueMatch of multilingualCueMatches) {
+    if (!cueMatch?.[1]) continue;
+    const candidate = sanitizeNameCandidate(cueMatch[1]);
+    if (!candidate || candidate.length < 2 || candidate.length > 60) continue;
+    const tokens = candidate.split(/\s+/).filter(Boolean);
+    if (tokens.length >= 2) return candidate;
+    if (tokens.length === 1 && candidate.length >= 3) return candidate;
+  }
 
   const nameCueRegex =
     /(?:a nombre de|mi nombre es|me llamo|soy)\s+([a-záéíóúñü.'-]+(?:\s+[a-záéíóúñü.'-]+){0,3})(?=\s+(?:quiero|pagar|en|con|hoy|manana|mañana|para|a|al|del|de|fecha|hora|metodo|m[eé]todo|servicio)\b|$)/i;
   const cueMatch = raw.match(nameCueRegex);
   if (cueMatch?.[1]) {
     const candidate = sanitizeNameCandidate(cueMatch[1]);
-    if (candidate && candidate.length >= 2 && candidate.length <= 60) {
-      return candidate;
+    if (!candidate || candidate.length < 2 || candidate.length > 60) {
+      // no-op
+    } else {
+      const tokens = candidate.split(/\s+/).filter(Boolean);
+      if (tokens.length >= 2) return candidate;
+      if (tokens.length === 1 && candidate.length >= 3) return candidate;
     }
   }
 
   const cleaned = raw
-    .replace(/^(me llamo|soy|mi nombre es|a nombre de)\s+/i, '')
+    .replace(
+      /^(me llamo|soy|mi nombre es|a nombre de|my name is|i am|i'm|im|it's for|its for)\s+/i,
+      ''
+    )
     .replace(/^(a|para)\s+/i, '')
-    .replace(/\b(ya lo sabes|nms|nomas|bro+|rey|ciejo|ciego|mano)\b/gi, ' ')
+    .replace(
+      /\b(ya lo sabes|nms|nomas|bro+|broh|brother|sis|sister|rey|ciejo|ciego|mano|dude|buddy|mate)\b/gi,
+      ' '
+    )
     .replace(/[0-9]/g, ' ')
     .replace(/[^\p{L}\s'.-]/gu, ' ')
     .replace(/\s+/g, ' ')
@@ -1077,16 +1317,38 @@ function inferNameFromDenseBookingMessage(rawText, msg) {
     'de',
     'del',
     'y',
+    'and',
+    'for',
+    'with',
+    'i',
+    'my',
+    'name',
+    'is',
+    'its',
+    'it',
+    'pay',
+    'today',
+    'tomorrow',
     'soy',
     'mi',
     'nombre',
     'es',
     'me',
     'llamo',
+    'booking',
+    'appointment',
+    'yes',
+    'no',
+    'okay',
+    'ok',
     'porfa',
     'bro',
     'broo',
     'brooo',
+    'dude',
+    'mate',
+    'buddy',
+    'man',
     'rey',
     'nms',
     'nomas',

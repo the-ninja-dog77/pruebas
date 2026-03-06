@@ -1262,6 +1262,68 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(reply.toLowerCase()).toContain('confirm');
   });
 
+  test('understands mixed one-shot message with typos and combined service intent', async () => {
+    const from = '595985544455';
+    const ip = '10.0.0.255';
+    const fecha = '2099-12-30';
+    const input =
+      `bro qiero un turno tipo 3 el ${fecha}, quiero un corte y hacerme la barba tambien, soy fernando vallejos y pago en efectivo`;
+
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(input, from));
+    expect(res.statusCode).toBe(200);
+
+    const reply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    expect(reply).toContain(fecha);
+    expect(reply).toContain('15:00');
+    expect(reply).toContain('corte + barba');
+    expect(reply).toContain('fernando vallejos');
+    expect(reply).toContain('efectivo');
+  });
+
+  test('understands "3 de la tarde" as 15:00 in one-shot booking', async () => {
+    const from = '595985544456';
+    const ip = '10.0.0.56';
+    const fecha = '2099-12-29';
+    const input = `quiero corte para el ${fecha} a las 3 de la tarde, soy juan perez y pago en efectivo`;
+
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(input, from));
+    expect(res.statusCode).toBe(200);
+
+    const reply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    expect(reply).toContain(fecha);
+    expect(reply).toContain('15:00');
+    expect(reply).toContain('juan perez');
+    expect(reply).toContain('efectivo');
+  });
+
+  test('accepts explicit single-token name when user says "soy fer"', async () => {
+    const from = '595985544457';
+    const ip = '10.0.0.57';
+    const fecha = '2099-12-28';
+    const input = `quiero corte el ${fecha} a las 4, soy fer y pago en efectivo`;
+
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(input, from));
+    expect(res.statusCode).toBe(200);
+
+    const reply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    expect(reply).toContain(fecha);
+    expect(reply).toContain('16:00');
+    expect(reply).toContain('fer');
+    expect(reply).toContain('efectivo');
+  });
+
   test('accepts "correcto" as confirmation on awaiting_confirm stage', async () => {
     const from = '595985544452';
     const ip = '10.0.0.252';
@@ -1288,6 +1350,56 @@ describe('WhatsApp webhook conversation flow', () => {
       .set('x-webhook-debug', '1')
       .set('x-forwarded-for', ip)
       .send(messagePayload('correcto', from));
+    expect(confirm.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('turno confirmado');
+  });
+
+  test('understands english one-shot booking message without rigid format', async () => {
+    const from = '595985544453';
+    const ip = '10.0.0.253';
+    const input =
+      'hi bro, i want a haircut for 2099-12-31 at 3 pm, my name is John Doe and i pay cash';
+
+    const res = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload(input, from));
+    expect(res.statusCode).toBe(200);
+
+    const reply = outboundMessages[outboundMessages.length - 1].toLowerCase();
+    expect(reply).toContain('2099-12-31');
+    expect(reply).toContain('15:00');
+    expect(reply).toContain('john doe');
+    expect(reply).toContain('efectivo');
+  });
+
+  test('accepts "yes bro" as confirmation in awaiting_confirm stage', async () => {
+    const from = '595985544454';
+    const ip = '10.0.0.254';
+    const seq = [
+      'turno',
+      'corte',
+      '2099-12-31',
+      '17:00',
+      'Pedro Gomez',
+      'efectivo',
+    ];
+
+    for (const msg of seq) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const confirm = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('yes bro', from));
     expect(confirm.statusCode).toBe(200);
     expect(outboundMessages[outboundMessages.length - 1]).toContain('turno confirmado');
   });
