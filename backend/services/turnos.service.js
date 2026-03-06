@@ -441,21 +441,17 @@ function confirmarTurnoCompletado({ id, barber_id }) {
   return turnosRepo.getById(id);
 }
 
-function shouldSendReminder(turno, ahora) {
+function shouldSendReminder(turno, nowParts) {
   if (!turno || Number(turno.recordatorioEnviado || 0) === 1) return false;
   if (!turno.fecha || !turno.hora) return false;
-  const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}:00`);
-  if (!Number.isFinite(fechaHoraTurno.getTime())) return false;
-
-  const diffMin = Math.floor((fechaHoraTurno - ahora) / 60000);
+  const diffMin = businessTime.diffMinutes(turno.fecha, turno.hora, nowParts);
+  if (diffMin === null) return false;
   return diffMin <= TURNO_CLIENT_REMINDER_MINUTES && diffMin >= 0;
 }
 
-function getDiffMinutesToTurno(turno, ahora) {
+function getDiffMinutesToTurno(turno, nowParts) {
   if (!turno?.fecha || !turno?.hora) return null;
-  const fechaHoraTurno = new Date(`${turno.fecha}T${turno.hora}:00`);
-  if (!Number.isFinite(fechaHoraTurno.getTime())) return null;
-  return Math.floor((fechaHoraTurno - ahora) / 60000);
+  return businessTime.diffMinutes(turno.fecha, turno.hora, nowParts);
 }
 
 function isWhatsappClientId(clienteId) {
@@ -470,17 +466,17 @@ function buildClientReminderText(turno) {
 
 function iniciarRecordatorios(logger) {
   setInterval(() => {
-    const ahora = new Date();
+    const nowParts = businessTime.getNowParts();
     const pendientes = turnosRepo.getPendientesRecordatorio();
 
     pendientes.forEach(async turno => {
-      const diffMin = getDiffMinutesToTurno(turno, ahora);
+      const diffMin = getDiffMinutesToTurno(turno, nowParts);
       if (diffMin === null) return;
       if (diffMin < 0) {
         turnosRepo.marcarRecordatorioEnviado(turno.id, { esperandoRespuesta: false });
         return;
       }
-      if (!shouldSendReminder(turno, ahora)) return;
+      if (!shouldSendReminder(turno, nowParts)) return;
 
       const recipient = String(turno.cliente_id || '').trim();
       const canReply = isWhatsappClientId(recipient);

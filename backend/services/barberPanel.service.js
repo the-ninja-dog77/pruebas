@@ -3,39 +3,37 @@ const settingsRepo = require('../repositories/settings.repository');
 const clientesRepo = require('../repositories/clientes.repository');
 const turnosService = require('./turnos.service');
 const businessHours = require('./businessHours.service');
+const businessTime = require('./businessTime.service');
 
 function pad2(v) {
   return String(v).padStart(2, '0');
 }
 
 function nowLocalParts() {
-  const now = new Date();
-  const fecha = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-${pad2(now.getDate())}`;
-  const hora = `${pad2(now.getHours())}:${pad2(now.getMinutes())}`;
-  return { fecha, hora };
+  return businessTime.getNowParts();
 }
 
 const COMPLETION_PROMPT_MINUTES = Number(process.env.BARBER_COMPLETION_PROMPT_MINUTES || 10);
 const DEFAULT_BALANCE_GOAL = Number(process.env.DEFAULT_BALANCE_GOAL || 2000000);
-
-function toLocalDateTime(fecha, hora) {
-  return new Date(`${fecha}T${hora}:00`);
-}
 
 function getBalanceGoalKey(barberId) {
   return `balance_goal_barber_${barberId}`;
 }
 
 function getDateRange(range) {
-  const now = new Date();
-  const end = nowLocalParts().fecha;
+  const nowParts = nowLocalParts();
+  const end = nowParts.fecha;
+  const [year, month, dayOfMonth] = String(nowParts.fecha)
+    .split('-')
+    .map(v => Number(v));
+  const now = new Date(year, month - 1, dayOfMonth);
   if (range === 'month') {
     const from = `${now.getFullYear()}-${pad2(now.getMonth() + 1)}-01`;
     return { from, to: end, range: 'month' };
   }
 
-  const day = now.getDay(); // 0=domingo
-  const diffToMonday = (day + 6) % 7;
+  const weekday = now.getDay(); // 0=domingo
+  const diffToMonday = (weekday + 6) % 7;
   const start = new Date(now);
   start.setDate(now.getDate() - diffToMonday);
   const from = `${start.getFullYear()}-${pad2(start.getMonth() + 1)}-${pad2(start.getDate())}`;
@@ -48,10 +46,10 @@ function parseGoalValue(value, fallback = DEFAULT_BALANCE_GOAL) {
   return Math.round(n);
 }
 
-function buildCompletionPrompt({ agendaHoy, nextTurno, now }) {
+function buildCompletionPrompt({ agendaHoy, nextTurno, nowParts }) {
   if (!nextTurno) return null;
-  const nextStart = toLocalDateTime(nextTurno.fecha, nextTurno.hora);
-  const diffToNext = Math.floor((nextStart - now) / 60000);
+  const diffToNext = businessTime.diffMinutes(nextTurno.fecha, nextTurno.hora, nowParts);
+  if (diffToNext === null) return null;
   if (diffToNext < 0 || diffToNext > COMPLETION_PROMPT_MINUTES) return null;
 
   const nextIndex = agendaHoy.findIndex(t => Number(t.id) === Number(nextTurno.id));
@@ -72,14 +70,15 @@ function buildCompletionPrompt({ agendaHoy, nextTurno, now }) {
 }
 
 function getSummary(barberId) {
-  const { fecha, hora } = nowLocalParts();
+  const nowParts = nowLocalParts();
+  const { fecha, hora } = nowParts;
   const summary = barberPanelRepo.getDaySummary({ barberId, fecha, hora }) || {};
   const nextTurno = barberPanelRepo.getNextTurno({ barberId, fecha, hora }) || null;
   const agendaHoy = barberPanelRepo.getTurnosByDay({ barberId, fecha });
   const completionPrompt = buildCompletionPrompt({
     agendaHoy,
     nextTurno,
-    now: toLocalDateTime(fecha, hora),
+    nowParts,
   });
 
   return {

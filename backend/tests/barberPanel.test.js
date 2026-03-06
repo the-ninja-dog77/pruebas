@@ -1,5 +1,6 @@
 const request = require('supertest');
 const businessHours = require('../services/businessHours.service');
+const barberPanelRepo = require('../repositories/barberPanel.repository');
 
 process.env.NODE_ENV = 'test';
 process.env.JWT_SECRET = 'zzeta_super_secreto';
@@ -92,6 +93,13 @@ describe('Barber panel', () => {
       t => t.hora === hora && t.servicio === 'Corte'
     );
     expect(createdInAgenda).toBe(true);
+
+    const summary = barberPanelRepo.getDaySummary({
+      barberId: 1,
+      fecha,
+      hora: '00:00',
+    });
+    expect(Number(summary.totalTurnos || 0)).toBeGreaterThan(0);
   });
 
   test('elimina un turno desde /api/barber-panel/day/:fecha/turnos/:id y libera el horario', async () => {

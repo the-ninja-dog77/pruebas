@@ -575,6 +575,85 @@ describe('WhatsApp webhook conversation flow', () => {
     expect(stillExists).toBe(false);
   });
 
+  test('cancels nearest upcoming booking when user says "no creo poder ir" without explicit "cancelar"', async () => {
+    const from = '595985544451';
+    const fecha = '2099-12-28';
+    const ip = '10.0.0.251';
+    const createSequence = [
+      'turno',
+      'corte',
+      fecha,
+      '12:00',
+      'Fernando Vallejos',
+      'efectivo',
+      'confirmar',
+    ];
+
+    for (const msg of createSequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const cancel = await request(app)
+      .post('/meta-webhook')
+      .set('x-webhook-debug', '1')
+      .set('x-forwarded-for', ip)
+      .send(messagePayload('no creo poder ir ese dia', from));
+
+    expect(cancel.statusCode).toBe(200);
+    expect(outboundMessages[outboundMessages.length - 1]).toContain('cancele tu turno');
+
+    const login = await request(app)
+      .post('/auth/login')
+      .set('x-forwarded-for', ip)
+      .send({
+        username: 'gonzabarber',
+        password: 'barber312',
+      });
+    expect(login.statusCode).toBe(200);
+    const token = login.body.token;
+
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('x-forwarded-for', ip)
+      .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
+
+    const stillExists = day.body.agenda.some(
+      t => t.hora === '12:00' && t.cliente === 'Fernando Vallejos'
+    );
+    expect(stillExists).toBe(false);
+  });
+
+  test('extracts customer name from long natural sentence with "soy ..." cue', async () => {
+    const from = '595985544452';
+    const fecha = '2099-12-26';
+    const ip = '10.0.0.252';
+    const sequence = [
+      'turno',
+      'corte',
+      fecha,
+      '13:00',
+      'quiero un corte soy fernando quiero pagar en efectivo y quiero un corte hoy a las 1',
+    ];
+
+    for (const msg of sequence) {
+      const res = await request(app)
+        .post('/meta-webhook')
+        .set('x-webhook-debug', '1')
+        .set('x-forwarded-for', ip)
+        .send(messagePayload(msg, from));
+      expect(res.statusCode).toBe(200);
+    }
+
+    const lastReply = outboundMessages[outboundMessages.length - 1];
+    expect(lastReply.toLowerCase()).not.toContain('me falta: nombre');
+  });
+
   test('responds naturally to thanks in idle state', async () => {
     const res = await request(app)
       .post('/meta-webhook')

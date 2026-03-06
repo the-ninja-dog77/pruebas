@@ -1,5 +1,33 @@
 const BUSINESS_TIMEZONE = process.env.BUSINESS_TIMEZONE || 'America/Asuncion';
 
+function parseIsoDate(fecha) {
+  const match = String(fecha || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return null;
+  return {
+    year: Number(match[1]),
+    month: Number(match[2]),
+    day: Number(match[3]),
+  };
+}
+
+function parseHourMinute(hora) {
+  const match = String(hora || '').match(/^(\d{2}):(\d{2})$/);
+  if (!match) return null;
+  return {
+    hour: Number(match[1]),
+    minute: Number(match[2]),
+  };
+}
+
+function toUtcMinuteIndex(fecha, hora) {
+  const date = parseIsoDate(fecha);
+  const time = parseHourMinute(hora);
+  if (!date || !time) return null;
+  const ms = Date.UTC(date.year, date.month - 1, date.day, time.hour, time.minute, 0);
+  if (!Number.isFinite(ms)) return null;
+  return Math.floor(ms / 60000);
+}
+
 function getNowParts() {
   try {
     const formatter = new Intl.DateTimeFormat('en-CA', {
@@ -81,6 +109,14 @@ function keepCurrentAndFutureSlots(fecha, slots, horaToMinutos, minLeadMinutes =
   return list.filter(hora => horaToMinutos(hora) >= minAllowed);
 }
 
+function diffMinutes(fecha, hora, fromParts = null) {
+  const reference = fromParts || getNowParts();
+  const targetIndex = toUtcMinuteIndex(fecha, hora);
+  const sourceIndex = toUtcMinuteIndex(reference?.fecha, reference?.hora);
+  if (!Number.isFinite(targetIndex) || !Number.isFinite(sourceIndex)) return null;
+  return targetIndex - sourceIndex;
+}
+
 module.exports = {
   BUSINESS_TIMEZONE,
   getNowParts,
@@ -88,4 +124,5 @@ module.exports = {
   isPastDateTime,
   isTooSoonDateTime,
   keepCurrentAndFutureSlots,
+  diffMinutes,
 };

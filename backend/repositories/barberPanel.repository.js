@@ -13,7 +13,7 @@ function getDaySummary({ barberId, fecha, hora }) {
       WHERE barber_id = ? AND fecha = ?
       `
     )
-    .get(hora, hora, barberId, fecha);
+    .get(hora, barberId, fecha);
 }
 
 function getNextTurno({ barberId, fecha, hora }) {

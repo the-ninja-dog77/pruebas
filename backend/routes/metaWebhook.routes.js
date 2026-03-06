@@ -127,6 +127,26 @@ function containsAny(texto, needles) {
   return needles.some(needle => texto.includes(needle));
 }
 
+function isNaturalNoShowIntent(msg) {
+  const normalized = normalizeText(msg);
+  return (
+    containsAny(normalized, [
+      'no voy a poder',
+      'no puedo ir',
+      'no voy a ir',
+      'no podre ir',
+      'no podre asistir',
+      'no podre llegar',
+      'no llego',
+      'se me complica ir',
+      'no voy',
+      'no puedo asistir',
+      'no creo poder ir',
+    ]) ||
+    /\bno\s+creo\s+poder\s+ir\b/i.test(normalized)
+  );
+}
+
 function nowMs() {
   return Date.now();
 }
@@ -712,6 +732,19 @@ function parseClientName(rawText) {
   const raw = String(rawText || '').trim();
   if (!raw) return null;
 
+  const nameCueRegex =
+    /(?:a nombre de|mi nombre es|me llamo|soy)\s+([a-záéíóúñü.'-]+(?:\s+[a-záéíóúñü.'-]+){0,3})(?=\s+(?:quiero|pagar|en|con|hoy|manana|mañana|para|a|al|del|de|fecha|hora|metodo|m[eé]todo|servicio)\b|$)/i;
+  const cueMatch = raw.match(nameCueRegex);
+  if (cueMatch?.[1]) {
+    const candidate = cueMatch[1]
+      .replace(/[^\p{L}\s'.-]/gu, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (candidate.length >= 2 && candidate.length <= 60) {
+      return candidate;
+    }
+  }
+
   const cleaned = raw
     .replace(/^(me llamo|soy|mi nombre es|a nombre de)\s+/i, '')
     .replace(/^(a|para)\s+/i, '')
@@ -1274,17 +1307,10 @@ async function buildReply(from, texto, _context = {}) {
   if (
     !wantsManageCancelCommand &&
     !wantsManageRescheduleCommand &&
-    containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar'])
+    (containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar']) || isNaturalNoShowIntent(msg))
   ) {
-    const wantsBookingCancel = containsAny(msg, [
-      'cancelar',
-      'anular',
-      'no voy a poder',
-      'no puedo ir',
-      'no voy a ir',
-      'no podre ir',
-      'no podre asistir',
-    ]);
+    const explicitFlowCancel = containsAny(msg, ['cancelar', 'anular', 'salir', 'reiniciar']);
+    const wantsBookingCancel = explicitFlowCancel || isNaturalNoShowIntent(msg);
 
     if (wantsBookingCancel) {
       try {
@@ -1297,6 +1323,9 @@ async function buildReply(from, texto, _context = {}) {
           });
           resetSession(from);
           return `Listo, cancele tu turno del ${turno.fecha} a las ${turno.hora} (${turno.servicio}).`;
+        }
+        if (!explicitFlowCancel) {
+          return 'Entiendo. No encontre un turno activo para cancelar ahora. Si queres reservar otro, decime servicio, fecha y hora.';
         }
       } catch (err) {
         logger.error(`WHATSAPP quick cancel error: ${err.stack || err.message}`);
