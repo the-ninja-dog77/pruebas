@@ -197,9 +197,12 @@ describe('Barber panel', () => {
 
   test('muestra completionPrompt sin proximo turno cuando ya pasaron 30 minutos', async () => {
     const fecha = getOpenDateFrom('2099-11-01', 2);
-    const slots = businessHours.getSlotsForDate(fecha);
-    expect(slots.length).toBeGreaterThan(0);
-    const hora = slots.includes('13:00') ? '13:00' : slots[0];
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
+    expect(day.body.disponibles.length).toBeGreaterThan(0);
+    const hora = day.body.disponibles[day.body.disponibles.length - 1];
 
     const create = await request(app)
       .post(`/api/barber-panel/day/${fecha}/turnos`)
@@ -235,10 +238,13 @@ describe('Barber panel', () => {
 
   test('si hay multiples pendientes sin proximo turno, devuelve primero el mas antiguo', async () => {
     const fecha = getOpenDateFrom('2099-10-01', 3);
-    const slots = businessHours.getSlotsForDate(fecha);
-    expect(slots.length).toBeGreaterThan(2);
-    const horaA = slots.includes('09:00') ? '09:00' : slots[0];
-    const horaB = slots.includes('10:00') ? '10:00' : slots[1];
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
+    expect(day.body.disponibles.length).toBeGreaterThan(2);
+    const horaB = day.body.disponibles[day.body.disponibles.length - 1];
+    const horaA = day.body.disponibles[day.body.disponibles.length - 2];
 
     const createA = await request(app)
       .post(`/api/barber-panel/day/${fecha}/turnos`)
@@ -280,5 +286,85 @@ describe('Barber panel', () => {
     } finally {
       businessTime.getNowParts = originalGetNowParts;
     }
+  });
+
+  test('oculta turnos del dia que ya superaron la ventana visual y ajusta el conteo del calendario', async () => {
+    const fecha = getOpenDateFrom('2099-09-01', 1);
+    const day = await request(app)
+      .get(`/api/barber-panel/day/${fecha}`)
+      .set('Authorization', `Bearer ${token}`);
+    expect(day.statusCode).toBe(200);
+    expect(day.body.disponibles.length).toBeGreaterThan(0);
+    const hora = day.body.disponibles[0];
+
+    const create = await request(app)
+      .post(`/api/barber-panel/day/${fecha}/turnos`)
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        hora,
+        servicio: 'Corte',
+        precio: 40000,
+      });
+    expect(create.statusCode).toBe(201);
+
+    const originalGetNowParts = businessTime.getNowParts;
+    businessTime.getNowParts = () => ({
+      fecha,
+      hora: addMinutesToHora(hora, 120),
+      timezone: 'test-fixed',
+    });
+
+    try {
+      const day = await request(app)
+        .get(`/api/barber-panel/day/${fecha}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(day.statusCode).toBe(200);
+      expect(day.body.agenda.some(t => Number(t.id) === Number(create.body.id))).toBe(false);
+
+      const month = fecha.slice(0, 7);
+      const calendar = await request(app)
+        .get(`/api/barber-panel/calendar?month=${month}`)
+        .set('Authorization', `Bearer ${token}`);
+      expect(calendar.statusCode).toBe(200);
+      const sameDay = (calendar.body.counts || []).find(c => c.fecha === fecha);
+      expect(Number(sameDay?.cantidad || 0)).toBe(0);
+    } finally {
+      businessTime.getNowParts = originalGetNowParts;
+    }
+  });
+
+  test('registra ingreso extra y lo incluye en balance', async () => {
+    const createIncome = await request(app)
+      .post('/api/barber-panel/balance-extra-income')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        concept: 'Venta de producto',
+        amount: 25000,
+      });
+    expect(createIncome.statusCode).toBe(201);
+    expect(createIncome.body.record).toBeTruthy();
+    expect(Number(createIncome.body.record.monto)).toBe(25000);
+
+    const balance = await request(app)
+      .get('/api/barber-panel/balance?range=month')
+      .set('Authorization', `Bearer ${token}`);
+    expect(balance.statusCode).toBe(200);
+    expect(Number(balance.body.extraEntries || 0)).toBeGreaterThan(0);
+    expect(Number(balance.body.extraAmount || 0)).toBeGreaterThanOrEqual(25000);
+    expect(Number(balance.body.amount || 0)).toBeGreaterThanOrEqual(
+      Number(balance.body.extraAmount || 0)
+    );
+  });
+
+  test('descarga resumen diario en PDF', async () => {
+    const pdf = await request(app)
+      .get('/api/barber-panel/summary/today-pdf')
+      .set('Authorization', `Bearer ${token}`);
+
+    expect(pdf.statusCode).toBe(200);
+    expect(String(pdf.headers['content-type'] || '')).toContain('application/pdf');
+    expect(Buffer.isBuffer(pdf.body)).toBe(true);
+    expect(pdf.body.length).toBeGreaterThan(100);
+    expect(pdf.body.toString('utf8', 0, 8)).toContain('%PDF');
   });
 });

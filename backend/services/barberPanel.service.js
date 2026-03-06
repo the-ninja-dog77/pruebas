@@ -16,6 +16,9 @@ function nowLocalParts() {
 const COMPLETION_PROMPT_MINUTES = Number(process.env.BARBER_COMPLETION_PROMPT_MINUTES || 10);
 const COMPLETION_NO_NEXT_DELAY_MINUTES = Number(process.env.BARBER_COMPLETION_NO_NEXT_DELAY_MINUTES || 30);
 const COMPLETION_NO_NEXT_WINDOW_MINUTES = Number(process.env.BARBER_COMPLETION_NO_NEXT_WINDOW_MINUTES || 90);
+const AGENDA_HIDE_PAST_AFTER_MINUTES = Number(
+  process.env.BARBER_PANEL_HIDE_PAST_AFTER_MINUTES || 60
+);
 const DEFAULT_BALANCE_GOAL = Number(process.env.DEFAULT_BALANCE_GOAL || 2000000);
 
 function getBalanceGoalKey(barberId) {
@@ -46,6 +49,184 @@ function parseGoalValue(value, fallback = DEFAULT_BALANCE_GOAL) {
   const n = Number(value);
   if (!Number.isFinite(n) || n <= 0) return Number(fallback);
   return Math.round(n);
+}
+
+function isAgendaItemVisible(turno, nowParts) {
+  if (!turno?.fecha || !turno?.hora) return true;
+  if (turno.fecha !== nowParts.fecha) return true;
+  const diff = businessTime.diffMinutes(turno.fecha, turno.hora, nowParts);
+  if (diff === null) return true;
+  const minutesAfterStart = -diff;
+  return minutesAfterStart < AGENDA_HIDE_PAST_AFTER_MINUTES;
+}
+
+function filterVisibleAgenda(agenda, nowParts) {
+  const list = Array.isArray(agenda) ? agenda : [];
+  return list.filter(turno => isAgendaItemVisible(turno, nowParts));
+}
+
+function groupAgendaByOrigen(agenda) {
+  const groups = {
+    panel: [],
+    bot: [],
+    other: [],
+  };
+
+  for (const turno of agenda || []) {
+    const origen = String(turno?.origen || '').toLowerCase().trim();
+    if (origen === 'panel') {
+      groups.panel.push(turno);
+      continue;
+    }
+    if (origen === 'bot') {
+      groups.bot.push(turno);
+      continue;
+    }
+    groups.other.push(turno);
+  }
+
+  return groups;
+}
+
+function pdfEscape(text) {
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)');
+}
+
+function buildSimplePdfFromOps(ops) {
+  const objects = [];
+  const addObject = value => {
+    objects.push(String(value));
+    return objects.length;
+  };
+
+  const content = ops.join('\n');
+  const contentObj = addObject(
+    `<< /Length ${Buffer.byteLength(content, 'utf8')} >>\nstream\n${content}\nendstream`
+  );
+  const fontRegularObj = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  const fontBoldObj = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
+  const pageObj = addObject(
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 ${fontRegularObj} 0 R /F2 ${fontBoldObj} 0 R >> >> /Contents ${contentObj} 0 R >>`
+  );
+  const pagesObj = addObject(`<< /Type /Pages /Kids [${pageObj} 0 R] /Count 1 >>`);
+  const catalogObj = addObject(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);
+
+  const header = '%PDF-1.4\n';
+  let body = '';
+  const offsets = [0];
+  let cursor = Buffer.byteLength(header, 'utf8');
+
+  objects.forEach((obj, i) => {
+    const index = i + 1;
+    offsets[index] = cursor;
+    const chunk = `${index} 0 obj\n${obj}\nendobj\n`;
+    body += chunk;
+    cursor += Buffer.byteLength(chunk, 'utf8');
+  });
+
+  const xrefOffset = cursor;
+  let xref = `xref\n0 ${objects.length + 1}\n`;
+  xref += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i += 1) {
+    xref += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+
+  const trailer =
+    `trailer\n<< /Size ${objects.length + 1} /Root ${catalogObj} 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+  return Buffer.from(header + body + xref + trailer, 'utf8');
+}
+
+function buildDaySummaryPdf({ barberId, fecha, agenda, extras, nowParts }) {
+  const groups = groupAgendaByOrigen(agenda);
+  const totalPanel = groups.panel.reduce((acc, t) => acc + Number(t.total || 0), 0);
+  const totalBot = groups.bot.reduce((acc, t) => acc + Number(t.total || 0), 0);
+  const totalOther = groups.other.reduce((acc, t) => acc + Number(t.total || 0), 0);
+  const totalExtras = (extras || []).reduce((acc, e) => acc + Number(e.monto || 0), 0);
+  const totalDia = totalPanel + totalBot + totalOther + totalExtras;
+
+  const ops = [];
+  const pushText = (x, y, size, text, bold = false) => {
+    ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${x} ${y} Td (${pdfEscape(text)}) Tj ET`);
+  };
+  const pushEntry = (y, text, kind = 'normal') => {
+    if (kind === 'muted') ops.push('0.68 0.68 0.68 rg');
+    else ops.push('1 1 1 rg');
+    pushText(34, y, 10, text, false);
+  };
+
+  ops.push('0.05 0.05 0.05 rg');
+  ops.push('0 0 595 842 re f');
+  ops.push('1 0.88 0 rg');
+  ops.push('0 774 595 68 re f');
+  ops.push('0 0 0 rg');
+  pushText(30, 812, 18, 'ZZETA Barber - Resumen Diario', true);
+  pushText(30, 792, 10, `Barbero #${barberId}  |  Fecha: ${fecha}  |  TZ: ${nowParts.timezone}`);
+
+  ops.push('1 1 1 rg');
+  pushText(30, 758, 11, `Turnos por panel: ${groups.panel.length}  |  Total: ${totalPanel.toLocaleString('es-ES')}`);
+  pushText(30, 742, 11, `Turnos por bot: ${groups.bot.length}  |  Total: ${totalBot.toLocaleString('es-ES')}`);
+  pushText(30, 726, 11, `Turnos origen mixto/otro: ${groups.other.length}  |  Total: ${totalOther.toLocaleString('es-ES')}`);
+  pushText(30, 710, 11, `Ingresos extra manuales: ${(extras || []).length}  |  Total: ${totalExtras.toLocaleString('es-ES')}`);
+  ops.push('1 0.88 0 rg');
+  pushText(30, 692, 12, `TOTAL DIA: ${totalDia.toLocaleString('es-ES')}`, true);
+
+  let y = 668;
+  const drawSection = (title, list) => {
+    ops.push('1 0.88 0 rg');
+    pushText(30, y, 11, title, true);
+    y -= 14;
+    if (!list.length) {
+      pushEntry(y, 'Sin movimientos.', 'muted');
+      y -= 14;
+      return;
+    }
+
+    for (const item of list.slice(0, 16)) {
+      const pago = item.metodo_pago ? ` | ${item.metodo_pago}` : '';
+      const estado = Number(item.completado || 0) === 1 ? ' | Completado' : '';
+      const line = `${item.hora} - ${item.servicio} - ${item.cliente} | ${Number(item.total || 0).toLocaleString('es-ES')}${pago}${estado}`;
+      pushEntry(y, line);
+      y -= 13;
+      if (y < 72) break;
+    }
+    if (list.length > 16 && y >= 72) {
+      pushEntry(y, `... y ${list.length - 16} mas`, 'muted');
+      y -= 13;
+    }
+    y -= 8;
+  };
+
+  drawSection('Turnos cargados por barbero (panel)', groups.panel);
+  if (y >= 72) drawSection('Turnos agendados por bot', groups.bot);
+  if (y >= 72 && groups.other.length) drawSection('Turnos de otros origenes', groups.other);
+
+  if (y >= 72) {
+    ops.push('1 0.88 0 rg');
+    pushText(30, y, 11, 'Ingresos extra manuales', true);
+    y -= 14;
+    if (!(extras || []).length) {
+      pushEntry(y, 'Sin ingresos extra.', 'muted');
+      y -= 14;
+    } else {
+      for (const entry of extras.slice(0, 10)) {
+        const concept = entry.concepto || 'Venta adicional';
+        pushEntry(
+          y,
+          `${entry.hora} - ${concept} | ${Number(entry.monto || 0).toLocaleString('es-ES')}`
+        );
+        y -= 13;
+        if (y < 72) break;
+      }
+    }
+  }
+
+  ops.push('0.68 0.68 0.68 rg');
+  pushText(30, 36, 9, `Generado: ${nowParts.fecha} ${nowParts.hora}`, false);
+  pushText(430, 36, 9, 'ZZETA Panel', false);
+  return buildSimplePdfFromOps(ops);
 }
 
 function buildCompletionPrompt({ agendaHoy, nextTurno, nowParts }) {
@@ -133,9 +314,24 @@ function getCalendar(barberId, month) {
       String(month) :
       nowLocalParts().fecha.slice(0, 7);
 
+  const nowParts = nowLocalParts();
+  const counts = barberPanelRepo.getMonthCounts({ barberId, month: selectedMonth }) || [];
+  if (nowParts.fecha.startsWith(`${selectedMonth}-`)) {
+    const agendaToday = barberPanelRepo.getTurnosByDay({ barberId, fecha: nowParts.fecha });
+    const visibleToday = filterVisibleAgenda(agendaToday, nowParts);
+    const todayCount = visibleToday.length;
+    const existing = counts.find(item => item.fecha === nowParts.fecha);
+    if (existing) {
+      existing.cantidad = todayCount;
+    } else if (todayCount > 0) {
+      counts.push({ fecha: nowParts.fecha, cantidad: todayCount });
+      counts.sort((a, b) => String(a.fecha).localeCompare(String(b.fecha)));
+    }
+  }
+
   return {
     month: selectedMonth,
-    counts: barberPanelRepo.getMonthCounts({ barberId, month: selectedMonth }),
+    counts,
     weeklyHours: businessHours.getWeeklyHoursDisplay(),
   };
 }
@@ -149,6 +345,8 @@ function getDay(barberId, fecha) {
   }
 
   const agenda = barberPanelRepo.getTurnosByDay({ barberId, fecha });
+  const nowParts = nowLocalParts();
+  const visibleAgenda = filterVisibleAgenda(agenda, nowParts);
   const disponibles = turnosService.obtenerDisponibilidad(fecha, barberId).disponibles;
   const rule = businessHours.getRuleForDate(fecha);
 
@@ -156,7 +354,7 @@ function getDay(barberId, fecha) {
     fecha,
     dayName: rule.dayName,
     businessHours: rule.label,
-    agenda,
+    agenda: visibleAgenda,
     disponibles,
   };
 }
@@ -257,8 +455,15 @@ function getBalance({ barberId, range }) {
     fromDate: dateRange.from,
     toDate: dateRange.to,
   });
+  const extras = barberPanelRepo.getManualIncomeByRange({
+    barberId,
+    fromDate: dateRange.from,
+    toDate: dateRange.to,
+  });
   const completados = rows.filter(r => Number(r.completado || 0) === 1);
-  const amount = completados.reduce((acc, r) => acc + Number(r.total || 0), 0);
+  const serviceAmount = completados.reduce((acc, r) => acc + Number(r.total || 0), 0);
+  const extraAmount = (extras || []).reduce((acc, e) => acc + Number(e.monto || 0), 0);
+  const amount = serviceAmount + extraAmount;
   const goal = parseGoalValue(settingsRepo.getValue(getBalanceGoalKey(barberId)));
   const progress = goal > 0 ? Math.min(100, (amount / goal) * 100) : 0;
 
@@ -267,6 +472,9 @@ function getBalance({ barberId, range }) {
     from: dateRange.from,
     to: dateRange.to,
     confirmedTurnos: completados.length,
+    serviceAmount,
+    extraAmount,
+    extraEntries: (extras || []).length,
     amount,
     goal,
     progressPercent: Number(progress.toFixed(2)),
@@ -280,6 +488,53 @@ function updateBalanceGoal({ barberId, amount }) {
     barberId,
     goal: parsed,
   };
+}
+
+function addExtraIncome({ barberId, amount, concept }) {
+  const nowParts = nowLocalParts();
+  const monto = Math.round(Number(amount || 0));
+  if (!Number.isFinite(monto) || monto <= 0) {
+    const err = new Error('Monto invalido.');
+    err.status = 400;
+    throw err;
+  }
+
+  const concepto = String(concept || '').trim();
+  if (!concepto || concepto.length < 2) {
+    const err = new Error('Concepto invalido.');
+    err.status = 400;
+    throw err;
+  }
+
+  const record = barberPanelRepo.createManualIncome({
+    barberId,
+    fecha: nowParts.fecha,
+    hora: nowParts.hora,
+    monto,
+    concepto: concepto.slice(0, 120),
+    createdAt: new Date().toISOString(),
+  });
+
+  return {
+    message: 'Ingreso extra registrado',
+    record,
+  };
+}
+
+function getTodaySummaryPdf(barberId, fecha = null) {
+  const selectedFecha = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))
+    ? String(fecha)
+    : nowLocalParts().fecha;
+  const nowParts = nowLocalParts();
+  const agenda = barberPanelRepo.getTurnosByDay({ barberId, fecha: selectedFecha }) || [];
+  const extras = barberPanelRepo.getManualIncomeByDay({ barberId, fecha: selectedFecha }) || [];
+  return buildDaySummaryPdf({
+    barberId,
+    fecha: selectedFecha,
+    agenda,
+    extras,
+    nowParts,
+  });
 }
 
 function confirmTurnoCompleted({ barberId, turnoId }) {
@@ -306,6 +561,8 @@ module.exports = {
   removeDayTurno,
   getBalance,
   updateBalanceGoal,
+  addExtraIncome,
+  getTodaySummaryPdf,
   confirmTurnoCompleted,
   getBotStatus,
   updateBotStatus,

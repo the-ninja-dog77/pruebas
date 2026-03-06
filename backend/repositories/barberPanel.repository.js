@@ -78,10 +78,69 @@ function getTurnosByRange({ barberId, fromDate, toDate }) {
     .all(barberId, fromDate, toDate);
 }
 
+function createManualIncome({
+  barberId,
+  fecha,
+  hora,
+  monto,
+  concepto,
+  createdAt,
+}) {
+  const result = db
+    .prepare(
+      `
+      INSERT INTO manual_income_entries (barber_id, fecha, hora, monto, concepto, created_at)
+      VALUES (?, ?, ?, ?, ?, ?)
+      `
+    )
+    .run(barberId, fecha, hora, monto, concepto, createdAt);
+
+  return db
+    .prepare(
+      `
+      SELECT id, barber_id, fecha, hora, monto, concepto, created_at
+      FROM manual_income_entries
+      WHERE id = ?
+      `
+    )
+    .get(result.lastInsertRowid);
+}
+
+function getManualIncomeByRange({ barberId, fromDate, toDate }) {
+  return db
+    .prepare(
+      `
+      SELECT id, barber_id, fecha, hora, monto, concepto, created_at
+      FROM manual_income_entries
+      WHERE barber_id = ?
+        AND fecha >= ?
+        AND fecha <= ?
+      ORDER BY fecha ASC, hora ASC, id ASC
+      `
+    )
+    .all(barberId, fromDate, toDate);
+}
+
+function getManualIncomeByDay({ barberId, fecha }) {
+  return db
+    .prepare(
+      `
+      SELECT id, barber_id, fecha, hora, monto, concepto, created_at
+      FROM manual_income_entries
+      WHERE barber_id = ? AND fecha = ?
+      ORDER BY hora ASC, id ASC
+      `
+    )
+    .all(barberId, fecha);
+}
+
 module.exports = {
   getDaySummary,
   getNextTurno,
   getMonthCounts,
   getTurnosByDay,
   getTurnosByRange,
+  createManualIncome,
+  getManualIncomeByRange,
+  getManualIncomeByDay,
 };

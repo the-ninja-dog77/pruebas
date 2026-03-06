@@ -56,7 +56,10 @@
         <article class="slide">
           <div class="section-head">
             <h3>Resumen</h3>
-            <button id="refreshSummaryBtn" class="ghost-btn">Actualizar</button>
+            <div class="summary-actions">
+              <button id="refreshSummaryBtn" class="ghost-btn">Actualizar</button>
+              <button id="downloadSummaryPdfBtn" class="ghost-btn">Descargar hoy (PDF)</button>
+            </div>
           </div>
           <div class="summary-grid">
             <div class="metric-card">
@@ -195,6 +198,14 @@
                 <span>Meta</span>
                 <strong id="balanceGoalValue">0</strong>
               </div>
+              <div class="metric-card">
+                <span>Ingresos extra</span>
+                <strong id="balanceExtraAmountValue">0</strong>
+              </div>
+              <div class="metric-card">
+                <span>Ventas extra</span>
+                <strong id="balanceExtraEntriesValue">0</strong>
+              </div>
             </div>
             <form id="balanceGoalForm" class="create-turno-form">
               <label>
@@ -209,6 +220,29 @@
               </label>
               <button class="btn-primary" type="submit">Guardar meta</button>
               <small id="balanceFeedback" class="create-feedback"></small>
+            </form>
+            <form id="balanceExtraIncomeForm" class="create-turno-form">
+              <label>
+                Registrar ingreso extra
+                <input
+                  id="balanceExtraConceptInput"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ej: Venta de producto"
+                />
+              </label>
+              <label>
+                Monto
+                <input
+                  id="balanceExtraAmountInput"
+                  type="number"
+                  min="1"
+                  step="1000"
+                  placeholder="Ej: 25000"
+                />
+              </label>
+              <button class="btn-primary" type="submit">Agregar ingreso</button>
+              <small id="balanceExtraIncomeFeedback" class="create-feedback"></small>
             </form>
           </div>
         </article>

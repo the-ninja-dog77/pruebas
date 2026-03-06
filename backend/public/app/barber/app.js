@@ -8,6 +8,8 @@ const API = {
   completeTurno: id => `/api/barber-panel/turnos/${id}/complete`,
   balance: range => `/api/barber-panel/balance?range=${encodeURIComponent(range)}`,
   balanceGoal: '/api/barber-panel/balance-goal',
+  balanceExtraIncome: '/api/barber-panel/balance-extra-income',
+  summaryPdf: '/api/barber-panel/summary/today-pdf',
   botStatus: '/api/barber-panel/bot-status',
 };
 
@@ -23,6 +25,7 @@ const todayLabel = document.getElementById('todayLabel');
 const slides = document.getElementById('slides');
 const navButtons = Array.from(document.querySelectorAll('.nav-btn'));
 const refreshSummaryBtn = document.getElementById('refreshSummaryBtn');
+const downloadSummaryPdfBtn = document.getElementById('downloadSummaryPdfBtn');
 
 const turnosHoyValue = document.getElementById('turnosHoyValue');
 const atendidosHoyValue = document.getElementById('atendidosHoyValue');
@@ -67,6 +70,12 @@ const balanceGoalValue = document.getElementById('balanceGoalValue');
 const balanceGoalForm = document.getElementById('balanceGoalForm');
 const balanceGoalInput = document.getElementById('balanceGoalInput');
 const balanceFeedback = document.getElementById('balanceFeedback');
+const balanceExtraAmountValue = document.getElementById('balanceExtraAmountValue');
+const balanceExtraEntriesValue = document.getElementById('balanceExtraEntriesValue');
+const balanceExtraIncomeForm = document.getElementById('balanceExtraIncomeForm');
+const balanceExtraConceptInput = document.getElementById('balanceExtraConceptInput');
+const balanceExtraAmountInput = document.getElementById('balanceExtraAmountInput');
+const balanceExtraIncomeFeedback = document.getElementById('balanceExtraIncomeFeedback');
 const moneyBallFill = document.getElementById('moneyBallFill');
 
 let token = '';
@@ -304,6 +313,12 @@ function setBalanceFeedback(text, kind = '') {
   balanceFeedback.className = `create-feedback${kind ? ` ${kind}` : ''}`;
 }
 
+function setBalanceExtraIncomeFeedback(text, kind = '') {
+  if (!balanceExtraIncomeFeedback) return;
+  balanceExtraIncomeFeedback.textContent = text || '';
+  balanceExtraIncomeFeedback.className = `create-feedback${kind ? ` ${kind}` : ''}`;
+}
+
 function setBalanceRangeButtons() {
   if (!balanceWeekBtn || !balanceMonthBtn) return;
   balanceWeekBtn.classList.toggle('active', currentBalanceRange === 'week');
@@ -315,6 +330,8 @@ function renderBalance(data) {
   const amount = Number(data.amount || 0);
   const goal = Number(data.goal || 0);
   const confirmed = Number(data.confirmedTurnos || 0);
+  const extraAmount = Number(data.extraAmount || 0);
+  const extraEntries = Number(data.extraEntries || 0);
 
   animateNumberText(balanceAmountValue, amount, {
     formatter: value => formatCurrency(Math.round(value)),
@@ -328,6 +345,14 @@ function renderBalance(data) {
   animateNumberText(balanceGoalValue, goal, {
     formatter: value => formatCurrency(Math.round(value)),
     duration: 480,
+  });
+  animateNumberText(balanceExtraAmountValue, extraAmount, {
+    formatter: value => formatCurrency(Math.round(value)),
+    duration: 480,
+  });
+  animateNumberText(balanceExtraEntriesValue, extraEntries, {
+    formatter: value => Math.round(value).toLocaleString('es-ES'),
+    duration: 420,
   });
 
   if (document.activeElement !== balanceGoalInput) {
@@ -361,6 +386,66 @@ async function saveBalanceGoal(event) {
   });
   setBalanceFeedback('Meta actualizada.', 'ok');
   await loadBalance(currentBalanceRange);
+}
+
+async function saveBalanceExtraIncome(event) {
+  event.preventDefault();
+  setBalanceExtraIncomeFeedback('');
+  const concept = String(balanceExtraConceptInput.value || '').trim();
+  const amount = Number(balanceExtraAmountInput.value);
+  if (concept.length < 2) {
+    setBalanceExtraIncomeFeedback('Describe la venta/ingreso.', 'error');
+    return;
+  }
+  if (!Number.isFinite(amount) || amount <= 0) {
+    setBalanceExtraIncomeFeedback('Ingresa un monto valido.', 'error');
+    return;
+  }
+
+  await apiFetch(API.balanceExtraIncome, {
+    method: 'POST',
+    body: JSON.stringify({ concept, amount: Math.round(amount) }),
+  });
+
+  setBalanceExtraIncomeFeedback('Ingreso extra guardado.', 'ok');
+  balanceExtraIncomeForm.reset();
+  await Promise.all([loadBalance(currentBalanceRange), loadSummary({ silentNotification: true })]);
+}
+
+async function downloadTodaySummaryPdf() {
+  if (!token) return;
+  const url = `${API.summaryPdf}?_t=${Date.now()}`;
+  const response = await fetch(url, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Cache-Control': 'no-cache, no-store, max-age=0',
+      Pragma: 'no-cache',
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    let message = `Error ${response.status}`;
+    try {
+      const body = await response.json();
+      message = body?.message || body?.error || message;
+    } catch (_err) {
+      // ignored
+    }
+    throw new Error(message);
+  }
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  const today = isoDate(new Date());
+  anchor.href = objectUrl;
+  anchor.download = `zzeta-resumen-${today}.pdf`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  URL.revokeObjectURL(objectUrl);
 }
 
 function cleanupDismissedCompletion() {
@@ -972,6 +1057,14 @@ logoutBtn.addEventListener('click', logout);
 refreshSummaryBtn.addEventListener('click', async () => {
   await Promise.all([loadSummary(), loadBalance(currentBalanceRange)]);
 });
+downloadSummaryPdfBtn.addEventListener('click', async () => {
+  try {
+    await downloadTodaySummaryPdf();
+    pushToast('Resumen PDF descargado.', 'ok');
+  } catch (err) {
+    pushToast(err.message || 'No se pudo descargar el PDF.', 'error');
+  }
+});
 prevMonthBtn.addEventListener('click', async () => {
   currentMonthDate = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1);
   await loadCalendar();
@@ -988,6 +1081,7 @@ enableNotificationsBtn.addEventListener('click', requestNotificationsPermission)
 balanceWeekBtn.addEventListener('click', () => loadBalance('week'));
 balanceMonthBtn.addEventListener('click', () => loadBalance('month'));
 balanceGoalForm.addEventListener('submit', saveBalanceGoal);
+balanceExtraIncomeForm.addEventListener('submit', saveBalanceExtraIncome);
 completionYesBtn.addEventListener('click', handleCompletionYes);
 completionNoBtn.addEventListener('click', handleCompletionNo);
 completionModal.addEventListener('click', event => {

@@ -204,10 +204,18 @@ input:focus {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
 }
 
 .section-head h3 {
   margin: 0;
+}
+
+.summary-actions {
+  display: inline-flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .summary-grid {

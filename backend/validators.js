@@ -28,6 +28,11 @@ const crearTurnoPanelSchema = Joi.object({
   precio: Joi.number().integer().min(0).required(),
 });
 
+const addManualIncomeSchema = Joi.object({
+  amount: Joi.number().integer().min(1).required(),
+  concept: Joi.string().trim().min(2).max(120).required(),
+});
+
 /* ======================================================
    VALIDACION LOGIN
    ====================================================== */
@@ -49,6 +54,7 @@ const responderRecordatorioSchema = Joi.object({
 module.exports = {
   crearTurnoSchema,
   crearTurnoPanelSchema,
+  addManualIncomeSchema,
   loginSchema,
   responderRecordatorioSchema,
 };

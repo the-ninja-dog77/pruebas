@@ -1,5 +1,8 @@
 const barberPanelService = require('../services/barberPanel.service');
-const { crearTurnoPanelSchema } = require('../validators');
+const {
+  crearTurnoPanelSchema,
+  addManualIncomeSchema,
+} = require('../validators');
 
 function resolveBarberId(req) {
   if (req.user.role === 'admin') {
@@ -132,6 +135,46 @@ function updateBalanceGoal(req, res, next) {
   }
 }
 
+function addExtraIncome(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const { error, value } = addManualIncomeSchema.validate(req.body || {});
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    res.status(201).json(
+      barberPanelService.addExtraIncome({
+        barberId,
+        amount: value.amount,
+        concept: value.concept,
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+}
+
+function downloadTodaySummaryPdf(req, res, next) {
+  try {
+    const barberId = resolveBarberId(req);
+    const fecha = String(req.query?.fecha || '').trim() || null;
+    const pdf = barberPanelService.getTodaySummaryPdf(barberId, fecha);
+    const targetFecha = /^\d{4}-\d{2}-\d{2}$/.test(String(fecha || ''))
+      ? String(fecha)
+      : barberPanelService.getSummary(barberId).fecha;
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="zzeta-resumen-${targetFecha}.pdf"`
+    );
+    res.send(pdf);
+  } catch (err) {
+    next(err);
+  }
+}
+
 function confirmTurnoCompleted(req, res, next) {
   try {
     const barberId = resolveBarberId(req);
@@ -159,6 +202,8 @@ module.exports = {
   removeDayTurno,
   getBalance,
   updateBalanceGoal,
+  addExtraIncome,
+  downloadTodaySummaryPdf,
   confirmTurnoCompleted,
   getBotStatus,
   updateBotStatus,
