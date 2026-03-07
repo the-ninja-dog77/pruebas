@@ -167,6 +167,63 @@
           "count": 7
         }
       ]
+    },
+    {
+      "generatedAt": "2026-02-22T16:31:33.484Z",
+      "score": 89.39,
+      "grade": "B",
+      "sent": 23258,
+      "ok": 21795,
+      "failures": 1463,
+      "dropped": 0,
+      "retries": 1463,
+      "errorRatePercent": 6.29,
+      "retryRatioPercent": 6.29,
+      "adjustedEventFailureRatePercent": 0,
+      "dropRatePercent": 0,
+      "fiveXxPercent": 6.29,
+      "p95Ms": 1368,
+      "p99Ms": 3820,
+      "audioFailurePercent": 10.69,
+      "phaseCoveragePercent": 100,
+      "topStatuses": [
+        {
+          "key": "200",
+          "count": 21795
+        },
+        {
+          "key": "500",
+          "count": 1463
+        }
+      ],
+      "topReasons": [
+        {
+          "key": "duplicate_event",
+          "count": 3441
+        },
+        {
+          "key": "out_of_order_event",
+          "count": 180
+        }
+      ],
+      "topAudioReasons": [
+        {
+          "key": "audio_processed",
+          "count": 6013
+        },
+        {
+          "key": "destructive_low_confidence",
+          "count": 2395
+        },
+        {
+          "key": "audio_too_short",
+          "count": 999
+        },
+        {
+          "key": "media_timeout",
+          "count": 657
+        }
+      ]
     }
   ]
 }

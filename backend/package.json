@@ -14,7 +14,10 @@
     "load:audio": "node scripts/runAudioLoadChaos.js",
     "load:soak:1h": "node scripts/runOneHourBotSoak.js",
     "evolve:cycle:auto": "node scripts/runBotEvolutionCycle.js",
-    "evolve:cycle:force": "node scripts/runBotEvolutionCycle.js --force"
+    "evolve:cycle:force": "node scripts/runBotEvolutionCycle.js --force",
+    "security:hash": "node scripts/generatePasswordHash.js",
+    "backup:restore": "node scripts/restoreBackup.js",
+    "backup:drill": "node scripts/runBackupRestoreDrill.js"
   },
   "keywords": [],
   "author": "",

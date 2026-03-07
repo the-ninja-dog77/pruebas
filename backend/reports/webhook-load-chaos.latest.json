@@ -1,10 +1,10 @@
 {
-  "generatedAt": "2026-02-21T04:06:51.967Z",
+  "generatedAt": "2026-03-02T04:19:44.856Z",
   "baseline": {
     "name": "baseline",
     "chaos": false,
-    "elapsedMs": 3300.72,
-    "throughputReqPerSec": 115.13,
+    "elapsedMs": 3350.37,
+    "throughputReqPerSec": 113.42,
     "totalRequests": 380,
     "failures": 0,
     "errorRatePercent": 0,
@@ -16,104 +16,104 @@
     "http429": 0,
     "http5xx": 0,
     "latencyMs": {
-      "min": 18,
-      "max": 124,
-      "avg": 61.23,
-      "p50": 60,
-      "p95": 97,
-      "p99": 109
+      "min": 20,
+      "max": 125,
+      "avg": 64.65,
+      "p50": 66,
+      "p95": 99,
+      "p99": 112
     },
     "maxInFlight": 18,
-    "cpuPercent": 45.47,
+    "cpuPercent": 50.38,
     "memory": {
       "start": {
-        "rss": 81661952,
-        "heapUsed": 20095664,
-        "heapTotal": 36057088
+        "rss": 83730432,
+        "heapUsed": 23124992,
+        "heapTotal": 36753408
       },
       "end": {
-        "rss": 99667968,
-        "heapUsed": 25165056,
-        "heapTotal": 55455744
+        "rss": 104394752,
+        "heapUsed": 27529456,
+        "heapTotal": 57462784
       },
       "max": {
-        "rss": 99667968,
-        "heapUsed": 27839600,
-        "heapTotal": 55455744
+        "rss": 104517632,
+        "heapUsed": 32242152,
+        "heapTotal": 57462784
       },
       "growthBytes": {
-        "rss": 18006016,
-        "heapUsed": 5069392
+        "rss": 20664320,
+        "heapUsed": 4404464
       }
     },
     "eventLoopDelayMs": {
-      "mean": 21.03,
-      "max": 48.07,
-      "p99": 25.28
+      "mean": 20.93,
+      "max": 31.83,
+      "p99": 29.82
     }
   },
   "stressChaos": {
     "name": "stress-chaos",
     "chaos": true,
-    "elapsedMs": 11719.91,
-    "throughputReqPerSec": 70.22,
-    "totalRequests": 823,
-    "failures": 123,
-    "errorRatePercent": 14.95,
-    "retries": 123,
-    "retryRatioPercent": 14.95,
+    "elapsedMs": 15722.75,
+    "throughputReqPerSec": 45.16,
+    "totalRequests": 710,
+    "failures": 10,
+    "errorRatePercent": 1.41,
+    "retries": 10,
+    "retryRatioPercent": 1.41,
     "statusHistogram": {
       "200": 700,
-      "500": 123
+      "500": 10
     },
     "http429": 0,
-    "http5xx": 123,
+    "http5xx": 10,
     "latencyMs": {
-      "min": 2,
-      "max": 1197,
-      "avg": 199.74,
-      "p50": 69,
-      "p95": 907,
-      "p99": 1117
+      "min": 3,
+      "max": 2371,
+      "avg": 288.33,
+      "p50": 78,
+      "p95": 1316,
+      "p99": 1715
     },
     "maxInFlight": 36,
-    "cpuPercent": 28.39,
+    "cpuPercent": 22.46,
     "memory": {
       "start": {
-        "rss": 104230912,
-        "heapUsed": 30412032,
-        "heapTotal": 55455744
+        "rss": 105009152,
+        "heapUsed": 34144992,
+        "heapTotal": 57462784
       },
       "end": {
-        "rss": 118726656,
-        "heapUsed": 34085672,
-        "heapTotal": 90058752
+        "rss": 108126208,
+        "heapUsed": 32179344,
+        "heapTotal": 59822080
       },
       "max": {
-        "rss": 119521280,
-        "heapUsed": 39900880,
-        "heapTotal": 90058752
+        "rss": 109096960,
+        "heapUsed": 35718928,
+        "heapTotal": 59822080
       },
       "growthBytes": {
-        "rss": 14495744,
-        "heapUsed": 3673640
+        "rss": 3117056,
+        "heapUsed": -1965648
       }
     },
     "eventLoopDelayMs": {
-      "mean": 20.68,
-      "max": 31.51,
-      "p99": 23.76
+      "mean": 20.7,
+      "max": 65.14,
+      "p99": 24.51
     }
   },
   "comparison": {
-    "latencyP95DeltaMs": 810,
-    "latencyP99DeltaMs": 1008,
-    "errorRateDeltaPercent": 14.95,
-    "retryRatioDeltaPercent": 14.95,
-    "throughputDeltaReqPerSec": -44.91,
+    "latencyP95DeltaMs": 1217,
+    "latencyP99DeltaMs": 1603,
+    "errorRateDeltaPercent": 1.41,
+    "retryRatioDeltaPercent": 1.41,
+    "throughputDeltaReqPerSec": -68.26,
     "memoryGrowthDeltaBytes": {
-      "rss": -3510272,
-      "heapUsed": -1395752
+      "rss": -17547264,
+      "heapUsed": -6370112
     }
   }
 }

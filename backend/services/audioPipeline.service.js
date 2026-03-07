@@ -19,6 +19,12 @@ const AUDIO_CONFIDENCE_ACTION = Number(process.env.AUDIO_CONFIDENCE_ACTION || 0.
 const AUDIO_CONFIDENCE_DESTRUCTIVE = Number(
   process.env.AUDIO_CONFIDENCE_DESTRUCTIVE || 0.85
 );
+const AUDIO_TRANSIENT_FAILURE_TTL_MS = Number(
+  process.env.AUDIO_TRANSIENT_FAILURE_TTL_MS || 10 * 60 * 1000
+);
+const AUDIO_TRANSIENT_FAILURE_ESCALATE_AFTER = Number(
+  process.env.AUDIO_TRANSIENT_FAILURE_ESCALATE_AFTER || 2
+);
 function normalizeMimeType(value) {
   const raw = String(value || '')
     .toLowerCase()
@@ -41,6 +47,18 @@ let active = 0;
 const loggedUnknownAudioMimes = new Set();
 const HARD_NOISE_FLAGS = new Set(['silence', 'noise_only']);
 const SOFT_NOISE_FLAGS = new Set(['noise', 'abrupt_cut', 'low_volume', 'clipping']);
+const transientFailuresBySender = new Map();
+const TRANSIENT_AUDIO_FAILURE_REASONS = new Set([
+  'media_timeout',
+  'media_not_found',
+  'media_url_expired_or_not_found',
+  'media_auth_error',
+  'missing_media_url',
+  'missing_media_url_gupshup',
+  'audio_pipeline_error',
+  'stt_timeout_or_network',
+  'stt_provider_error',
+]);
 
 function nowMs() {
   return Date.now();
@@ -261,7 +279,54 @@ function unsupportedMime(mimeType) {
   return true;
 }
 
-function fallbackReplyByReason(reason) {
+function cleanupTransientFailures() {
+  const cutoff = nowMs() - AUDIO_TRANSIENT_FAILURE_TTL_MS;
+  for (const [sender, state] of transientFailuresBySender.entries()) {
+    if (!state || state.lastAt < cutoff) {
+      transientFailuresBySender.delete(sender);
+    }
+  }
+}
+
+function markTransientFailure(sender, reason) {
+  if (!sender || !TRANSIENT_AUDIO_FAILURE_REASONS.has(reason)) return 0;
+  cleanupTransientFailures();
+  const previous = transientFailuresBySender.get(sender);
+  const count = Number(previous?.count || 0) + 1;
+  transientFailuresBySender.set(sender, { count, lastAt: nowMs(), reason });
+  return count;
+}
+
+function clearTransientFailure(sender) {
+  if (!sender) return;
+  transientFailuresBySender.delete(sender);
+}
+
+function buildEscalatedTransientHint(reason, transientFailureCount) {
+  if (transientFailureCount < AUDIO_TRANSIENT_FAILURE_ESCALATE_AFTER) return null;
+  if (reason === 'missing_media_url_gupshup') {
+    return 'En Sandbox/Proxy de Gupshup el audio puede no entregarse completo. Para avanzar sin perder tiempo, enviame el pedido en texto.';
+  }
+  if (
+    reason === 'media_timeout' ||
+    reason === 'media_not_found' ||
+    reason === 'media_url_expired_or_not_found'
+  ) {
+    return 'Estoy detectando fallas repetidas al descargar el audio de WhatsApp. Para no frenarte, enviame en texto: servicio, fecha, hora, nombre y pago.';
+  }
+  if (reason === 'media_auth_error') {
+    return 'Hay un problema temporal de acceso al archivo de audio. Para seguir ahora, enviame en texto: servicio, fecha, hora, nombre y pago.';
+  }
+  return 'Estoy con un problema temporal para procesar audios. Para no frenarte, escribime en texto: servicio, fecha, hora, nombre y pago.';
+}
+
+function fallbackReplyByReason(reason, context = {}) {
+  const escalatedHint = buildEscalatedTransientHint(
+    reason,
+    Number(context.transientFailureCount || 0)
+  );
+  if (escalatedHint) return escalatedHint;
+
   switch (reason) {
     case 'audio_too_short':
       return 'El audio fue demasiado corto. Podrias repetirlo un poco mas claro o escribir en texto?';
@@ -292,17 +357,17 @@ function fallbackReplyByReason(reason) {
     case 'missing_media_url':
       return 'No pude obtener el archivo de audio desde WhatsApp. Reenvialo por favor.';
     case 'missing_media_url_gupshup':
-      return 'No recibi el enlace de audio desde Gupshup Sandbox. Reenviá el audio o escribime en texto.';
+      return 'No recibi el enlace de audio desde Gupshup Sandbox/Proxy. Reenvia el audio o escribime en texto.';
     case 'audio_pipeline_error':
       return 'No pude descargar o procesar ese audio desde WhatsApp. Reenvialo por favor o escribime en texto.';
     case 'media_auth_error':
-      return 'No pude acceder al archivo de audio en WhatsApp. Reenvialo por favor.';
+      return 'No pude acceder al archivo de audio en WhatsApp. Reenvialo una vez; si vuelve a fallar, escribime en texto.';
     case 'media_not_found':
-      return 'No encontre ese archivo de audio en WhatsApp. Reenvialo por favor.';
+      return 'No encontre ese archivo de audio en WhatsApp. Reenvialo una vez; si falla de nuevo, escribime en texto.';
     case 'media_url_expired_or_not_found':
-      return 'El enlace del audio expiro. Reenvialo por favor.';
+      return 'El enlace del audio vencio o no esta disponible. Reenvialo una vez; si vuelve a fallar, escribime en texto.';
     case 'media_timeout':
-      return 'La descarga del audio demoro demasiado. Reenvialo por favor.';
+      return 'La descarga del audio demoro demasiado. Reenvialo una vez; si vuelve a fallar, escribime en texto.';
     case 'missing_media_id':
       return 'No recibi bien el audio. Reenvialo por favor o escribime en texto.';
     default:
@@ -527,6 +592,7 @@ async function processAudioMessage({
 
   if (!transcript || !transcript.ok) {
     const reason = transcript?.reason || 'stt_unknown';
+    const transientFailureCount = markTransientFailure(from, reason);
     audioMetrics.record({
       discarded: true,
       reason,
@@ -536,10 +602,12 @@ async function processAudioMessage({
     });
     return {
       ok: true,
-      reply: fallbackReplyByReason(reason),
+      reply: fallbackReplyByReason(reason, { transientFailureCount }),
       reason,
     };
   }
+
+  clearTransientFailure(from);
 
   const text = String(transcript.text || '').trim();
   const confidence = Number.isFinite(transcript.confidence)
@@ -722,3 +790,4 @@ module.exports = {
   processAudioMessage,
   classifyIntentRisk,
 };
+

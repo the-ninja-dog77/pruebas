@@ -149,6 +149,58 @@ describe('audioStt.service hardening', () => {
     expect(result.reason).toBe('media_url_expired_or_not_found');
   });
 
+  test('refreshes media URL after 404 and succeeds when second URL is valid', async () => {
+    const service = require('../services/audioStt.service');
+    let metadataCalls = 0;
+    let sttCalls = 0;
+
+    global.fetch.mockImplementation(async (url) => {
+      const target = String(url);
+      if (target.includes('/v24.0/media-refresh')) {
+        metadataCalls += 1;
+        if (metadataCalls === 1) {
+          return mockResponse({
+            jsonBody: { url: 'https://lookaside.whatsapp.test/expired.bin', mime_type: 'audio/ogg' },
+          });
+        }
+        return mockResponse({
+          jsonBody: { url: 'https://lookaside.whatsapp.test/fresh.bin', mime_type: 'audio/ogg' },
+        });
+      }
+      if (target === 'https://lookaside.whatsapp.test/expired.bin') {
+        return mockResponse({
+          ok: false,
+          status: 404,
+          textBody: 'expired',
+        });
+      }
+      if (target === 'https://lookaside.whatsapp.test/fresh.bin') {
+        return mockResponse({
+          arrayBufferBody: Buffer.from('fresh-bytes'),
+          contentType: 'audio/ogg',
+        });
+      }
+      if (target.includes('/audio/transcriptions')) {
+        sttCalls += 1;
+        return mockResponse({
+          jsonBody: { text: 'audio recuperado' },
+        });
+      }
+      return mockResponse({ ok: false, status: 500, textBody: 'unexpected url' });
+    });
+
+    const result = await service.transcribeFromWhatsAppMedia({
+      mediaId: 'media-refresh',
+      accessToken: 'wa_token',
+      graphVersion: 'v24.0',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe('audio recuperado');
+    expect(metadataCalls).toBe(2);
+    expect(sttCalls).toBe(1);
+  });
+
   test('returns stt_auth_error when Groq returns 401', async () => {
     const service = require('../services/audioStt.service');
 

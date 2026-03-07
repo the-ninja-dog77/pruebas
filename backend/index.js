@@ -22,6 +22,7 @@ const statsRoutes = require('./routes/stats.routes');
 const whatsappWebhookRoutes = require('./routes/metaWebhook.routes');
 const barberPanelRoutes = require('./routes/barberPanel.routes');
 const turnosService = require('./services/turnos.service');
+const opsMonitoring = require('./services/opsMonitoring.service');
 
 runMigrations();
 runSeeders();
@@ -79,6 +80,28 @@ app.use(limiter);
 
 // logger http
 app.use(loggerMiddleware);
+app.use((req, res, next) => {
+  const isWebhookPath =
+    req.path.startsWith('/meta-webhook') ||
+    req.path.startsWith('/whatsapp-webhook') ||
+    req.path.startsWith('/gupshup-webhook');
+
+  if (!isWebhookPath) {
+    next();
+    return;
+  }
+
+  const startedAt = Date.now();
+  res.on('finish', () => {
+    opsMonitoring.recordWebhook({
+      path: req.path,
+      status: res.statusCode,
+      latencyMs: Date.now() - startedAt,
+    });
+  });
+
+  next();
+});
 
 // rutas
 app.use('/auth', authRoutes);
@@ -107,6 +130,11 @@ process.on('unhandledRejection', (err) => {
 
 if (process.env.NODE_ENV !== 'test') {
   turnosService.iniciarRecordatorios(logger);
+  setInterval(() => {
+    opsMonitoring.runAlertCycle().catch(err => {
+      logger.warn(`OPS alert cycle failed: ${err.message}`);
+    });
+  }, Math.max(15000, Number(opsMonitoring.ALERT_CHECK_INTERVAL_MS || 60000)));
 
   const PORT = process.env.PORT || 3000;
   app.listen(PORT, () => {

@@ -43,6 +43,11 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 });
 
+const rotatePasswordSchema = Joi.object({
+  currentPassword: Joi.string().min(1).required(),
+  newPassword: Joi.string().min(10).max(200).required(),
+});
+
 /* ======================================================
    VALIDACION RESPUESTA RECORDATORIO
    ====================================================== */
@@ -57,5 +62,6 @@ module.exports = {
   crearTurnoPanelSchema,
   addManualIncomeSchema,
   loginSchema,
+  rotatePasswordSchema,
   responderRecordatorioSchema,
 };

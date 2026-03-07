@@ -9,6 +9,7 @@
 - `memory_heap_used_growth > 25%` sostenido por 6h: posible leak.
 - `http_429_rate > 1%` sostenido por 10m: revisar rate-limit / origen de trafico.
 - `webhook_failed_accumulated >= 50` en 30m: disparar incidente.
+- `provider_down_fail_rate >= 95%` y `>= 8` fallos en 5m: incidente critico por proveedor.
 
 ## Alertas inteligentes por tendencia
 - Alerta por tendencia de `latency_p95` creciente 3 ventanas consecutivas, aunque no supere umbral duro.
@@ -29,6 +30,7 @@
 3. Revisar retry-ratio y eventos de `duplicate_event`.
 4. Verificar consumo de memoria y tendencia 24h.
 5. Confirmar que `bot_enabled` no cambie sin trazabilidad.
+6. Revisar `ops.outbound.byProvider` y alertas `provider_down_*`.
 
 ## Operacion semanal
 1. Ejecutar `npm run test:reliability`.

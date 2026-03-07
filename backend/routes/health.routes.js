@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../database');
 const whatsappSender = require('../services/whatsappSender.service');
+const jwtSecrets = require('../services/jwtSecrets.service');
 
 router.get('/', (req, res) => {
   try {
@@ -20,6 +21,9 @@ router.get('/', (req, res) => {
         outboundConfigured: !outboundConfigError,
         outboundConfigError: outboundConfigError || null,
         outboundConfig,
+      },
+      security: {
+        jwt: jwtSecrets.getSnapshot(),
       },
     });
   } catch (err) {

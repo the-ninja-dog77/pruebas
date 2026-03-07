@@ -1,4 +1,5 @@
 const logger = require('../logger');
+const opsMonitoring = require('./opsMonitoring.service');
 
 const GRAPH_VERSION = process.env.WHATSAPP_GRAPH_VERSION || 'v21.0';
 const WHATSAPP_PROVIDER =
@@ -246,6 +247,19 @@ async function sendSafe(to, text, context = {}) {
           context
         )} retries=${Number(outbound.retries || 0)} body=${outbound.bodyText || ''}`
       );
+      opsMonitoring.recordOutboundResult({
+        provider: WHATSAPP_PROVIDER,
+        status: outbound.status,
+        ok: false,
+        reason: outbound.bodyText,
+      });
+    } else {
+      opsMonitoring.recordOutboundResult({
+        provider: WHATSAPP_PROVIDER,
+        status: outbound.status,
+        ok: true,
+        reason: '',
+      });
     }
     return outbound;
   } catch (err) {
@@ -254,6 +268,12 @@ async function sendSafe(to, text, context = {}) {
         context
       )} err=${err.stack || err.message}`
     );
+    opsMonitoring.recordOutboundResult({
+      provider: WHATSAPP_PROVIDER,
+      status: 500,
+      ok: false,
+      reason: err.message,
+    });
     return { ok: false, status: 500, bodyText: err.message };
   }
 }

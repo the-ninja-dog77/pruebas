@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "updatedAt": "2026-02-22T00:30:30.158Z",
-  "lastScore": 92.35,
+  "updatedAt": "2026-02-22T16:31:33.512Z",
+  "lastScore": 89.39,
   "notes": "Perfil adaptativo de carga; no modifica codigo del bot.",
   "phaseAdjustments": {
     "normal": {
@@ -13,28 +13,28 @@
       "nonDebugAudioChanceDelta": 0
     },
     "raras": {
-      "audioRatioDelta": 0.11000000000000001,
+      "audioRatioDelta": 0.14,
       "weirdRatioDelta": 0,
       "rudeRatioDelta": 0,
       "duplicateChanceDelta": 0,
       "outOfOrderChanceDelta": 0,
-      "nonDebugAudioChanceDelta": 0.14
+      "nonDebugAudioChanceDelta": 0.18
     },
     "desubicados": {
-      "audioRatioDelta": 0.11000000000000001,
+      "audioRatioDelta": 0.14,
       "weirdRatioDelta": 0,
       "rudeRatioDelta": 0,
-      "duplicateChanceDelta": 0.03,
-      "outOfOrderChanceDelta": 0.03,
-      "nonDebugAudioChanceDelta": 0.14
+      "duplicateChanceDelta": 0.04,
+      "outOfOrderChanceDelta": 0.04,
+      "nonDebugAudioChanceDelta": 0.18
     },
     "acero": {
-      "audioRatioDelta": 0.11000000000000001,
+      "audioRatioDelta": 0.14,
       "weirdRatioDelta": 0,
       "rudeRatioDelta": 0,
-      "duplicateChanceDelta": 0.03,
-      "outOfOrderChanceDelta": 0.03,
-      "nonDebugAudioChanceDelta": 0.14
+      "duplicateChanceDelta": 0.04,
+      "outOfOrderChanceDelta": 0.04,
+      "nonDebugAudioChanceDelta": 0.18
     }
   }
 }

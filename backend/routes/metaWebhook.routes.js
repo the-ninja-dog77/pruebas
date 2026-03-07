@@ -181,6 +181,18 @@ const LIGHT_ACK_INTENTS = [
   'buenisima',
   'nos vemos',
 ];
+const BOOKING_ONLY_INTENTS = [
+  'quiero turno',
+  'quiero reservar',
+  'quiero agendar',
+  'reservar',
+  'agendar',
+  'nuevo turno',
+  'new appointment',
+  'book appointment',
+  'book',
+  'booking',
+];
 const TEMPORAL_DISAMBIGUATION_TTL_MS = Number(
   process.env.WHATSAPP_TEMPORAL_DISAMBIGUATION_TTL_MS || 5 * 60 * 1000
 );
@@ -390,6 +402,21 @@ const GUPSHUP_MESSAGE_TYPES = new Set([
   'list_reply',
   'button_reply',
 ]);
+const GUPSHUP_SANDBOX_PROXY_PATTERNS = [
+  /sorry\s+no\s+such\s+keyword/i,
+  /no\s+such\s+keyword/i,
+  /please\s+use\s+one\s+of\s+the\s+following\s+keywords/i,
+  /type\s+start\s+to\s+begin/i,
+  /send\s+start\s+to\s+continue/i,
+  /this\s+number\s+is\s+connected\s+to\s+gupshup/i,
+  /use\s+the\s+keyword\s+/i,
+];
+
+function isGupshupSandboxProxyText(text) {
+  const normalized = String(text || '').trim();
+  if (!normalized) return false;
+  return GUPSHUP_SANDBOX_PROXY_PATTERNS.some(pattern => pattern.test(normalized));
+}
 
 function parseIncomingGupshup(body) {
   const root = body || {};
@@ -1168,6 +1195,19 @@ function detectAvailabilityIntent(msg) {
   };
 }
 
+function hasExplicitBookingOnlyIntent(msg) {
+  return containsAny(msg, BOOKING_ONLY_INTENTS);
+}
+
+function didDraftBookingFieldsChange(beforeDraft, afterDraft) {
+  const keys = ['servicio', 'fecha', 'hora', 'nombre', 'metodo_pago'];
+  return keys.some(key => {
+    const before = String(beforeDraft?.[key] || '').trim();
+    const after = String(afterDraft?.[key] || '').trim();
+    return before !== after;
+  });
+}
+
 function parseClientName(rawText, options = {}) {
   const allowSingleToken = Boolean(options?.allowSingleToken);
   const raw = String(rawText || '').trim();
@@ -1808,9 +1848,17 @@ async function buildReply(from, texto, _context = {}) {
     containsAny(msg, MANAGE_RESCHEDULE_INTENTS) ||
     msg.includes('reprogramar') ||
     (msg.includes('cambiar') && msg.includes('turno'));
+  const wantsExplicitBooking = hasExplicitBookingOnlyIntent(msg);
   const wantsStart = containsAny(msg, START_INTENTS);
   const asksFlowHelp = containsAny(msg, FLOW_HELP_INTENTS);
   const expressesUncertainty = containsAny(msg, FLOW_UNCERTAINTY_INTENTS);
+
+  if (
+    (wantsManageCancelCommand || wantsManageRescheduleCommand) &&
+    wantsExplicitBooking
+  ) {
+    return 'Veo una mezcla de acciones. Primero decime si queres gestionar un turno existente (cancelar/reprogramar) o crear uno nuevo.';
+  }
 
   if (wantsManageCancelCommand && wantsManageRescheduleCommand) {
     return 'Te ayudo con eso. Primero decime si queres cancelar o reprogramar. Ejemplos: "cancelar turno" o "reprogramar turno".';
@@ -1952,6 +2000,10 @@ async function buildReply(from, texto, _context = {}) {
     }
   }
 
+  const stageBeforeDetections = session.stage;
+  const draftBeforeDetections = {
+    ...session.draft,
+  };
   applyDetections(session, msg);
   if (!session.draft.nombre) {
     const inferredName = parseClientName(texto) || inferNameFromDenseBookingMessage(texto, msg);
@@ -1960,6 +2012,14 @@ async function buildReply(from, texto, _context = {}) {
     }
   }
   ensureSessionIntegrity(session);
+
+  const changedDraftWhileAwaitingConfirm =
+    stageBeforeDetections === 'awaiting_confirm' &&
+    session.stage === 'awaiting_confirm' &&
+    didDraftBookingFieldsChange(draftBeforeDetections, session.draft);
+  if (changedDraftWhileAwaitingConfirm && confirms) {
+    return `${buildSummaryMessage(session.draft)} Si esta correcto, responde "confirmar".`;
+  }
 
   if (session.stage === 'awaiting_name') {
     const name = parseClientName(texto, { allowSingleToken: true });
@@ -2435,6 +2495,21 @@ router.post('/', async (req, res) => {
       incoming.interactive?.button_reply?.title ||
       incoming.interactive?.list_reply?.title ||
       '';
+
+    if (
+      WHATSAPP_PROVIDER === 'gupshup' &&
+      incoming.type === 'text' &&
+      isGupshupSandboxProxyText(texto)
+    ) {
+      logger.warn(
+        `WHATSAPP sandbox proxy message ignored from=${from} text="${String(texto).slice(0, 180)}"`
+      );
+      if (debugMode) {
+        return res.status(200).json({ ok: true, reason: 'gupshup_sandbox_proxy_message' });
+      }
+      return res.sendStatus(200);
+    }
+
     logger.info(`WHATSAPP inbound from=${from} type=${incoming.type || 'text'} text="${texto}"`);
 
     const incomingMessageId = String(incoming.id || '').trim();

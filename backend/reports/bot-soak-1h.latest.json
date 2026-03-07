@@ -1,269 +1,310 @@
 {
-  "generatedAt": "2026-02-22T00:30:30.156Z",
-  "phaseScale": 0.01,
-  "configuredDurationMs": 36000,
-  "elapsedMs": 37949,
-  "maxPending": 36,
+  "generatedAt": "2026-02-22T16:31:33.484Z",
+  "phaseScale": 1,
+  "configuredDurationMs": 3600000,
+  "elapsedMs": 3600598,
+  "maxPending": 46,
   "total": {
-    "eventsTotal": 178,
-    "eventsOk": 178,
+    "eventsTotal": 21795,
+    "eventsOk": 21795,
     "eventsFailed": 0,
-    "eventsRecoveredAfterRetry": 11,
-    "eventsWithChaosFailure": 11,
+    "eventsRecoveredAfterRetry": 1463,
+    "eventsWithChaosFailure": 1463,
     "eventsFailedChaos": 0,
     "eventsFailedNonChaos": 0,
-    "sent": 189,
-    "ok": 178,
-    "failures": 11,
-    "failuresChaos": 11,
+    "sent": 23258,
+    "ok": 21795,
+    "failures": 1463,
+    "failuresChaos": 1463,
     "failuresNonChaos": 0,
     "dropped": 0,
-    "retries": 11,
-    "textMessages": 62,
-    "audioMessages": 116,
-    "duplicatesSent": 18,
-    "outOfOrderSent": 16,
-    "errorRatePercent": 5.82,
+    "retries": 1463,
+    "textMessages": 7013,
+    "audioMessages": 14782,
+    "duplicatesSent": 2410,
+    "outOfOrderSent": 2380,
+    "errorRatePercent": 6.29,
     "nonChaosAttemptFailureRatePercent": 0,
-    "chaosAttemptFailureRatePercent": 5.82,
-    "retryRatioPercent": 5.82,
+    "chaosAttemptFailureRatePercent": 6.29,
+    "retryRatioPercent": 6.29,
     "eventFailureRatePercent": 0,
     "adjustedEventFailureRatePercent": 0,
-    "throughputReqPerSec": 4.98,
+    "throughputReqPerSec": 6.46,
     "latencyMs": {
-      "min": 3,
-      "max": 4696,
-      "avg": 233.42,
-      "p50": 102,
-      "p95": 853,
-      "p99": 3778
+      "min": 2,
+      "max": 6057,
+      "avg": 295.96,
+      "p50": 112,
+      "p95": 1368,
+      "p99": 3820
     },
     "statusHistogram": {
-      "200": 178,
-      "500": 11
+      "200": 21795,
+      "500": 1463
     },
     "reasonCounts": {
-      "duplicate_event": 29,
-      "out_of_order_event": 1
+      "duplicate_event": 3441,
+      "out_of_order_event": 180
     },
     "audioReasonCounts": {
-      "audio_noise_or_silence": 4,
-      "audio_processed": 43,
-      "audio_too_short": 14,
-      "actionable_low_confidence": 7,
-      "media_not_found": 4,
-      "media_timeout": 3,
-      "destructive_low_confidence": 11,
-      "stt_empty_transcript": 1,
-      "stt_auth_error": 2,
-      "low_confidence": 3,
-      "media_auth_error": 3
+      "audio_processed": 6013,
+      "audio_too_short": 999,
+      "destructive_low_confidence": 2395,
+      "stt_empty_transcript": 90,
+      "audio_noise_or_silence": 528,
+      "low_confidence": 382,
+      "actionable_low_confidence": 304,
+      "media_timeout": 657,
+      "media_auth_error": 389,
+      "stt_auth_error": 96,
+      "media_not_found": 420,
+      "stt_provider_error": 18
     }
   },
   "phases": [
     {
       "id": "normal",
       "label": "Pruebas normales",
-      "eventsTotal": 5,
-      "eventsOk": 5,
+      "eventsTotal": 247,
+      "eventsOk": 247,
       "eventsFailed": 0,
-      "eventsRecoveredAfterRetry": 0,
-      "eventsWithChaosFailure": 0,
+      "eventsRecoveredAfterRetry": 14,
+      "eventsWithChaosFailure": 14,
       "eventsFailedChaos": 0,
       "eventsFailedNonChaos": 0,
-      "sent": 5,
-      "ok": 5,
-      "failures": 0,
-      "failuresChaos": 0,
+      "sent": 261,
+      "ok": 247,
+      "failures": 14,
+      "failuresChaos": 14,
       "failuresNonChaos": 0,
       "dropped": 0,
-      "retries": 0,
-      "textMessages": 4,
-      "audioMessages": 1,
-      "duplicatesSent": 0,
-      "outOfOrderSent": 0,
+      "retries": 14,
+      "textMessages": 215,
+      "audioMessages": 32,
+      "duplicatesSent": 5,
+      "outOfOrderSent": 1,
       "latencyMs": {
-        "min": 67,
-        "max": 164,
-        "avg": 103.4,
-        "p50": 89,
-        "p95": 164,
-        "p99": 164
+        "min": 3,
+        "max": 1570,
+        "avg": 111.2,
+        "p50": 74,
+        "p95": 325,
+        "p99": 1113
       },
       "statusHistogram": {
-        "200": 5
+        "200": 247,
+        "500": 14
       },
-      "reasonCounts": {},
+      "reasonCounts": {
+        "duplicate_event": 19,
+        "out_of_order_event": 1
+      },
       "audioReasonCounts": {
-        "audio_noise_or_silence": 1
+        "audio_processed": 19,
+        "audio_too_short": 5,
+        "destructive_low_confidence": 1,
+        "stt_empty_transcript": 1,
+        "audio_noise_or_silence": 2,
+        "low_confidence": 1
       },
       "eventFailureRatePercent": 0,
       "adjustedEventFailureRatePercent": 0,
-      "attemptFailureRatePercent": 0,
+      "attemptFailureRatePercent": 5.36,
       "nonChaosAttemptFailureRatePercent": 0,
-      "chaosAttemptFailureRatePercent": 0
+      "chaosAttemptFailureRatePercent": 5.36
     },
     {
       "id": "raras",
       "label": "Preguntas raras",
-      "eventsTotal": 4,
-      "eventsOk": 4,
+      "eventsTotal": 287,
+      "eventsOk": 287,
       "eventsFailed": 0,
-      "eventsRecoveredAfterRetry": 0,
-      "eventsWithChaosFailure": 0,
+      "eventsRecoveredAfterRetry": 8,
+      "eventsWithChaosFailure": 8,
       "eventsFailedChaos": 0,
       "eventsFailedNonChaos": 0,
-      "sent": 4,
-      "ok": 4,
-      "failures": 0,
-      "failuresChaos": 0,
+      "sent": 295,
+      "ok": 287,
+      "failures": 8,
+      "failuresChaos": 8,
       "failuresNonChaos": 0,
       "dropped": 0,
-      "retries": 0,
-      "textMessages": 3,
-      "audioMessages": 1,
-      "duplicatesSent": 0,
-      "outOfOrderSent": 0,
+      "retries": 8,
+      "textMessages": 179,
+      "audioMessages": 108,
+      "duplicatesSent": 8,
+      "outOfOrderSent": 10,
       "latencyMs": {
-        "min": 24,
-        "max": 166,
-        "avg": 78,
-        "p50": 63,
-        "p95": 166,
-        "p99": 166
+        "min": 3,
+        "max": 3391,
+        "avg": 117.73,
+        "p50": 78,
+        "p95": 275,
+        "p99": 936
       },
       "statusHistogram": {
-        "200": 4
+        "200": 287,
+        "500": 8
       },
-      "reasonCounts": {},
+      "reasonCounts": {
+        "duplicate_event": 14
+      },
       "audioReasonCounts": {
-        "audio_processed": 1
+        "destructive_low_confidence": 23,
+        "actionable_low_confidence": 5,
+        "audio_processed": 52,
+        "media_timeout": 1,
+        "low_confidence": 8,
+        "stt_empty_transcript": 1,
+        "audio_too_short": 11,
+        "audio_noise_or_silence": 3,
+        "media_auth_error": 1
       },
       "eventFailureRatePercent": 0,
       "adjustedEventFailureRatePercent": 0,
-      "attemptFailureRatePercent": 0,
+      "attemptFailureRatePercent": 2.71,
       "nonChaosAttemptFailureRatePercent": 0,
-      "chaosAttemptFailureRatePercent": 0
+      "chaosAttemptFailureRatePercent": 2.71
     },
     {
       "id": "desubicados",
       "label": "Mensajes desubicados",
-      "eventsTotal": 4,
-      "eventsOk": 4,
+      "eventsTotal": 461,
+      "eventsOk": 461,
       "eventsFailed": 0,
-      "eventsRecoveredAfterRetry": 1,
-      "eventsWithChaosFailure": 1,
+      "eventsRecoveredAfterRetry": 23,
+      "eventsWithChaosFailure": 23,
       "eventsFailedChaos": 0,
       "eventsFailedNonChaos": 0,
-      "sent": 5,
-      "ok": 4,
-      "failures": 1,
-      "failuresChaos": 1,
+      "sent": 484,
+      "ok": 461,
+      "failures": 23,
+      "failuresChaos": 23,
       "failuresNonChaos": 0,
       "dropped": 0,
-      "retries": 1,
-      "textMessages": 3,
-      "audioMessages": 1,
-      "duplicatesSent": 0,
-      "outOfOrderSent": 1,
+      "retries": 23,
+      "textMessages": 245,
+      "audioMessages": 216,
+      "duplicatesSent": 32,
+      "outOfOrderSent": 21,
       "latencyMs": {
-        "min": 6,
-        "max": 1578,
-        "avg": 404.8,
-        "p50": 107,
-        "p95": 1578,
-        "p99": 1578
+        "min": 3,
+        "max": 3913,
+        "avg": 180.84,
+        "p50": 91,
+        "p95": 708,
+        "p99": 3148
       },
       "statusHistogram": {
-        "200": 4,
-        "500": 1
+        "200": 461,
+        "500": 23
       },
       "reasonCounts": {
-        "duplicate_event": 1
+        "duplicate_event": 35
       },
       "audioReasonCounts": {
-        "audio_processed": 1
+        "actionable_low_confidence": 5,
+        "audio_too_short": 18,
+        "destructive_low_confidence": 36,
+        "low_confidence": 16,
+        "audio_processed": 95,
+        "media_timeout": 7,
+        "stt_auth_error": 3,
+        "media_auth_error": 6,
+        "audio_noise_or_silence": 10,
+        "stt_empty_transcript": 1,
+        "media_not_found": 1,
+        "stt_provider_error": 1
       },
       "eventFailureRatePercent": 0,
       "adjustedEventFailureRatePercent": 0,
-      "attemptFailureRatePercent": 20,
+      "attemptFailureRatePercent": 4.75,
       "nonChaosAttemptFailureRatePercent": 0,
-      "chaosAttemptFailureRatePercent": 20
+      "chaosAttemptFailureRatePercent": 4.75
     },
     {
       "id": "acero",
       "label": "Prueba de acero",
-      "eventsTotal": 165,
-      "eventsOk": 165,
+      "eventsTotal": 20800,
+      "eventsOk": 20800,
       "eventsFailed": 0,
-      "eventsRecoveredAfterRetry": 10,
-      "eventsWithChaosFailure": 10,
+      "eventsRecoveredAfterRetry": 1418,
+      "eventsWithChaosFailure": 1418,
       "eventsFailedChaos": 0,
       "eventsFailedNonChaos": 0,
-      "sent": 175,
-      "ok": 165,
-      "failures": 10,
-      "failuresChaos": 10,
+      "sent": 22218,
+      "ok": 20800,
+      "failures": 1418,
+      "failuresChaos": 1418,
       "failuresNonChaos": 0,
       "dropped": 0,
-      "retries": 10,
-      "textMessages": 52,
-      "audioMessages": 113,
-      "duplicatesSent": 18,
-      "outOfOrderSent": 15,
+      "retries": 1418,
+      "textMessages": 6374,
+      "audioMessages": 14426,
+      "duplicatesSent": 2365,
+      "outOfOrderSent": 2348,
       "latencyMs": {
-        "min": 3,
-        "max": 4696,
-        "avg": 235.79,
-        "p50": 104,
-        "p95": 853,
-        "p99": 3778
+        "min": 2,
+        "max": 6057,
+        "avg": 303.01,
+        "p50": 114,
+        "p95": 1410,
+        "p99": 3841
       },
       "statusHistogram": {
-        "200": 165,
-        "500": 10
+        "200": 20800,
+        "500": 1418
       },
       "reasonCounts": {
-        "duplicate_event": 28,
-        "out_of_order_event": 1
+        "duplicate_event": 3373,
+        "out_of_order_event": 179
       },
       "audioReasonCounts": {
-        "audio_noise_or_silence": 3,
-        "audio_processed": 41,
-        "audio_too_short": 14,
-        "actionable_low_confidence": 7,
-        "media_not_found": 4,
-        "media_timeout": 3,
-        "destructive_low_confidence": 11,
-        "stt_empty_transcript": 1,
-        "stt_auth_error": 2,
-        "low_confidence": 3,
-        "media_auth_error": 3
+        "stt_empty_transcript": 87,
+        "audio_processed": 5847,
+        "audio_too_short": 965,
+        "low_confidence": 357,
+        "destructive_low_confidence": 2335,
+        "media_not_found": 419,
+        "media_auth_error": 382,
+        "media_timeout": 649,
+        "stt_auth_error": 93,
+        "audio_noise_or_silence": 513,
+        "actionable_low_confidence": 294,
+        "stt_provider_error": 17
       },
       "eventFailureRatePercent": 0,
       "adjustedEventFailureRatePercent": 0,
-      "attemptFailureRatePercent": 5.71,
+      "attemptFailureRatePercent": 6.38,
       "nonChaosAttemptFailureRatePercent": 0,
-      "chaosAttemptFailureRatePercent": 5.71
+      "chaosAttemptFailureRatePercent": 6.38
     }
   ],
   "diagnostic": {
-    "score": 92.35,
-    "grade": "A",
+    "score": 89.39,
+    "grade": "B",
     "strengths": [
       "Error rate dentro de objetivo",
-      "Resistencia al caos: 5.82% del error bruto proviene de fallas inyectadas controladas",
+      "Resistencia al caos: 6.29% del error bruto proviene de fallas inyectadas controladas",
       "Backpressure controlado (dropped bajo)",
-      "Latencia p95 dentro de objetivo",
+      "Cobertura de fases completa",
       "Idempotencia observada en eventos duplicados"
     ],
     "weaknesses": [
       {
         "severity": "medium",
+        "area": "performance",
+        "title": "Latencia p95 elevada",
+        "metric": "latencyP95Ms",
+        "value": 1368,
+        "target": 1200
+      },
+      {
+        "severity": "medium",
         "area": "resilience",
         "title": "Retry ratio alto",
         "metric": "retryRatioPercent",
-        "value": 5.82,
+        "value": 6.29,
         "target": 5
       },
       {
@@ -271,25 +312,24 @@
         "area": "audio",
         "title": "Pipeline de audio inestable",
         "metric": "audioFailurePercent",
-        "value": 10.34,
+        "value": 10.69,
         "target": 8
-      },
-      {
-        "severity": "medium",
-        "area": "testing",
-        "title": "Cobertura baja en una o mas fases",
-        "metric": "phaseCoveragePercent",
-        "value": 25,
-        "target": 100,
-        "details": "Fases con baja muestra: normal, raras, desubicados"
       }
     ],
     "recommendations": [
       {
         "priority": "P1",
+        "area": "performance",
+        "title": "Optimizar ruta /meta-webhook en carga",
+        "why": "p95 1368ms > 1200ms",
+        "action": "Perfilar parseo, IO de DB y pipeline STT; cachear lookups repetidos.",
+        "verifyWith": "p95 <= 1200ms y p99 <= 3000ms."
+      },
+      {
+        "priority": "P1",
         "area": "resilience",
         "title": "Reducir retries innecesarios",
-        "why": "retry ratio 5.82% > 5%",
+        "why": "retry ratio 6.29% > 5%",
         "action": "Revisar timeouts y errores recuperables/no recuperables en STT y media download.",
         "verifyWith": "retry ratio <= 5% sostenido."
       },
@@ -297,29 +337,104 @@
         "priority": "P1",
         "area": "audio",
         "title": "Fortalecer manejo de audio dificil",
-        "why": "audio failures 10.34% > 8%",
+        "why": "audio failures 10.69% > 8%",
         "action": "Ajustar retries/media timeout y forzar aclaracion temprana cuando confidence sea baja.",
         "verifyWith": "audio failure <= 8% en fase acero."
-      },
-      {
-        "priority": "P2",
-        "area": "testing",
-        "title": "Subir volumen minimo por fase",
-        "why": "Cobertura de fases 25%",
-        "action": "Incrementar SOAK_DURATION_MS o SOAK_PHASE_SCALE para obtener al menos 50 eventos por fase.",
-        "verifyWith": "Todas las fases con >= 50 eventos."
       }
     ],
     "metrics": {
-      "rawAttemptErrorRatePercent": 5.82,
+      "rawAttemptErrorRatePercent": 6.29,
       "adjustedEventFailureRatePercent": 0,
       "dropRatePercent": 0,
-      "fiveXxPercent": 5.82,
-      "audioFailurePercent": 10.34,
-      "phaseCoveragePercent": 25
+      "fiveXxPercent": 6.29,
+      "audioFailurePercent": 10.69,
+      "phaseCoveragePercent": 100
     },
     "topFailures": {
       "statuses": [
+        {
+          "key": "200",
+          "count": 21795
+        },
+        {
+          "key": "500",
+          "count": 1463
+        }
+      ],
+      "reasons": [
+        {
+          "key": "duplicate_event",
+          "count": 3441
+        },
+        {
+          "key": "out_of_order_event",
+          "count": 180
+        }
+      ],
+      "audioReasons": [
+        {
+          "key": "audio_processed",
+          "count": 6013
+        },
+        {
+          "key": "destructive_low_confidence",
+          "count": 2395
+        },
+        {
+          "key": "audio_too_short",
+          "count": 999
+        },
+        {
+          "key": "media_timeout",
+          "count": 657
+        },
+        {
+          "key": "audio_noise_or_silence",
+          "count": 528
+        },
+        {
+          "key": "media_not_found",
+          "count": 420
+        },
+        {
+          "key": "media_auth_error",
+          "count": 389
+        },
+        {
+          "key": "low_confidence",
+          "count": 382
+        }
+      ]
+    },
+    "trend": {
+      "previousGeneratedAt": "2026-02-22T00:30:30.156Z",
+      "scoreDelta": -2.96,
+      "errorRateDelta": 0,
+      "p95DeltaMs": 515,
+      "dropRateDelta": 0
+    }
+  },
+  "history": {
+    "totalRuns": 4,
+    "previousRun": {
+      "generatedAt": "2026-02-22T00:30:30.156Z",
+      "score": 92.35,
+      "grade": "A",
+      "sent": 189,
+      "ok": 178,
+      "failures": 11,
+      "dropped": 0,
+      "retries": 11,
+      "errorRatePercent": 5.82,
+      "retryRatioPercent": 5.82,
+      "adjustedEventFailureRatePercent": 0,
+      "dropRatePercent": 0,
+      "fiveXxPercent": 5.82,
+      "p95Ms": 853,
+      "p99Ms": 3778,
+      "audioFailurePercent": 10.34,
+      "phaseCoveragePercent": 25,
+      "topStatuses": [
         {
           "key": "200",
           "count": 178
@@ -329,7 +444,7 @@
           "count": 11
         }
       ],
-      "reasons": [
+      "topReasons": [
         {
           "key": "duplicate_event",
           "count": 29
@@ -339,7 +454,7 @@
           "count": 1
         }
       ],
-      "audioReasons": [
+      "topAudioReasons": [
         {
           "key": "audio_processed",
           "count": 43
@@ -355,85 +470,6 @@
         {
           "key": "actionable_low_confidence",
           "count": 7
-        },
-        {
-          "key": "audio_noise_or_silence",
-          "count": 4
-        },
-        {
-          "key": "media_not_found",
-          "count": 4
-        },
-        {
-          "key": "media_timeout",
-          "count": 3
-        },
-        {
-          "key": "low_confidence",
-          "count": 3
-        }
-      ]
-    },
-    "trend": {
-      "previousGeneratedAt": "2026-02-22T00:21:47.229Z",
-      "scoreDelta": -5.38,
-      "errorRateDelta": 0,
-      "p95DeltaMs": 48,
-      "dropRateDelta": 0
-    }
-  },
-  "history": {
-    "totalRuns": 3,
-    "previousRun": {
-      "generatedAt": "2026-02-22T00:21:47.229Z",
-      "score": 97.73,
-      "grade": "A",
-      "sent": 436,
-      "ok": 413,
-      "failures": 23,
-      "dropped": 0,
-      "retries": 23,
-      "errorRatePercent": 5.28,
-      "retryRatioPercent": 5.28,
-      "adjustedEventFailureRatePercent": 0,
-      "dropRatePercent": 0,
-      "fiveXxPercent": 5.28,
-      "p95Ms": 805,
-      "p99Ms": 3473,
-      "audioFailurePercent": 8.02,
-      "phaseCoveragePercent": 25,
-      "topStatuses": [
-        {
-          "key": "200",
-          "count": 413
-        },
-        {
-          "key": "500",
-          "count": 23
-        }
-      ],
-      "topReasons": [
-        {
-          "key": "duplicate_event",
-          "count": 56
-        }
-      ],
-      "topAudioReasons": [
-        {
-          "key": "audio_processed",
-          "count": 126
-        },
-        {
-          "key": "destructive_low_confidence",
-          "count": 37
-        },
-        {
-          "key": "audio_too_short",
-          "count": 19
-        },
-        {
-          "key": "media_timeout",
-          "count": 12
         }
       ]
     },
@@ -604,6 +640,63 @@
             "count": 7
           }
         ]
+      },
+      {
+        "generatedAt": "2026-02-22T16:31:33.484Z",
+        "score": 89.39,
+        "grade": "B",
+        "sent": 23258,
+        "ok": 21795,
+        "failures": 1463,
+        "dropped": 0,
+        "retries": 1463,
+        "errorRatePercent": 6.29,
+        "retryRatioPercent": 6.29,
+        "adjustedEventFailureRatePercent": 0,
+        "dropRatePercent": 0,
+        "fiveXxPercent": 6.29,
+        "p95Ms": 1368,
+        "p99Ms": 3820,
+        "audioFailurePercent": 10.69,
+        "phaseCoveragePercent": 100,
+        "topStatuses": [
+          {
+            "key": "200",
+            "count": 21795
+          },
+          {
+            "key": "500",
+            "count": 1463
+          }
+        ],
+        "topReasons": [
+          {
+            "key": "duplicate_event",
+            "count": 3441
+          },
+          {
+            "key": "out_of_order_event",
+            "count": 180
+          }
+        ],
+        "topAudioReasons": [
+          {
+            "key": "audio_processed",
+            "count": 6013
+          },
+          {
+            "key": "destructive_low_confidence",
+            "count": 2395
+          },
+          {
+            "key": "audio_too_short",
+            "count": 999
+          },
+          {
+            "key": "media_timeout",
+            "count": 657
+          }
+        ]
       }
     ]
   },
@@ -611,46 +704,6 @@
     "enabled": true,
     "profilePath": "C:\\Users\\ACER\\Desktop\\proyecto bot definitivo1.0\\backend\\reports\\bot-soak-1h.adaptive-profile.json",
     "appliedProfile": {
-      "version": 1,
-      "updatedAt": "2026-02-22T00:21:47.231Z",
-      "lastScore": 97.73,
-      "notes": "Perfil adaptativo de carga; no modifica codigo del bot.",
-      "phaseAdjustments": {
-        "normal": {
-          "audioRatioDelta": 0,
-          "weirdRatioDelta": 0,
-          "rudeRatioDelta": 0,
-          "duplicateChanceDelta": 0,
-          "outOfOrderChanceDelta": 0,
-          "nonDebugAudioChanceDelta": 0
-        },
-        "raras": {
-          "audioRatioDelta": 0.08,
-          "weirdRatioDelta": 0,
-          "rudeRatioDelta": 0,
-          "duplicateChanceDelta": 0,
-          "outOfOrderChanceDelta": 0,
-          "nonDebugAudioChanceDelta": 0.1
-        },
-        "desubicados": {
-          "audioRatioDelta": 0.08,
-          "weirdRatioDelta": 0,
-          "rudeRatioDelta": 0,
-          "duplicateChanceDelta": 0.02,
-          "outOfOrderChanceDelta": 0.02,
-          "nonDebugAudioChanceDelta": 0.1
-        },
-        "acero": {
-          "audioRatioDelta": 0.08,
-          "weirdRatioDelta": 0,
-          "rudeRatioDelta": 0,
-          "duplicateChanceDelta": 0.02,
-          "outOfOrderChanceDelta": 0.02,
-          "nonDebugAudioChanceDelta": 0.1
-        }
-      }
-    },
-    "nextProfile": {
       "version": 1,
       "updatedAt": "2026-02-22T00:30:30.158Z",
       "lastScore": 92.35,
@@ -687,6 +740,46 @@
           "duplicateChanceDelta": 0.03,
           "outOfOrderChanceDelta": 0.03,
           "nonDebugAudioChanceDelta": 0.14
+        }
+      }
+    },
+    "nextProfile": {
+      "version": 1,
+      "updatedAt": "2026-02-22T16:31:33.512Z",
+      "lastScore": 89.39,
+      "notes": "Perfil adaptativo de carga; no modifica codigo del bot.",
+      "phaseAdjustments": {
+        "normal": {
+          "audioRatioDelta": 0,
+          "weirdRatioDelta": 0,
+          "rudeRatioDelta": 0,
+          "duplicateChanceDelta": 0,
+          "outOfOrderChanceDelta": 0,
+          "nonDebugAudioChanceDelta": 0
+        },
+        "raras": {
+          "audioRatioDelta": 0.14,
+          "weirdRatioDelta": 0,
+          "rudeRatioDelta": 0,
+          "duplicateChanceDelta": 0,
+          "outOfOrderChanceDelta": 0,
+          "nonDebugAudioChanceDelta": 0.18
+        },
+        "desubicados": {
+          "audioRatioDelta": 0.14,
+          "weirdRatioDelta": 0,
+          "rudeRatioDelta": 0,
+          "duplicateChanceDelta": 0.04,
+          "outOfOrderChanceDelta": 0.04,
+          "nonDebugAudioChanceDelta": 0.18
+        },
+        "acero": {
+          "audioRatioDelta": 0.14,
+          "weirdRatioDelta": 0,
+          "rudeRatioDelta": 0,
+          "duplicateChanceDelta": 0.04,
+          "outOfOrderChanceDelta": 0.04,
+          "nonDebugAudioChanceDelta": 0.18
         }
       }
     }

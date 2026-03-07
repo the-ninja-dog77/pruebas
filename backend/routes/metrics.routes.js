@@ -4,6 +4,7 @@ const db = require('../database');
 const authMiddleware = require('../middlewares/auth.middleware');
 const roleMiddleware = require('../middlewares/role.middleware');
 const audioMetrics = require('../services/audioObservability.service');
+const opsMonitoring = require('../services/opsMonitoring.service');
 
 router.get('/', (req, res) => {
   try {
@@ -21,6 +22,8 @@ router.get('/', (req, res) => {
       memoryUsage: process.memoryUsage(),
       uptime: process.uptime(),
       audio: audioMetrics.getSnapshot(),
+      ops: opsMonitoring.getSnapshot(),
+      alerts: opsMonitoring.getLatestAlerts(),
     });
   } catch (err) {
     res.status(500).json({ message: 'Error obteniendo métricas' });
@@ -38,6 +41,20 @@ router.get(
       memory: process.memoryUsage(),
       uptime: process.uptime(),
       audio: audioMetrics.getSnapshot(),
+      ops: opsMonitoring.getSnapshot(),
+      alerts: opsMonitoring.getLatestAlerts(),
+    });
+  }
+);
+
+router.get(
+  '/alerts',
+  authMiddleware,
+  roleMiddleware(['admin']),
+  (_req, res) => {
+    res.json({
+      alerts: opsMonitoring.getLatestAlerts(),
+      snapshot: opsMonitoring.getSnapshot(),
     });
   }
 );

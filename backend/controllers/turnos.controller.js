@@ -1,5 +1,5 @@
 const turnosService = require('../services/turnos.service');
-const jwt = require('jsonwebtoken');
+const jwtSecrets = require('../services/jwtSecrets.service');
 const {
   crearTurnoSchema,
   responderRecordatorioSchema,
@@ -65,7 +65,7 @@ function remove(req, res, next) {
     if (authHeader) {
       const token = authHeader.split(' ')[1];
       try {
-        user = jwt.verify(token, process.env.JWT_SECRET);
+        user = jwtSecrets.verify(token);
       } catch (err) {
         return res.status(403).json({ message: 'Token inválido o expirado' });
       }

@@ -1,0 +1,20 @@
+{
+  "startedAt": "2026-03-07T04:06:39.749Z",
+  "backupDir": "C:\\Users\\ACER\\Desktop\\proyecto bot definitivo1.0\\backend\\backups",
+  "sourceBackup": "C:\\Users\\ACER\\Desktop\\proyecto bot definitivo1.0\\backend\\zzeta.audio.1771641482827.db",
+  "tempTarget": "C:\\Users\\ACER\\AppData\\Local\\Temp\\zzeta-restore-drill-1772856399749.db",
+  "status": "ok",
+  "notes": [
+    "Restore drill ejecutado sobre archivo temporal sin tocar DB productiva."
+  ],
+  "finishedAt": "2026-03-07T04:06:39.760Z",
+  "durationMs": 11,
+  "source": {
+    "sizeBytes": 45056,
+    "modifiedAt": "2026-02-21T02:38:03.983Z"
+  },
+  "validation": {
+    "sourceTables": 5,
+    "restoredTables": 5
+  }
+}

@@ -1,32 +1,40 @@
 const bcrypt = require('bcrypt');
 
+const SEED_LEGACY_DEFAULT_USERS =
+  String(
+    process.env.SEED_LEGACY_DEFAULT_USERS ||
+      (process.env.NODE_ENV === 'production' ? 'false' : 'true')
+  ).toLowerCase() === 'true';
+
 module.exports.up = function (db) {
-  // Usuario admin
-  const existingUser = db
-    .prepare('SELECT * FROM users WHERE username = ?')
-    .get('zzeta');
+  if (SEED_LEGACY_DEFAULT_USERS) {
+    // Usuario admin legado.
+    const existingUser = db
+      .prepare('SELECT * FROM users WHERE username = ?')
+      .get('zzeta');
 
-  if (!existingUser) {
-    const passwordHash = bcrypt.hashSync('GONZA123', 10);
+    if (!existingUser) {
+      const passwordHash = bcrypt.hashSync('GONZA123', 10);
 
-    db.prepare(`
-      INSERT INTO users (username, passwordHash, role, barber_id)
-      VALUES (?, ?, ?, ?)
-    `).run('zzeta', passwordHash, 'admin', 1);
-  }
+      db.prepare(`
+        INSERT INTO users (username, passwordHash, role, barber_id)
+        VALUES (?, ?, ?, ?)
+      `).run('zzeta', passwordHash, 'admin', 1);
+    }
 
-  // Usuario barbero para app movil
-  const existingBarberUser = db
-    .prepare('SELECT * FROM users WHERE username = ?')
-    .get('gonzabarber');
+    // Usuario barbero legado para app movil.
+    const existingBarberUser = db
+      .prepare('SELECT * FROM users WHERE username = ?')
+      .get('gonzabarber');
 
-  if (!existingBarberUser) {
-    const passwordHash = bcrypt.hashSync('barber312', 10);
+    if (!existingBarberUser) {
+      const passwordHash = bcrypt.hashSync('barber312', 10);
 
-    db.prepare(`
-      INSERT INTO users (username, passwordHash, role, barber_id)
-      VALUES (?, ?, ?, ?)
-    `).run('gonzabarber', passwordHash, 'barber', 1);
+      db.prepare(`
+        INSERT INTO users (username, passwordHash, role, barber_id)
+        VALUES (?, ?, ?, ?)
+      `).run('gonzabarber', passwordHash, 'barber', 1);
+    }
   }
 
   // Cliente base

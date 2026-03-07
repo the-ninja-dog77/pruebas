@@ -41,6 +41,8 @@ const STT_MAX_RETRIES = Number(process.env.AUDIO_STT_RETRIES || 1);
 const MEDIA_METADATA_RETRIES = Number(process.env.AUDIO_MEDIA_METADATA_RETRIES || 1);
 const MEDIA_DOWNLOAD_RETRIES = Number(process.env.AUDIO_MEDIA_DOWNLOAD_RETRIES || 1);
 const RETRY_BACKOFF_MS = Number(process.env.AUDIO_RETRY_BACKOFF_MS || 300);
+const MEDIA_REFRESH_URL_ON_404 =
+  String(process.env.AUDIO_MEDIA_REFRESH_URL_ON_404 || 'true').toLowerCase() === 'true';
 
 if (STT_PROVIDER_RAW !== 'groq') {
   logger.warn(`AUDIO STT unsupported provider "${STT_PROVIDER_RAW}", forcing provider=groq`);
@@ -84,6 +86,15 @@ function asPositiveInt(value, fallback) {
   return Math.floor(number);
 }
 
+function asBoolean(value, fallback) {
+  if (value === undefined || value === null) return fallback;
+  if (typeof value === 'boolean') return value;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'y', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'n', 'off'].includes(normalized)) return false;
+  return fallback;
+}
+
 function resolveRuntimeProfile(retryProfile = {}) {
   return {
     metadataRetries: asNonNegativeInt(retryProfile.metadataRetries, MEDIA_METADATA_RETRIES),
@@ -93,6 +104,7 @@ function resolveRuntimeProfile(retryProfile = {}) {
     downloadTimeoutMs: asPositiveInt(retryProfile.downloadTimeoutMs, MEDIA_TIMEOUT_MS),
     sttTimeoutMs: asPositiveInt(retryProfile.sttTimeoutMs, STT_REQUEST_TIMEOUT_MS),
     backoffMs: asPositiveInt(retryProfile.backoffMs, RETRY_BACKOFF_MS),
+    refreshUrlOn404: asBoolean(retryProfile.refreshUrlOn404, MEDIA_REFRESH_URL_ON_404),
   };
 }
 
@@ -376,8 +388,9 @@ async function transcribeFromWhatsAppMedia({
       };
     }
 
-    const metadata = metadataResult.data || {};
-    const mediaUrl = metadata.url;
+    let metadata = metadataResult.data || {};
+    let metadataRetries = Number(metadataResult.retries || 0);
+    let mediaUrl = metadata.url;
     if (!mediaUrl) {
       return {
         ok: false,
@@ -386,17 +399,48 @@ async function transcribeFromWhatsAppMedia({
       };
     }
 
-    const downloaded = await downloadMediaBuffer({
+    let downloaded = await downloadMediaBuffer({
       mediaUrl,
       accessToken,
       runtime,
     });
+    let downloadRetries = Number(downloaded?.retries || 0);
+
+    if (
+      !downloaded.ok &&
+      downloaded.reason === 'media_url_expired_or_not_found' &&
+      runtime.refreshUrlOn404
+    ) {
+      const refreshedMetadata = await fetchMediaMetadata({
+        mediaId,
+        accessToken,
+        graphVersion,
+        phoneNumberId,
+        runtime,
+      });
+      metadataRetries += Number(refreshedMetadata.retries || 0);
+      if (refreshedMetadata.ok && refreshedMetadata.data?.url) {
+        metadata = refreshedMetadata.data || metadata;
+        mediaUrl = String(refreshedMetadata.data.url || '').trim() || mediaUrl;
+      }
+
+      if (mediaUrl) {
+        const retriedDownload = await downloadMediaBuffer({
+          mediaUrl,
+          accessToken,
+          runtime,
+        });
+        downloaded = retriedDownload;
+        downloadRetries += Number(retriedDownload.retries || 0);
+      }
+    }
+
     if (!downloaded.ok) {
       return {
         ok: false,
         reason: downloaded.reason || 'audio_pipeline_error',
         failureType: downloaded.reason === 'media_timeout' ? 'timing' : 'audio',
-        retries: Number(downloaded.retries || 0),
+        retries: metadataRetries + downloadRetries,
       };
     }
 
@@ -423,10 +467,7 @@ async function transcribeFromWhatsAppMedia({
       ...transcript,
       sizeBytes,
       mimeType,
-      retries:
-        Number(transcript.retries || 0) +
-        Number(metadataResult.retries || 0) +
-        Number(downloaded.retries || 0),
+      retries: Number(transcript.retries || 0) + metadataRetries + downloadRetries,
     };
   } catch (err) {
     logger.error(`AUDIO media pipeline failed: ${err.stack || err.message}`);

@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-22T02:21:33.405Z",
+  "generatedAt": "2026-03-07T04:47:10.438Z",
   "totalCases": 56,
   "cases": [
     {
@@ -9,7 +9,7 @@
       "previousState": "n/a",
       "expected": "200 con reason no_message_event",
       "actual": "status=200 reason=no_message_event",
-      "latencyMs": 11,
+      "latencyMs": 37,
       "fallback": "no_message_event"
     },
     {
@@ -19,7 +19,7 @@
       "previousState": "n/a",
       "expected": "200 con reason invalid_inbound_payload",
       "actual": "status=200 reason=invalid_inbound_payload",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "invalid_inbound_payload"
     },
     {
@@ -29,7 +29,7 @@
       "previousState": "n/a",
       "expected": "400 JSON invalido",
       "actual": "status=400 message=JSON invalido",
-      "latencyMs": 6,
+      "latencyMs": 5,
       "fallback": "JSON invalido"
     },
     {
@@ -59,7 +59,7 @@
       "previousState": "n/a",
       "expected": "segundo 200 duplicate_event",
       "actual": "first=200 second=200/duplicate_event",
-      "latencyMs": 6,
+      "latencyMs": 4,
       "fallback": "duplicate_event"
     },
     {
@@ -89,7 +89,7 @@
       "previousState": "awaiting_time expirado",
       "expected": "no continuar como si nada",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -139,7 +139,7 @@
       "previousState": "session activa variable",
       "expected": "sin crash + respuesta coherente",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 8,
+      "latencyMs": 4,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -148,9 +148,9 @@
       "input": "quiero turno para martes\npero tambien cancelar\nmejor reprogramar",
       "previousState": "session activa variable",
       "expected": "sin crash + respuesta coherente",
-      "actual": "Te ayudo con eso. Primero decime si queres cancelar o reprogramar. Ejemplos: \"cancelar turno\" o \"reprogramar turno\".",
+      "actual": "Veo una mezcla de acciones. Primero decime si queres gestionar un turno existente (cancelar/reprogramar) o crear uno nuevo.",
       "latencyMs": 3,
-      "fallback": "Te ayudo con eso. Primero decime si queres cancelar o reprogramar. Ejemplos: \"cancelar turno\" o \"reprogramar turno\"."
+      "fallback": "Veo una mezcla de acciones. Primero decime si queres gestionar un turno existente (cancelar/reprogramar) o crear uno nuevo."
     },
     {
       "dimension": "D",
@@ -159,7 +159,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\".",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "Hola! Soy ZZETA Bot. Si queres reservar, escribi \"turno\"."
     },
     {
@@ -169,7 +169,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 5,
+      "latencyMs": 4,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -199,7 +199,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. A nombre de quien agendo el turno?",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Perfecto. A nombre de quien agendo el turno?"
     },
     {
@@ -209,7 +209,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte.",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte."
     },
     {
@@ -219,7 +219,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Te resumo: Juan Perez, Corte, 2099-12-30 a las 16:00, pago Efectivo. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde \"confirmar\".",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Te resumo: Juan Perez, Corte, 2099-12-30 a las 16:00, pago Efectivo. Recorda que el pago se realiza despues del corte. Si queres confirmar, responde \"confirmar\"."
     },
     {
@@ -229,7 +229,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Listo Juan Perez, turno confirmado para 2099-12-30 a las 16:00 (Corte). Pago: Efectivo. Recorda que abonas despues del corte.",
-      "latencyMs": 18,
+      "latencyMs": 28,
       "fallback": "Listo Juan Perez, turno confirmado para 2099-12-30 a las 16:00 (Corte). Pago: Efectivo. Recorda que abonas despues del corte."
     },
     {
@@ -239,7 +239,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "De nada. Cuando quieras, estoy para ayudarte.",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "De nada. Cuando quieras, estoy para ayudarte."
     },
     {
@@ -249,7 +249,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -278,9 +278,9 @@
       "input": "15:00",
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
-      "actual": "Necesito un nombre valido para agendar. Ejemplo: Juan Perez.",
-      "latencyMs": 3,
-      "fallback": "Necesito un nombre valido para agendar. Ejemplo: Juan Perez."
+      "actual": "Ya tenes un turno activo el 2099-12-30 a las 16:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
+      "latencyMs": 4,
+      "fallback": "Ya tenes un turno activo el 2099-12-30 a las 16:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
       "dimension": "D",
@@ -309,7 +309,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-30 a las 16:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "Ya tenes un turno activo el 2099-12-30 a las 16:00 (Corte). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -319,7 +319,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Encontre tu proximo turno (2099-12-30 16:00). Decime la nueva fecha y hora (ej: 2026-02-25 16:00).",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Encontre tu proximo turno (2099-12-30 16:00). Decime la nueva fecha y hora (ej: 2026-02-25 16:00)."
     },
     {
@@ -339,7 +339,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Listo, cancele tu turno del 2099-12-31 a las 17:00 (Corte).",
-      "latencyMs": 14,
+      "latencyMs": 13,
       "fallback": "Listo, cancele tu turno del 2099-12-31 a las 17:00 (Corte)."
     },
     {
@@ -349,7 +349,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. Empecemos de nuevo. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "Perfecto. Empecemos de nuevo. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -359,7 +359,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)"
     },
     {
@@ -369,7 +369,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Horarios disponibles para 2099-12-30: 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00, ... Decime la hora en formato HH:MM (ej: 15:00).",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Horarios disponibles para 2099-12-30: 09:00, 10:00, 11:00, 12:00, 13:00, 14:00, 15:00, 16:00, ... Decime la hora en formato HH:MM (ej: 15:00)."
     },
     {
@@ -379,7 +379,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. A nombre de quien agendo el turno?",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Perfecto. A nombre de quien agendo el turno?"
     },
     {
@@ -389,7 +389,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte.",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Que metodo de pago preferis? (efectivo, transferencia/QR, tarjeta). Recorda que el pago se realiza despues del corte."
     },
     {
@@ -419,7 +419,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Puedo ayudarte a reservar. Escribi \"turno\" para empezar.",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Puedo ayudarte a reservar. Escribi \"turno\" para empezar."
     },
     {
@@ -429,7 +429,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Perfecto. Que servicio queres? (corte, recorte/tratamiento de barba, perfilado de cejas)"
     },
     {
@@ -439,7 +439,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Genial. Para que fecha queres el turno? (ej: 2026-02-23 o 23/02/2026)"
     },
     {
@@ -449,7 +449,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 4,
+      "latencyMs": 5,
       "fallback": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -458,9 +458,9 @@
       "input": "11:00",
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
-      "actual": "Necesito un nombre valido para agendar. Ejemplo: Juan Perez.",
-      "latencyMs": 4,
-      "fallback": "Necesito un nombre valido para agendar. Ejemplo: Juan Perez."
+      "actual": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
+      "latencyMs": 5,
+      "fallback": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
       "dimension": "D",
@@ -499,7 +499,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -539,7 +539,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 3,
+      "latencyMs": 4,
       "fallback": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
@@ -549,7 +549,7 @@
       "previousState": "sesion larga 40 turnos",
       "expected": "200 + sin estado imposible",
       "actual": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\".",
-      "latencyMs": 4,
+      "latencyMs": 3,
       "fallback": "Ya tenes un turno activo el 2099-12-30 a las 10:00 (Recorte/Tratamiento de Barba). Si queres cambiarlo, escribi \"reprogramar turno\". Si queres cancelarlo, escribi \"cancelar\". Si este nuevo turno es para otra persona, responde: \"a nombre de Nombre Apellido\"."
     },
     {
