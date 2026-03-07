@@ -148,6 +148,7 @@ function addExtraIncome(req, res, next) {
         barberId,
         amount: value.amount,
         concept: value.concept,
+        direction: value.direction,
       })
     );
   } catch (err) {

@@ -31,6 +31,7 @@ const crearTurnoPanelSchema = Joi.object({
 const addManualIncomeSchema = Joi.object({
   amount: Joi.number().integer().min(1).required(),
   concept: Joi.string().trim().min(2).max(120).required(),
+  direction: Joi.string().valid('add', 'subtract').default('add'),
 });
 
 /* ======================================================

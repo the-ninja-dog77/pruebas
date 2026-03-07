@@ -465,7 +465,7 @@ function getBalance({ barberId, range }) {
   const extraAmount = (extras || []).reduce((acc, e) => acc + Number(e.monto || 0), 0);
   const amount = serviceAmount + extraAmount;
   const goal = parseGoalValue(settingsRepo.getValue(getBalanceGoalKey(barberId)));
-  const progress = goal > 0 ? Math.min(100, (amount / goal) * 100) : 0;
+  const progress = goal > 0 ? Math.max(0, Math.min(100, (amount / goal) * 100)) : 0;
 
   return {
     range: dateRange.range,
@@ -490,14 +490,20 @@ function updateBalanceGoal({ barberId, amount }) {
   };
 }
 
-function addExtraIncome({ barberId, amount, concept }) {
+function addExtraIncome({ barberId, amount, concept, direction = 'add' }) {
   const nowParts = nowLocalParts();
-  const monto = Math.round(Number(amount || 0));
-  if (!Number.isFinite(monto) || monto <= 0) {
+  const amountBase = Math.round(Number(amount || 0));
+  if (!Number.isFinite(amountBase) || amountBase <= 0) {
     const err = new Error('Monto invalido.');
     err.status = 400;
     throw err;
   }
+
+  const normalizedDirection = String(direction || 'add').toLowerCase() === 'subtract'
+    ? 'subtract'
+    : 'add';
+
+  const monto = normalizedDirection === 'subtract' ? -amountBase : amountBase;
 
   const concepto = String(concept || '').trim();
   if (!concepto || concepto.length < 2) {
@@ -516,7 +522,11 @@ function addExtraIncome({ barberId, amount, concept }) {
   });
 
   return {
-    message: 'Ingreso extra registrado',
+    message:
+      normalizedDirection === 'subtract' ?
+        'Egreso registrado' :
+        'Ingreso extra registrado',
+    direction: normalizedDirection,
     record,
   };
 }

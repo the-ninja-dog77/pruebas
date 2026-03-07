@@ -73,6 +73,7 @@ const balanceFeedback = document.getElementById('balanceFeedback');
 const balanceExtraAmountValue = document.getElementById('balanceExtraAmountValue');
 const balanceExtraEntriesValue = document.getElementById('balanceExtraEntriesValue');
 const balanceExtraIncomeForm = document.getElementById('balanceExtraIncomeForm');
+const balanceExtraIncomeSubtractBtn = document.getElementById('balanceExtraIncomeSubtractBtn');
 const balanceExtraConceptInput = document.getElementById('balanceExtraConceptInput');
 const balanceExtraAmountInput = document.getElementById('balanceExtraAmountInput');
 const balanceExtraIncomeFeedback = document.getElementById('balanceExtraIncomeFeedback');
@@ -388,11 +389,11 @@ async function saveBalanceGoal(event) {
   await loadBalance(currentBalanceRange);
 }
 
-async function saveBalanceExtraIncome(event) {
-  event.preventDefault();
+async function submitBalanceExtraIncome(direction = 'add') {
   setBalanceExtraIncomeFeedback('');
   const concept = String(balanceExtraConceptInput.value || '').trim();
   const amount = Number(balanceExtraAmountInput.value);
+  const normalizedDirection = direction === 'subtract' ? 'subtract' : 'add';
   if (concept.length < 2) {
     setBalanceExtraIncomeFeedback('Describe la venta/ingreso.', 'error');
     return;
@@ -404,12 +405,28 @@ async function saveBalanceExtraIncome(event) {
 
   await apiFetch(API.balanceExtraIncome, {
     method: 'POST',
-    body: JSON.stringify({ concept, amount: Math.round(amount) }),
+    body: JSON.stringify({
+      concept,
+      amount: Math.round(amount),
+      direction: normalizedDirection,
+    }),
   });
 
-  setBalanceExtraIncomeFeedback('Ingreso extra guardado.', 'ok');
+  setBalanceExtraIncomeFeedback(
+    normalizedDirection === 'subtract' ? 'Monto restado correctamente.' : 'Ingreso extra guardado.',
+    'ok'
+  );
   balanceExtraIncomeForm.reset();
   await Promise.all([loadBalance(currentBalanceRange), loadSummary({ silentNotification: true })]);
+}
+
+async function saveBalanceExtraIncome(event) {
+  event.preventDefault();
+  await submitBalanceExtraIncome('add');
+}
+
+async function subtractBalanceExtraIncome() {
+  await submitBalanceExtraIncome('subtract');
 }
 
 async function downloadTodaySummaryPdf() {
@@ -1082,6 +1099,7 @@ balanceWeekBtn.addEventListener('click', () => loadBalance('week'));
 balanceMonthBtn.addEventListener('click', () => loadBalance('month'));
 balanceGoalForm.addEventListener('submit', saveBalanceGoal);
 balanceExtraIncomeForm.addEventListener('submit', saveBalanceExtraIncome);
+balanceExtraIncomeSubtractBtn.addEventListener('click', subtractBalanceExtraIncome);
 completionYesBtn.addEventListener('click', handleCompletionYes);
 completionNoBtn.addEventListener('click', handleCompletionNo);
 completionModal.addEventListener('click', event => {

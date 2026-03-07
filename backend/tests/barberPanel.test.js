@@ -333,7 +333,14 @@ describe('Barber panel', () => {
     }
   });
 
-  test('registra ingreso extra y lo incluye en balance', async () => {
+  test('registra ingreso extra, permite restar y actualiza balance', async () => {
+    const before = await request(app)
+      .get('/api/barber-panel/balance?range=month')
+      .set('Authorization', `Bearer ${token}`);
+    expect(before.statusCode).toBe(200);
+    const extraBefore = Number(before.body.extraAmount || 0);
+    const entriesBefore = Number(before.body.extraEntries || 0);
+
     const createIncome = await request(app)
       .post('/api/barber-panel/balance-extra-income')
       .set('Authorization', `Bearer ${token}`)
@@ -345,12 +352,24 @@ describe('Barber panel', () => {
     expect(createIncome.body.record).toBeTruthy();
     expect(Number(createIncome.body.record.monto)).toBe(25000);
 
+    const subtractIncome = await request(app)
+      .post('/api/barber-panel/balance-extra-income')
+      .set('Authorization', `Bearer ${token}`)
+      .send({
+        concept: 'Descuento aplicado',
+        amount: 10000,
+        direction: 'subtract',
+      });
+    expect(subtractIncome.statusCode).toBe(201);
+    expect(subtractIncome.body.record).toBeTruthy();
+    expect(Number(subtractIncome.body.record.monto)).toBe(-10000);
+
     const balance = await request(app)
       .get('/api/barber-panel/balance?range=month')
       .set('Authorization', `Bearer ${token}`);
     expect(balance.statusCode).toBe(200);
-    expect(Number(balance.body.extraEntries || 0)).toBeGreaterThan(0);
-    expect(Number(balance.body.extraAmount || 0)).toBeGreaterThanOrEqual(25000);
+    expect(Number(balance.body.extraEntries || 0)).toBe(entriesBefore + 2);
+    expect(Number(balance.body.extraAmount || 0)).toBe(extraBefore + 15000);
     expect(Number(balance.body.amount || 0)).toBeGreaterThanOrEqual(
       Number(balance.body.extraAmount || 0)
     );
