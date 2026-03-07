@@ -52,6 +52,7 @@ describe('audioPipeline gupshup compatibility', () => {
     expect(audioStt.transcribeFromMediaUrl).toHaveBeenCalledTimes(1);
     const callArgs = audioStt.transcribeFromMediaUrl.mock.calls[0][0];
     expect(callArgs.accessToken).toBeUndefined();
+    expect(callArgs.fallbackAccessToken).toBe('wa_token');
     expect(callArgs.requestHeaders).toEqual({ apikey: 'gup_key' });
     expect(audioStt.transcribeFromWhatsAppMedia).not.toHaveBeenCalled();
   });

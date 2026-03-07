@@ -547,8 +547,9 @@ async function processAudioMessage({
           transcript = await enqueueTask(() =>
             audioStt.transcribeFromMediaUrl({
               mediaUrl,
-              // Gupshup media URL should be requested with apikey headers, not Meta bearer token.
+              // Primary path for Gupshup uses apikey headers; fallback token is only used if needed.
               accessToken: undefined,
+              fallbackAccessToken: accessToken,
               requestHeaders: mediaRequestHeaders,
               mimeTypeHint: mimeType,
               filenameHint: urlFilename,
@@ -593,6 +594,11 @@ async function processAudioMessage({
   if (!transcript || !transcript.ok) {
     const reason = transcript?.reason || 'stt_unknown';
     const transientFailureCount = markTransientFailure(from, reason);
+    logger.warn(
+      `AUDIO processing failed from=${from} provider=${provider || 'unknown'} reason=${reason} retries=${Number(
+        transcript?.retries || 0
+      )} transientCount=${transientFailureCount}`
+    );
     audioMetrics.record({
       discarded: true,
       reason,

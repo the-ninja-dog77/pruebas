@@ -201,6 +201,89 @@ describe('audioStt.service hardening', () => {
     expect(sttCalls).toBe(1);
   });
 
+  test('media-url pipeline retries without custom headers when first attempt fails', async () => {
+    process.env.AUDIO_MEDIA_DOWNLOAD_RETRIES = '0';
+    const service = require('../services/audioStt.service');
+    let downloadCalls = 0;
+
+    global.fetch.mockImplementation(async (url, opts = {}) => {
+      const target = String(url);
+      if (target === 'https://media.gupshup.test/audio.ogg') {
+        downloadCalls += 1;
+        if (opts?.headers?.apikey) {
+          return mockResponse({
+            ok: false,
+            status: 403,
+            textBody: 'forbidden with custom header',
+          });
+        }
+        return mockResponse({
+          arrayBufferBody: Buffer.from('audio-ok'),
+          contentType: 'audio/ogg',
+        });
+      }
+      if (target.includes('/audio/transcriptions')) {
+        return mockResponse({
+          jsonBody: { text: 'audio por fallback headers' },
+        });
+      }
+      return mockResponse({ ok: false, status: 500, textBody: 'unexpected url' });
+    });
+
+    const result = await service.transcribeFromMediaUrl({
+      mediaUrl: 'https://media.gupshup.test/audio.ogg',
+      requestHeaders: { apikey: 'gup_key' },
+      mimeTypeHint: 'audio/ogg',
+      filenameHint: 'test.ogg',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe('audio por fallback headers');
+    expect(downloadCalls).toBe(2);
+  });
+
+  test('media-url pipeline retries with fallback bearer token when available', async () => {
+    process.env.AUDIO_MEDIA_DOWNLOAD_RETRIES = '0';
+    const service = require('../services/audioStt.service');
+    let downloadCalls = 0;
+
+    global.fetch.mockImplementation(async (url, opts = {}) => {
+      const target = String(url);
+      if (target === 'https://media.gupshup.test/audio-token.ogg') {
+        downloadCalls += 1;
+        if (opts?.headers?.Authorization === 'Bearer wa_fallback_token') {
+          return mockResponse({
+            arrayBufferBody: Buffer.from('audio-token-ok'),
+            contentType: 'audio/ogg',
+          });
+        }
+        return mockResponse({
+          ok: false,
+          status: 403,
+          textBody: 'forbidden until fallback token',
+        });
+      }
+      if (target.includes('/audio/transcriptions')) {
+        return mockResponse({
+          jsonBody: { text: 'audio por fallback token' },
+        });
+      }
+      return mockResponse({ ok: false, status: 500, textBody: 'unexpected url' });
+    });
+
+    const result = await service.transcribeFromMediaUrl({
+      mediaUrl: 'https://media.gupshup.test/audio-token.ogg',
+      requestHeaders: { apikey: 'gup_key' },
+      fallbackAccessToken: 'wa_fallback_token',
+      mimeTypeHint: 'audio/ogg',
+      filenameHint: 'test-token.ogg',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.text).toBe('audio por fallback token');
+    expect(downloadCalls).toBe(3);
+  });
+
   test('returns stt_auth_error when Groq returns 401', async () => {
     const service = require('../services/audioStt.service');
 

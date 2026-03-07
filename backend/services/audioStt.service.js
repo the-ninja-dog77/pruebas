@@ -482,6 +482,7 @@ async function transcribeFromWhatsAppMedia({
 async function transcribeFromMediaUrl({
   mediaUrl,
   accessToken,
+  fallbackAccessToken,
   requestHeaders,
   mimeTypeHint,
   filenameHint,
@@ -497,18 +498,57 @@ async function transcribeFromMediaUrl({
       };
     }
 
-    const downloaded = await downloadMediaBuffer({
+    let totalDownloadRetries = 0;
+    let downloaded = await downloadMediaBuffer({
       mediaUrl,
       accessToken,
       requestHeaders,
       runtime,
     });
+    totalDownloadRetries += Number(downloaded.retries || 0);
+
+    if (
+      !downloaded.ok &&
+      requestHeaders &&
+      typeof requestHeaders === 'object' &&
+      Object.keys(requestHeaders).length
+    ) {
+      logger.warn(
+        `AUDIO media-url retrying without custom headers reason=${downloaded.reason || 'unknown'}`
+      );
+      const withoutCustomHeaders = await downloadMediaBuffer({
+        mediaUrl,
+        accessToken,
+        runtime,
+      });
+      totalDownloadRetries += Number(withoutCustomHeaders.retries || 0);
+      downloaded = withoutCustomHeaders;
+    }
+
+    if (
+      !downloaded.ok &&
+      fallbackAccessToken &&
+      !accessToken &&
+      downloaded.reason !== 'media_not_found'
+    ) {
+      logger.warn(
+        `AUDIO media-url retrying with fallback bearer token reason=${downloaded.reason || 'unknown'}`
+      );
+      const withFallbackToken = await downloadMediaBuffer({
+        mediaUrl,
+        accessToken: fallbackAccessToken,
+        runtime,
+      });
+      totalDownloadRetries += Number(withFallbackToken.retries || 0);
+      downloaded = withFallbackToken;
+    }
+
     if (!downloaded.ok) {
       return {
         ok: false,
         reason: downloaded.reason || 'audio_pipeline_error',
         failureType: downloaded.reason === 'media_timeout' ? 'timing' : 'audio',
-        retries: Number(downloaded.retries || 0),
+        retries: totalDownloadRetries,
       };
     }
 
@@ -535,7 +575,7 @@ async function transcribeFromMediaUrl({
       ...transcript,
       sizeBytes,
       mimeType,
-      retries: Number(transcript.retries || 0) + Number(downloaded.retries || 0),
+      retries: Number(transcript.retries || 0) + totalDownloadRetries,
     };
   } catch (err) {
     logger.error(`AUDIO media-url pipeline failed: ${err.stack || err.message}`);
